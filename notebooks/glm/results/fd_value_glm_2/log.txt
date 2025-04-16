@@ -1,0 +1,128 @@
+2025-02-19 16:37:22,027 - INFO - PARAMS:
+2025-02-19 16:37:22,027 - INFO - model: glm
+2025-02-19 16:37:22,027 - INFO - glm_predictors: ['feedback', 'value_function']
+2025-02-19 16:37:22,027 - INFO - neural_data_type: spike_counts
+2025-02-19 16:37:22,027 - INFO - value_type: continuous
+2025-02-19 16:37:22,027 - INFO - step_time: 0.05
+2025-02-19 16:37:22,027 - INFO - n_permutations: 1000
+2025-02-19 16:37:22,027 - INFO - floc: /Users/zsombi/ZSOMBI/SBRI/PoPy/notebooks/decoders/glm/results/fd_value_glm_2
+2025-02-19 16:37:22,027 - INFO - msg: Fitting a simple GLM with feedback and value, 1000 permutations, just to see the direction of coding
+2025-02-19 16:37:22,027 - INFO - Started at 2025-02-19 16:37:22
+2025-02-19 16:37:36,703 - INFO - Finished for monkey ka and session 230720
+2025-02-19 16:37:50,634 - INFO - Finished for monkey ka and session 050620
+2025-02-19 16:37:51,086 - INFO - Finished for monkey ka and session 150720
+2025-02-19 16:37:54,190 - INFO - Finished for monkey ka and session 160620
+2025-02-19 16:37:56,077 - INFO - Finished for monkey ka and session 190620
+2025-02-19 16:37:59,106 - INFO - Finished for monkey ka and session 090720
+2025-02-19 16:38:04,046 - INFO - Finished for monkey ka and session 010720
+2025-02-19 16:38:06,428 - INFO - Finished for monkey ka and session 170720
+2025-02-19 16:38:11,808 - INFO - Finished for monkey ka and session 080620
+2025-02-19 16:38:13,097 - INFO - Finished for monkey ka and session 230520
+2025-02-19 16:38:15,255 - INFO - Finished for monkey ka and session 270720
+2025-02-19 16:38:17,337 - INFO - Finished for monkey ka and session 100820
+2025-02-19 16:38:18,076 - INFO - Finished for monkey ka and session 100620
+2025-02-19 16:38:18,164 - ERROR - Error occurred for arguments ('ka', '170920'): index 172103 is out of bounds for axis 0 with size 171813
+2025-02-19 16:38:21,019 - INFO - Finished for monkey ka and session 300720
+2025-02-19 16:38:21,949 - INFO - Finished for monkey ka and session 120820
+2025-02-19 16:38:24,000 - INFO - Finished for monkey ka and session 050820
+2025-02-19 16:38:30,752 - INFO - Finished for monkey ka and session 200820
+2025-02-19 16:38:36,235 - INFO - Finished for monkey ka and session 240820
+2025-02-19 16:38:44,145 - INFO - Finished for monkey ka and session 100920
+2025-02-19 16:38:45,366 - INFO - Finished for monkey ka and session 101220
+2025-02-19 16:38:45,799 - INFO - Finished for monkey ka and session 011020
+2025-02-19 16:38:46,587 - INFO - Finished for monkey ka and session 081020
+2025-02-19 16:38:47,313 - INFO - Finished for monkey ka and session 281020
+2025-02-19 16:38:48,923 - INFO - Finished for monkey ka and session 310820
+2025-02-19 16:38:57,282 - INFO - Finished for monkey ka and session 221020
+2025-02-19 16:38:58,267 - INFO - Finished for monkey ka and session 041220
+2025-02-19 16:39:00,066 - INFO - Finished for monkey ka and session 180221
+2025-02-19 16:39:05,230 - INFO - Finished for monkey ka and session 180121
+2025-02-19 16:39:05,872 - INFO - Finished for monkey ka and session 120821
+2025-02-19 16:39:09,994 - INFO - Finished for monkey ka and session 150221
+2025-02-19 16:39:13,715 - INFO - Finished for monkey ka and session 110321
+2025-02-19 16:39:24,094 - INFO - Finished for monkey ka and session 250121
+2025-02-19 16:39:25,645 - INFO - Finished for monkey ka and session 180321
+2025-02-19 16:39:26,119 - INFO - Finished for monkey ka and session 070322
+2025-02-19 16:39:29,353 - INFO - Finished for monkey ka and session 190821
+2025-02-19 16:39:30,240 - INFO - Finished for monkey ka and session 040321
+2025-02-19 16:39:30,598 - INFO - Finished for monkey ka and session 290921
+2025-02-19 16:39:37,954 - INFO - Finished for monkey ka and session 030322
+2025-02-19 16:39:45,708 - INFO - Finished for monkey ka and session 210322
+2025-02-19 16:39:49,445 - INFO - Finished for monkey ka and session 280322
+2025-02-19 16:39:52,355 - INFO - Finished for monkey ka and session 080622
+2025-02-19 16:39:52,736 - INFO - Finished for monkey ka and session 050422
+2025-02-19 16:39:53,227 - INFO - Finished for monkey ka and session 130422
+2025-02-19 16:40:01,577 - INFO - Finished for monkey ka and session 020622
+2025-02-19 16:40:03,652 - INFO - Finished for monkey ka and session 200422
+2025-02-19 16:40:07,996 - INFO - Finished for monkey ka and session 130622
+2025-02-19 16:40:08,473 - INFO - Finished for monkey ka and session 250422
+2025-02-19 16:40:10,850 - INFO - Finished for monkey ka and session 030522
+2025-02-19 16:40:18,642 - INFO - Finished for monkey ka and session 200622
+2025-02-19 16:40:21,254 - INFO - Finished for monkey ka and session 150622
+2025-02-19 16:40:29,209 - INFO - Finished for monkey ka and session 230622
+2025-02-19 16:40:38,830 - INFO - Finished for monkey ka and session 300622
+2025-02-19 16:40:46,206 - INFO - Finished for monkey ka and session 210722
+2025-02-19 16:40:47,386 - INFO - Finished for monkey ka and session 010822
+2025-02-19 16:40:48,300 - INFO - Finished for monkey ka and session 270722
+2025-02-19 16:40:48,386 - INFO - Finished for monkey ka and session 060922
+2025-02-19 16:40:49,447 - INFO - Finished for monkey ka and session 280622
+2025-02-19 16:40:51,434 - INFO - Finished for monkey ka and session 070722
+2025-02-19 16:40:52,470 - INFO - Finished for monkey po and session 070920
+2025-02-19 16:40:54,672 - INFO - Finished for monkey po and session 040920
+2025-02-19 16:41:01,975 - INFO - Finished for monkey ka and session 300822
+2025-02-19 16:41:02,261 - INFO - Finished for monkey ka and session 010922
+2025-02-19 16:41:02,871 - INFO - Finished for monkey ka and session 080822
+2025-02-19 16:41:11,146 - ERROR - Error occurred for arguments ('po', '150920'): index 0 is out of bounds for axis 0 with size 0
+2025-02-19 16:41:17,389 - INFO - Finished for monkey po and session 080920
+2025-02-19 16:41:20,298 - INFO - Finished for monkey po and session 121020
+2025-02-19 16:41:22,841 - INFO - Finished for monkey po and session 021020
+2025-02-19 16:41:23,883 - INFO - Finished for monkey po and session 110920
+2025-02-19 16:41:27,088 - INFO - Finished for monkey po and session 090920
+2025-02-19 16:41:27,266 - INFO - Finished for monkey po and session 140920
+2025-02-19 16:41:29,615 - INFO - Finished for monkey po and session 211020
+2025-02-19 16:41:31,887 - INFO - Finished for monkey po and session 051020
+2025-02-19 16:41:33,211 - INFO - Finished for monkey po and session 160920
+2025-02-19 16:41:36,648 - INFO - Finished for monkey po and session 141020
+2025-02-19 16:41:38,844 - INFO - Finished for monkey po and session 210920
+2025-02-19 16:41:42,659 - INFO - Finished for monkey po and session 111220
+2025-02-19 16:41:43,339 - INFO - Finished for monkey po and session 180920
+2025-02-19 16:41:46,227 - INFO - Finished for monkey po and session 011220
+2025-02-19 16:41:48,721 - INFO - Finished for monkey po and session 031220
+2025-02-19 16:41:49,790 - INFO - Finished for monkey po and session 070121
+2025-02-19 16:41:51,390 - INFO - Finished for monkey po and session 291020
+2025-02-19 16:41:54,473 - INFO - Finished for monkey po and session 071220
+2025-02-19 16:42:01,677 - INFO - Finished for monkey po and session 261020
+2025-02-19 16:42:03,779 - INFO - Finished for monkey po and session 120121
+2025-02-19 16:42:04,989 - INFO - Finished for monkey po and session 140121
+2025-02-19 16:42:05,584 - INFO - Finished for monkey po and session 240321
+2025-02-19 16:42:05,609 - INFO - Finished for monkey po and session 090421
+2025-02-19 16:42:06,681 - INFO - Finished for monkey po and session 080321
+2025-02-19 16:42:07,500 - INFO - Finished for monkey po and session 190321
+2025-02-19 16:42:10,738 - INFO - Finished for monkey po and session 190121
+2025-02-19 16:42:11,268 - INFO - Finished for monkey po and session 100321
+2025-02-19 16:42:12,454 - INFO - Finished for monkey po and session 270121
+2025-02-19 16:42:14,192 - ERROR - Error occurred for arguments ('po', '071021'): index 232651 is out of bounds for axis 0 with size 232365
+2025-02-19 16:42:23,712 - INFO - Finished for monkey po and session 280421
+2025-02-19 16:42:27,026 - INFO - Finished for monkey po and session 190721
+2025-02-19 16:42:30,647 - INFO - Finished for monkey po and session 090721
+2025-02-19 16:42:31,085 - INFO - Finished for monkey po and session 300421
+2025-02-19 16:42:35,079 - INFO - Finished for monkey po and session 280721
+2025-02-19 16:42:35,402 - INFO - Finished for monkey po and session 230421
+2025-02-19 16:42:35,439 - INFO - Finished for monkey po and session 300322
+2025-02-19 16:42:36,981 - INFO - Finished for monkey po and session 240921
+2025-02-19 16:42:43,552 - INFO - Finished for monkey po and session 090322
+2025-02-19 16:42:45,925 - INFO - Finished for monkey po and session 180322
+2025-02-19 16:42:46,355 - INFO - Finished for monkey po and session 040322
+2025-02-19 16:42:49,794 - INFO - Finished for monkey po and session 220422
+2025-02-19 16:42:51,169 - INFO - Finished for monkey po and session 080422
+2025-02-19 16:42:56,171 - INFO - Finished for monkey po and session 140422
+2025-02-19 16:43:05,587 - INFO - Finished for monkey po and session 140622
+2025-02-19 16:43:05,609 - INFO - Finished for monkey po and session 210422
+2025-02-19 16:43:10,165 - INFO - Finished for monkey po and session 080722
+2025-02-19 16:43:20,985 - INFO - Finished for monkey po and session 090822
+2025-02-19 16:43:21,760 - INFO - Finished for monkey po and session 310822
+2025-02-19 16:43:22,479 - INFO - Finished for monkey po and session 210622
+2025-02-19 16:43:22,512 - INFO - Finished for monkey po and session 280722
+2025-02-19 16:43:24,133 - INFO - Finished for monkey po and session 050922
+2025-02-19 16:43:25,565 - INFO - Finished for monkey po and session 200722
+2025-02-19 16:43:25,952 - INFO - Finished at 2025-02-19 16:43:25

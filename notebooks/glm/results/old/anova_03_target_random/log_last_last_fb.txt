@@ -1,0 +1,33 @@
+Error occurred for arguments ('ka', '230720'): [Errno 13] Permission denied: '/Users/zsombi/Library/CloudStorage/OneDrive-Personal/PoPy/notebooks/decoders/glm/results/anova_03_target_random/all_sessions_last_last_fb.nc'
+Error occurred for arguments ('ka', '190620'): [Errno 13] Permission denied: '/Users/zsombi/Library/CloudStorage/OneDrive-Personal/PoPy/notebooks/decoders/glm/results/anova_03_target_random/all_sessions_last_last_fb.nc'
+Error occurred for arguments ('ka', '050620'): [Errno 13] Permission denied: '/Users/zsombi/Library/CloudStorage/OneDrive-Personal/PoPy/notebooks/decoders/glm/results/anova_03_target_random/all_sessions_last_last_fb.nc'
+Error occurred for arguments ('ka', '170720'): [Errno 13] Permission denied: '/Users/zsombi/Library/CloudStorage/OneDrive-Personal/PoPy/notebooks/decoders/glm/results/anova_03_target_random/all_sessions_last_last_fb.nc'
+Error occurred for arguments ('ka', '230520'): [Errno 13] Permission denied: '/Users/zsombi/Library/CloudStorage/OneDrive-Personal/PoPy/notebooks/decoders/glm/results/anova_03_target_random/all_sessions_last_last_fb.nc'
+Error occurred for arguments ('ka', '080620'): [Errno 13] Permission denied: '/Users/zsombi/Library/CloudStorage/OneDrive-Personal/PoPy/notebooks/decoders/glm/results/anova_03_target_random/all_sessions_last_last_fb.nc'
+Error occurred for arguments ('ka', '100620'): [Errno 13] Permission denied: '/Users/zsombi/Library/CloudStorage/OneDrive-Personal/PoPy/notebooks/decoders/glm/results/anova_03_target_random/all_sessions_last_last_fb.nc'
+Error occurred for arguments ('ka', '160620'): [Errno 13] Permission denied: '/Users/zsombi/Library/CloudStorage/OneDrive-Personal/PoPy/notebooks/decoders/glm/results/anova_03_target_random/all_sessions_last_last_fb.nc'
+Error occurred for arguments ('ka', '150720'): [Errno 13] Permission denied: '/Users/zsombi/Library/CloudStorage/OneDrive-Personal/PoPy/notebooks/decoders/glm/results/anova_03_target_random/all_sessions_last_last_fb.nc'
+Error occurred for arguments ('ka', '010720'): [Errno 13] Permission denied: '/Users/zsombi/Library/CloudStorage/OneDrive-Personal/PoPy/notebooks/decoders/glm/results/anova_03_target_random/all_sessions_last_last_fb.nc'
+Error occurred for arguments ('ka', '090720'): [Errno 13] Permission denied: '/Users/zsombi/Library/CloudStorage/OneDrive-Personal/PoPy/notebooks/decoders/glm/results/anova_03_target_random/all_sessions_last_last_fb.nc'
+Error occurred for arguments ('ka', '170920'): conflicting sizes for dimension 'time': length 1 on <this-array> and length 219845 on {'time': 'time', 'unit': 'unit'}
+Error occurred for arguments ('ka', '300720'): [Errno 13] Permission denied: '/Users/zsombi/Library/CloudStorage/OneDrive-Personal/PoPy/notebooks/decoders/glm/results/anova_03_target_random/all_sessions_last_last_fb.nc'
+Error occurred for arguments ('ka', '270720'): [Errno 13] Permission denied: '/Users/zsombi/Library/CloudStorage/OneDrive-Personal/PoPy/notebooks/decoders/glm/results/anova_03_target_random/all_sessions_last_last_fb.nc'
+Error occurred for arguments ('ka', '050820'): [Errno 13] Permission denied: '/Users/zsombi/Library/CloudStorage/OneDrive-Personal/PoPy/notebooks/decoders/glm/results/anova_03_target_random/all_sessions_last_last_fb.nc'
+Error occurred for arguments ('ka', '011020'): [Errno 13] Permission denied: '/Users/zsombi/Library/CloudStorage/OneDrive-Personal/PoPy/notebooks/decoders/glm/results/anova_03_target_random/all_sessions_last_last_fb.nc'
+Error occurred for arguments ('ka', '200820'): [Errno 13] Permission denied: '/Users/zsombi/Library/CloudStorage/OneDrive-Personal/PoPy/notebooks/decoders/glm/results/anova_03_target_random/all_sessions_last_last_fb.nc'
+Error occurred for arguments ('ka', '310820'): [Errno 13] Permission denied: '/Users/zsombi/Library/CloudStorage/OneDrive-Personal/PoPy/notebooks/decoders/glm/results/anova_03_target_random/all_sessions_last_last_fb.nc'
+Error occurred for arguments ('ka', '240820'): [Errno 13] Permission denied: '/Users/zsombi/Library/CloudStorage/OneDrive-Personal/PoPy/notebooks/decoders/glm/results/anova_03_target_random/all_sessions_last_last_fb.nc'
+Error occurred for arguments ('ka', '100820'): [Errno 13] Permission denied: '/Users/zsombi/Library/CloudStorage/OneDrive-Personal/PoPy/notebooks/decoders/glm/results/anova_03_target_random/all_sessions_last_last_fb.nc'
+Error occurred for arguments ('ka', '120820'): [Errno 13] Permission denied: '/Users/zsombi/Library/CloudStorage/OneDrive-Personal/PoPy/notebooks/decoders/glm/results/anova_03_target_random/all_sessions_last_last_fb.nc'
+Error occurred for arguments ('ka', '281020'): [Errno 13] Permission denied: '/Users/zsombi/Library/CloudStorage/OneDrive-Personal/PoPy/notebooks/decoders/glm/results/anova_03_target_random/all_sessions_last_last_fb.nc'
+Error occurred for arguments ('ka', '081020'): [Errno 13] Permission denied: '/Users/zsombi/Library/CloudStorage/OneDrive-Personal/PoPy/notebooks/decoders/glm/results/anova_03_target_random/all_sessions_last_last_fb.nc'
+Error occurred for arguments ('ka', '100920'): [Errno 13] Permission denied: '/Users/zsombi/Library/CloudStorage/OneDrive-Personal/PoPy/notebooks/decoders/glm/results/anova_03_target_random/all_sessions_last_last_fb.nc'
+Error occurred for arguments ('ka', '221020'): [Errno 13] Permission denied: '/Users/zsombi/Library/CloudStorage/OneDrive-Personal/PoPy/notebooks/decoders/glm/results/anova_03_target_random/all_sessions_last_last_fb.nc'
+Error occurred for arguments ('ka', '101220'): [Errno 13] Permission denied: '/Users/zsombi/Library/CloudStorage/OneDrive-Personal/PoPy/notebooks/decoders/glm/results/anova_03_target_random/all_sessions_last_last_fb.nc'
+Error occurred for arguments ('ka', '130422'): too many indices for array: array is 0-dimensional, but 1 were indexed
+Error occurred for arguments ('po', '040920'): index 0 is out of bounds for axis 0 with size 0
+Error occurred for arguments ('po', '291020'): index 0 is out of bounds for axis 0 with size 0
+Error occurred for arguments ('po', '011220'): index 0 is out of bounds for axis 0 with size 0
+Error occurred for arguments ('po', '190721'): index 0 is out of bounds for axis 0 with size 0
+Error occurred for arguments ('po', '040322'): index 0 is out of bounds for axis 0 with size 0
+Error occurred for arguments ('po', '280722'): index 0 is out of bounds for axis 0 with size 0

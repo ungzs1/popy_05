@@ -1,0 +1,10 @@
+Error occurred for arguments ('ka', '130422'): too many indices for array: array is 0-dimensional, but 1 were indexed
+Error occurred for arguments ('po', '040920'): index 0 is out of bounds for axis 0 with size 0
+Error occurred for arguments ('po', '291020'): index 0 is out of bounds for axis 0 with size 0
+Error occurred for arguments ('po', '011220'): index 0 is out of bounds for axis 0 with size 0
+Error occurred for arguments ('po', '190721'): index 0 is out of bounds for axis 0 with size 0
+Error occurred for arguments ('po', '040322'): index 0 is out of bounds for axis 0 with size 0
+Error occurred for arguments ('po', '180322'): at least two inputs are required; got 1.
+Error occurred for arguments ('po', '280722'): index 0 is out of bounds for axis 0 with size 0
+Error occurred for arguments ('po', '140622'): list index out of range
+Error occurred for arguments ('po', '210622'): list index out of range

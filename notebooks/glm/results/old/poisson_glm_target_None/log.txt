@@ -1,0 +1,14 @@
+Error occurred for arguments ('ka', '230720'): The first guess on the deviance function returned a nan.  This could be a boundary  problem and should be reported.
+Error occurred for arguments ('ka', '281020'): The first guess on the deviance function returned a nan.  This could be a boundary  problem and should be reported.
+Error occurred for arguments ('ka', '130422'): too many indices for array: array is 0-dimensional, but 1 were indexed
+Error occurred for arguments ('po', '040920'): index 0 is out of bounds for axis 0 with size 0
+Error occurred for arguments ('po', '080920'): The first guess on the deviance function returned a nan.  This could be a boundary  problem and should be reported.
+Error occurred for arguments ('po', '291020'): index 0 is out of bounds for axis 0 with size 0
+Error occurred for arguments ('po', '011220'): index 0 is out of bounds for axis 0 with size 0
+Error occurred for arguments ('po', '031220'): The first guess on the deviance function returned a nan.  This could be a boundary  problem and should be reported.
+Error occurred for arguments ('po', '190721'): index 0 is out of bounds for axis 0 with size 0
+Error occurred for arguments ('po', '040322'): index 0 is out of bounds for axis 0 with size 0
+Error occurred for arguments ('po', '280722'): index 0 is out of bounds for axis 0 with size 0
+Error occurred for arguments ('po', '240921'): The first guess on the deviance function returned a nan.  This could be a boundary  problem and should be reported.
+Error occurred for arguments ('po', '080422'): The first guess on the deviance function returned a nan.  This could be a boundary  problem and should be reported.
+Error occurred for arguments ('po', '140422'): The first guess on the deviance function returned a nan.  This could be a boundary  problem and should be reported.

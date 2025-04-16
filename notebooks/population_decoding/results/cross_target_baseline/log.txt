@@ -1,0 +1,128 @@
+2025-03-13 15:23:50,701 - INFO - PARAMS:
+2025-03-13 15:23:50,701 - INFO - conditions: ['shift_value']
+2025-03-13 15:23:50,701 - INFO - group_target: target_shuffled
+2025-03-13 15:23:50,701 - INFO - K_fold: 3
+2025-03-13 15:23:50,702 - INFO - step_len: 0.05
+2025-03-13 15:23:50,702 - INFO - n_perm: 500
+2025-03-13 15:23:50,702 - INFO - n_extra_trials: (-1, 0)
+2025-03-13 15:23:50,702 - INFO - floc: /Users/zsombi/ZSOMBI/SBRI/PoPy/notebooks/decoders/population_decoding/results/cross_target_baseline
+2025-03-13 15:23:50,702 - INFO - msg: decoding the shift value across targets (targets shuffled to do a baseline).
+2025-03-13 15:23:50,702 - INFO - Started at 2025-03-13 15:23:50
+2025-03-13 15:34:28,912 - INFO - Finished for monkey ka and session 230520
+2025-03-13 15:35:57,376 - INFO - Finished for monkey ka and session 090720
+2025-03-13 15:42:31,275 - INFO - Finished for monkey ka and session 230720
+2025-03-13 15:43:46,680 - INFO - Finished for monkey ka and session 080620
+2025-03-13 15:43:47,966 - INFO - Finished for monkey ka and session 160620
+2025-03-13 15:44:16,676 - INFO - Finished for monkey ka and session 150720
+2025-03-13 15:44:25,178 - INFO - Finished for monkey ka and session 100620
+2025-03-13 15:44:43,390 - INFO - Finished for monkey ka and session 050620
+2025-03-13 15:44:53,055 - INFO - Finished for monkey ka and session 010720
+2025-03-13 15:44:57,219 - INFO - Finished for monkey ka and session 170720
+2025-03-13 15:45:13,553 - INFO - Finished for monkey ka and session 190620
+2025-03-13 15:49:08,797 - INFO - Finished for monkey ka and session 270720
+2025-03-13 15:49:29,964 - INFO - Finished for monkey ka and session 300720
+2025-03-13 15:53:57,553 - INFO - Finished for monkey ka and session 050820
+2025-03-13 15:54:11,852 - INFO - Finished for monkey ka and session 120820
+2025-03-13 15:54:42,087 - INFO - Finished for monkey ka and session 200820
+2025-03-13 15:54:46,466 - INFO - Finished for monkey ka and session 240820
+2025-03-13 15:54:49,629 - INFO - Finished for monkey ka and session 100820
+2025-03-13 15:55:25,471 - INFO - Finished for monkey ka and session 310820
+2025-03-13 15:55:28,107 - INFO - Finished for monkey ka and session 170920
+2025-03-13 15:55:44,495 - INFO - Finished for monkey ka and session 100920
+2025-03-13 15:56:48,864 - INFO - Finished for monkey ka and session 011020
+2025-03-13 15:59:45,654 - INFO - Finished for monkey ka and session 221020
+2025-03-13 16:00:07,149 - INFO - Finished for monkey ka and session 081020
+2025-03-13 16:00:49,244 - INFO - Finished for monkey ka and session 180221
+2025-03-13 16:03:57,734 - INFO - Finished for monkey ka and session 281020
+2025-03-13 16:05:11,027 - INFO - Finished for monkey ka and session 101220
+2025-03-13 16:05:36,746 - INFO - Finished for monkey ka and session 120821
+2025-03-13 16:05:51,492 - INFO - Finished for monkey ka and session 041220
+2025-03-13 16:07:04,981 - INFO - Finished for monkey ka and session 150221
+2025-03-13 16:07:13,858 - INFO - Finished for monkey ka and session 180121
+2025-03-13 16:07:15,902 - INFO - Finished for monkey ka and session 110321
+2025-03-13 16:07:16,164 - INFO - Finished for monkey ka and session 250121
+2025-03-13 16:07:41,189 - INFO - Finished for monkey ka and session 040321
+2025-03-13 16:10:46,891 - INFO - Finished for monkey ka and session 180321
+2025-03-13 16:11:06,366 - INFO - Finished for monkey ka and session 070322
+2025-03-13 16:11:18,950 - INFO - Finished for monkey ka and session 190821
+2025-03-13 16:14:44,228 - INFO - Finished for monkey ka and session 290921
+2025-03-13 16:16:37,289 - INFO - Finished for monkey ka and session 080622
+2025-03-13 16:17:43,363 - INFO - Finished for monkey ka and session 030322
+2025-03-13 16:18:14,197 - INFO - Finished for monkey ka and session 130422
+2025-03-13 16:18:45,123 - INFO - Finished for monkey ka and session 280322
+2025-03-13 16:19:00,694 - INFO - Finished for monkey ka and session 210322
+2025-03-13 16:19:16,805 - INFO - Finished for monkey ka and session 050422
+2025-03-13 16:19:32,060 - INFO - Finished for monkey ka and session 250422
+2025-03-13 16:19:33,593 - INFO - Finished for monkey ka and session 200422
+2025-03-13 16:21:17,210 - INFO - Finished for monkey ka and session 030522
+2025-03-13 16:21:54,489 - INFO - Finished for monkey ka and session 020622
+2025-03-13 16:25:42,057 - INFO - Finished for monkey ka and session 130622
+2025-03-13 16:26:53,873 - INFO - Finished for monkey ka and session 150622
+2025-03-13 16:27:53,668 - INFO - Finished for monkey ka and session 200622
+2025-03-13 16:29:20,069 - INFO - Finished for monkey ka and session 230622
+2025-03-13 16:29:40,140 - INFO - Finished for monkey ka and session 300622
+2025-03-13 16:29:51,263 - INFO - Finished for monkey ka and session 210722
+2025-03-13 16:30:43,593 - INFO - Finished for monkey ka and session 280622
+2025-03-13 16:30:56,391 - INFO - Finished for monkey ka and session 270722
+2025-03-13 16:31:54,513 - INFO - Finished for monkey ka and session 070722
+2025-03-13 16:34:46,495 - INFO - Finished for monkey ka and session 010822
+2025-03-13 16:34:47,915 - INFO - Finished for monkey po and session 070920
+2025-03-13 16:36:14,268 - INFO - Finished for monkey ka and session 080822
+2025-03-13 16:37:46,896 - INFO - Finished for monkey po and session 140920
+2025-03-13 16:38:54,462 - INFO - Finished for monkey ka and session 060922
+2025-03-13 16:39:36,646 - INFO - Finished for monkey ka and session 300822
+2025-03-13 16:39:44,781 - INFO - Finished for monkey po and session 040920
+2025-03-13 16:40:23,321 - INFO - Finished for monkey po and session 080920
+2025-03-13 16:40:33,816 - INFO - Finished for monkey ka and session 010922
+2025-03-13 16:40:56,763 - INFO - Finished for monkey po and session 110920
+2025-03-13 16:41:22,985 - INFO - Finished for monkey po and session 150920
+2025-03-13 16:41:33,212 - INFO - Finished for monkey po and session 090920
+2025-03-13 16:45:17,340 - INFO - Finished for monkey po and session 160920
+2025-03-13 16:45:38,701 - INFO - Finished for monkey po and session 211020
+2025-03-13 16:48:08,386 - INFO - Finished for monkey po and session 021020
+2025-03-13 16:48:31,082 - INFO - Finished for monkey po and session 180920
+2025-03-13 16:49:20,377 - INFO - Finished for monkey po and session 121020
+2025-03-13 16:49:20,848 - INFO - Finished for monkey po and session 210920
+2025-03-13 16:50:05,128 - INFO - Finished for monkey po and session 051020
+2025-03-13 16:50:47,899 - INFO - Finished for monkey po and session 141020
+2025-03-13 16:51:03,362 - INFO - Finished for monkey po and session 291020
+2025-03-13 16:51:46,946 - INFO - Finished for monkey po and session 011220
+2025-03-13 16:52:16,792 - INFO - Finished for monkey po and session 261020
+2025-03-13 16:54:10,454 - INFO - Finished for monkey po and session 070121
+2025-03-13 16:55:11,877 - INFO - Finished for monkey po and session 031220
+2025-03-13 16:55:53,759 - INFO - Finished for monkey po and session 071220
+2025-03-13 16:58:01,070 - INFO - Finished for monkey po and session 111220
+2025-03-13 17:00:29,230 - INFO - Finished for monkey po and session 120121
+2025-03-13 17:00:32,148 - INFO - Finished for monkey po and session 190121
+2025-03-13 17:00:33,340 - INFO - Finished for monkey po and session 140121
+2025-03-13 17:00:48,798 - ERROR - Error occurred for arguments ('po', '190721'): Reindexing only valid with uniquely valued Index objects
+2025-03-13 17:02:00,860 - INFO - Finished for monkey po and session 190321
+2025-03-13 17:02:02,304 - INFO - Finished for monkey po and session 080321
+2025-03-13 17:02:21,876 - INFO - Finished for monkey po and session 100321
+2025-03-13 17:02:58,396 - INFO - Finished for monkey po and session 270121
+2025-03-13 17:03:36,197 - INFO - Finished for monkey po and session 240321
+2025-03-13 17:05:08,362 - INFO - Finished for monkey po and session 090421
+2025-03-13 17:07:00,759 - INFO - Finished for monkey po and session 071021
+2025-03-13 17:08:07,239 - INFO - Finished for monkey po and session 280421
+2025-03-13 17:08:10,331 - INFO - Finished for monkey po and session 230421
+2025-03-13 17:10:29,053 - INFO - Finished for monkey po and session 300421
+2025-03-13 17:10:43,354 - INFO - Finished for monkey po and session 090721
+2025-03-13 17:11:12,620 - INFO - Finished for monkey po and session 280721
+2025-03-13 17:11:59,089 - ERROR - Error occurred for arguments ('po', '140622'): Group balancing not implemented yet for categorical data - do it manualy before passing the data to the decoder routine!
+2025-03-13 17:11:59,656 - INFO - Finished for monkey po and session 240921
+2025-03-13 17:13:13,350 - INFO - Finished for monkey po and session 180322
+2025-03-13 17:13:15,333 - INFO - Finished for monkey po and session 040322
+2025-03-13 17:13:54,164 - INFO - Finished for monkey po and session 090322
+2025-03-13 17:14:19,058 - INFO - Finished for monkey po and session 300322
+2025-03-13 17:17:02,395 - INFO - Finished for monkey po and session 080422
+2025-03-13 17:17:24,839 - INFO - Finished for monkey po and session 210422
+2025-03-13 17:17:50,673 - INFO - Finished for monkey po and session 140422
+2025-03-13 17:18:53,674 - INFO - Finished for monkey po and session 220422
+2025-03-13 17:19:22,138 - INFO - Finished for monkey po and session 050922
+2025-03-13 17:19:41,134 - INFO - Finished for monkey po and session 210622
+2025-03-13 17:22:03,730 - INFO - Finished for monkey po and session 080722
+2025-03-13 17:22:03,954 - INFO - Finished for monkey po and session 310822
+2025-03-13 17:22:57,548 - INFO - Finished for monkey po and session 280722
+2025-03-13 17:23:21,138 - INFO - Finished for monkey po and session 090822
+2025-03-13 17:23:59,027 - INFO - Finished for monkey po and session 200722
+2025-03-13 17:23:59,562 - INFO - Finished at 2025-03-13 17:23:59

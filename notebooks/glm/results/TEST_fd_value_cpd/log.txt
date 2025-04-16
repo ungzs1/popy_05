@@ -1,0 +1,9 @@
+2025-02-12 13:21:27,088 - INFO - PARAMS:
+2025-02-12 13:21:27,088 - INFO - model: glm_cpd
+2025-02-12 13:21:27,088 - INFO - cpd_predictors: ['feedback', 'R_1', 'R_2', 'R_3', 'R_4', 'R_5', 'R_6']
+2025-02-12 13:21:27,088 - INFO - cpd_targets: [['R_1', 'R_2', 'R_3', 'R_4', 'R_5', 'R_6'], 'feedback']
+2025-02-12 13:21:27,088 - INFO - neural_data_type: spike_counts
+2025-02-12 13:21:27,088 - INFO - step_time: 0.05
+2025-02-12 13:21:27,088 - INFO - floc: /Users/zsombi/ZSOMBI/SBRI/PoPy/notebooks/decoders/glm/results/TEST_fd_value_cpd
+2025-02-12 13:21:27,088 - INFO - msg: Fitting GLM with feedback, target and historical feedback, the CPD is for the feedback and for the full history
+2025-02-12 13:21:27,088 - INFO - Started at 2025-02-12 13:21:27

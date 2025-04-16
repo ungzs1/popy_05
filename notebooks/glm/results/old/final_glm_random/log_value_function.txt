@@ -1,0 +1,47 @@
+Error occurred for arguments ('ka', '230720'): The first guess on the deviance function returned a nan.  This could be a boundary  problem and should be reported.
+Error occurred for arguments ('ka', '100820'): The first guess on the deviance function returned a nan.  This could be a boundary  problem and should be reported.
+Error occurred for arguments ('ka', '281020'): The first guess on the deviance function returned a nan.  This could be a boundary  problem and should be reported.
+Error occurred for arguments ('ka', '050620'): The first guess on the deviance function returned a nan.  This could be a boundary  problem and should be reported.
+Error occurred for arguments ('ka', '081020'): The first guess on the deviance function returned a nan.  This could be a boundary  problem and should be reported.
+Error occurred for arguments ('ka', '200820'): The first guess on the deviance function returned a nan.  This could be a boundary  problem and should be reported.
+Error occurred for arguments ('ka', '180121'): The first guess on the deviance function returned a nan.  This could be a boundary  problem and should be reported.
+Error occurred for arguments ('ka', '101220'): The first guess on the deviance function returned a nan.  This could be a boundary  problem and should be reported.
+Error occurred for arguments ('ka', '150221'): The first guess on the deviance function returned a nan.  This could be a boundary  problem and should be reported.
+Error occurred for arguments ('ka', '130422'): too many indices for array: array is 0-dimensional, but 1 were indexed
+Error occurred for arguments ('ka', '280322'): The first guess on the deviance function returned a nan.  This could be a boundary  problem and should be reported.
+Error occurred for arguments ('ka', '020622'): The first guess on the deviance function returned a nan.  This could be a boundary  problem and should be reported.
+Error occurred for arguments ('ka', '010922'): The first guess on the deviance function returned a nan.  This could be a boundary  problem and should be reported.
+Error occurred for arguments ('po', '040920'): index 0 is out of bounds for axis 0 with size 0
+Error occurred for arguments ('po', '080920'): The first guess on the deviance function returned a nan.  This could be a boundary  problem and should be reported.
+Error occurred for arguments ('po', '021020'): The first guess on the deviance function returned a nan.  This could be a boundary  problem and should be reported.
+Error occurred for arguments ('po', '160920'): The first guess on the deviance function returned a nan.  This could be a boundary  problem and should be reported.
+Error occurred for arguments ('po', '291020'): index 0 is out of bounds for axis 0 with size 0
+Error occurred for arguments ('po', '011220'): index 0 is out of bounds for axis 0 with size 0
+Error occurred for arguments ('po', '031220'): The first guess on the deviance function returned a nan.  This could be a boundary  problem and should be reported.
+Error occurred for arguments ('po', '051020'): The first guess on the deviance function returned a nan.  This could be a boundary  problem and should be reported.
+Error occurred for arguments ('po', '111220'): The first guess on the deviance function returned a nan.  This could be a boundary  problem and should be reported.
+Error occurred for arguments ('po', '261020'): The first guess on the deviance function returned a nan.  This could be a boundary  problem and should be reported.
+Error occurred for arguments ('po', '210920'): The first guess on the deviance function returned a nan.  This could be a boundary  problem and should be reported.
+Error occurred for arguments ('po', '141020'): The first guess on the deviance function returned a nan.  This could be a boundary  problem and should be reported.
+Error occurred for arguments ('po', '070121'): The first guess on the deviance function returned a nan.  This could be a boundary  problem and should be reported.
+Error occurred for arguments ('po', '270121'): The first guess on the deviance function returned a nan.  This could be a boundary  problem and should be reported.
+Error occurred for arguments ('po', '090421'): The first guess on the deviance function returned a nan.  This could be a boundary  problem and should be reported.
+Error occurred for arguments ('po', '190321'): The first guess on the deviance function returned a nan.  This could be a boundary  problem and should be reported.
+Error occurred for arguments ('po', '190721'): index 0 is out of bounds for axis 0 with size 0
+Error occurred for arguments ('po', '240321'): The first guess on the deviance function returned a nan.  This could be a boundary  problem and should be reported.
+Error occurred for arguments ('po', '071220'): The first guess on the deviance function returned a nan.  This could be a boundary  problem and should be reported.
+Error occurred for arguments ('po', '080321'): The first guess on the deviance function returned a nan.  This could be a boundary  problem and should be reported.
+Error occurred for arguments ('po', '040322'): index 0 is out of bounds for axis 0 with size 0
+Error occurred for arguments ('po', '090322'): The first guess on the deviance function returned a nan.  This could be a boundary  problem and should be reported.
+Error occurred for arguments ('po', '071021'): The first guess on the deviance function returned a nan.  This could be a boundary  problem and should be reported.
+Error occurred for arguments ('po', '280421'): The first guess on the deviance function returned a nan.  This could be a boundary  problem and should be reported.
+Error occurred for arguments ('po', '240921'): The first guess on the deviance function returned a nan.  This could be a boundary  problem and should be reported.
+Error occurred for arguments ('po', '280722'): index 0 is out of bounds for axis 0 with size 0
+Error occurred for arguments ('po', '080422'): The first guess on the deviance function returned a nan.  This could be a boundary  problem and should be reported.
+Error occurred for arguments ('po', '220422'): The first guess on the deviance function returned a nan.  This could be a boundary  problem and should be reported.
+Error occurred for arguments ('po', '210622'): The first guess on the deviance function returned a nan.  This could be a boundary  problem and should be reported.
+Error occurred for arguments ('po', '180322'): The first guess on the deviance function returned a nan.  This could be a boundary  problem and should be reported.
+Error occurred for arguments ('po', '310822'): The first guess on the deviance function returned a nan.  This could be a boundary  problem and should be reported.
+Error occurred for arguments ('po', '140422'): The first guess on the deviance function returned a nan.  This could be a boundary  problem and should be reported.
+Error occurred for arguments ('po', '080722'): The first guess on the deviance function returned a nan.  This could be a boundary  problem and should be reported.
+Error occurred for arguments ('po', '090822'): The first guess on the deviance function returned a nan.  This could be a boundary  problem and should be reported.

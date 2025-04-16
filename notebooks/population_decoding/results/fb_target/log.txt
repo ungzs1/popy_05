@@ -1,0 +1,10 @@
+2025-03-12 10:55:43,511 - INFO - PARAMS:
+2025-03-12 10:55:43,511 - INFO - conditions: ['feedback', 'target']
+2025-03-12 10:55:43,512 - INFO - group_target: None
+2025-03-12 10:55:43,512 - INFO - K_fold: 5
+2025-03-12 10:55:43,512 - INFO - step_len: 0.05
+2025-03-12 10:55:43,512 - INFO - n_perm: 500
+2025-03-12 10:55:43,512 - INFO - n_extra_trials: (0, 1)
+2025-03-12 10:55:43,512 - INFO - floc: /Users/zsombi/Library/CloudStorage/GoogleDrive-uuungvarszi@gmail.com/Other computers/My Mac/ZSOMBI/SBRI/PoPy/notebooks/decoders/population_decoding/results/fb_target
+2025-03-12 10:55:43,512 - INFO - msg: decoding the new fixed value signal, and comparing it to the old value (should be more or less the same de tout facon).
+2025-03-12 10:55:43,512 - INFO - Started at 2025-03-12 10:55:43

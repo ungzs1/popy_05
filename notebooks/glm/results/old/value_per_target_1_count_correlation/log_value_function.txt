@@ -1,0 +1,59 @@
+Error occurred for arguments ('ka', '130422'): too many indices for array: array is 0-dimensional, but 1 were indexed
+Error occurred for arguments ('po', '040920'): index 0 is out of bounds for axis 0 with size 0
+Error occurred for arguments ('ka', '010822'): [Errno 13] Permission denied: '/Users/zsombi/Library/CloudStorage/OneDrive-Personal/PoPy/notebooks/decoders/glm/results/value_per_target_1_count_correlation/all_sessions_value_function.nc'
+Error occurred for arguments ('ka', '080822'): did not find a match in any of xarray's currently installed IO backends ['netcdf4', 'scipy']. Consider explicitly selecting one of the installed engines via the ``engine`` parameter, or installing additional IO dependencies, see:
+https://docs.xarray.dev/en/stable/getting-started-guide/installing.html
+https://docs.xarray.dev/en/stable/user-guide/io.html
+Error occurred for arguments ('po', '080920'): did not find a match in any of xarray's currently installed IO backends ['netcdf4', 'scipy']. Consider explicitly selecting one of the installed engines via the ``engine`` parameter, or installing additional IO dependencies, see:
+https://docs.xarray.dev/en/stable/getting-started-guide/installing.html
+https://docs.xarray.dev/en/stable/user-guide/io.html
+Error occurred for arguments ('po', '110920'): did not find a match in any of xarray's currently installed IO backends ['netcdf4', 'scipy']. Consider explicitly selecting one of the installed engines via the ``engine`` parameter, or installing additional IO dependencies, see:
+https://docs.xarray.dev/en/stable/getting-started-guide/installing.html
+https://docs.xarray.dev/en/stable/user-guide/io.html
+Error occurred for arguments ('po', '090920'): did not find a match in any of xarray's currently installed IO backends ['netcdf4', 'scipy']. Consider explicitly selecting one of the installed engines via the ``engine`` parameter, or installing additional IO dependencies, see:
+https://docs.xarray.dev/en/stable/getting-started-guide/installing.html
+https://docs.xarray.dev/en/stable/user-guide/io.html
+Error occurred for arguments ('ka', '300822'): did not find a match in any of xarray's currently installed IO backends ['netcdf4', 'scipy']. Consider explicitly selecting one of the installed engines via the ``engine`` parameter, or installing additional IO dependencies, see:
+https://docs.xarray.dev/en/stable/getting-started-guide/installing.html
+https://docs.xarray.dev/en/stable/user-guide/io.html
+Error occurred for arguments ('ka', '060922'): did not find a match in any of xarray's currently installed IO backends ['netcdf4', 'scipy']. Consider explicitly selecting one of the installed engines via the ``engine`` parameter, or installing additional IO dependencies, see:
+https://docs.xarray.dev/en/stable/getting-started-guide/installing.html
+https://docs.xarray.dev/en/stable/user-guide/io.html
+Error occurred for arguments ('po', '150920'): did not find a match in any of xarray's currently installed IO backends ['netcdf4', 'scipy']. Consider explicitly selecting one of the installed engines via the ``engine`` parameter, or installing additional IO dependencies, see:
+https://docs.xarray.dev/en/stable/getting-started-guide/installing.html
+https://docs.xarray.dev/en/stable/user-guide/io.html
+Error occurred for arguments ('po', '140920'): did not find a match in any of xarray's currently installed IO backends ['netcdf4', 'scipy']. Consider explicitly selecting one of the installed engines via the ``engine`` parameter, or installing additional IO dependencies, see:
+https://docs.xarray.dev/en/stable/getting-started-guide/installing.html
+https://docs.xarray.dev/en/stable/user-guide/io.html
+Error occurred for arguments ('po', '211020'): did not find a match in any of xarray's currently installed IO backends ['netcdf4', 'scipy']. Consider explicitly selecting one of the installed engines via the ``engine`` parameter, or installing additional IO dependencies, see:
+https://docs.xarray.dev/en/stable/getting-started-guide/installing.html
+https://docs.xarray.dev/en/stable/user-guide/io.html
+Error occurred for arguments ('po', '291020'): index 0 is out of bounds for axis 0 with size 0
+Error occurred for arguments ('po', '011220'): index 0 is out of bounds for axis 0 with size 0
+Error occurred for arguments ('ka', '010922'): did not find a match in any of xarray's currently installed IO backends ['netcdf4', 'scipy']. Consider explicitly selecting one of the installed engines via the ``engine`` parameter, or installing additional IO dependencies, see:
+https://docs.xarray.dev/en/stable/getting-started-guide/installing.html
+https://docs.xarray.dev/en/stable/user-guide/io.html
+Error occurred for arguments ('po', '021020'): did not find a match in any of xarray's currently installed IO backends ['netcdf4', 'scipy']. Consider explicitly selecting one of the installed engines via the ``engine`` parameter, or installing additional IO dependencies, see:
+https://docs.xarray.dev/en/stable/getting-started-guide/installing.html
+https://docs.xarray.dev/en/stable/user-guide/io.html
+Error occurred for arguments ('po', '121020'): did not find a match in any of xarray's currently installed IO backends ['netcdf4', 'scipy']. Consider explicitly selecting one of the installed engines via the ``engine`` parameter, or installing additional IO dependencies, see:
+https://docs.xarray.dev/en/stable/getting-started-guide/installing.html
+https://docs.xarray.dev/en/stable/user-guide/io.html
+Error occurred for arguments ('po', '160920'): did not find a match in any of xarray's currently installed IO backends ['netcdf4', 'scipy']. Consider explicitly selecting one of the installed engines via the ``engine`` parameter, or installing additional IO dependencies, see:
+https://docs.xarray.dev/en/stable/getting-started-guide/installing.html
+https://docs.xarray.dev/en/stable/user-guide/io.html
+Error occurred for arguments ('po', '111220'): did not find a match in any of xarray's currently installed IO backends ['netcdf4', 'scipy']. Consider explicitly selecting one of the installed engines via the ``engine`` parameter, or installing additional IO dependencies, see:
+https://docs.xarray.dev/en/stable/getting-started-guide/installing.html
+https://docs.xarray.dev/en/stable/user-guide/io.html
+Error occurred for arguments ('po', '141020'): did not find a match in any of xarray's currently installed IO backends ['netcdf4', 'scipy']. Consider explicitly selecting one of the installed engines via the ``engine`` parameter, or installing additional IO dependencies, see:
+https://docs.xarray.dev/en/stable/getting-started-guide/installing.html
+https://docs.xarray.dev/en/stable/user-guide/io.html
+Error occurred for arguments ('po', '051020'): did not find a match in any of xarray's currently installed IO backends ['netcdf4', 'scipy']. Consider explicitly selecting one of the installed engines via the ``engine`` parameter, or installing additional IO dependencies, see:
+https://docs.xarray.dev/en/stable/getting-started-guide/installing.html
+https://docs.xarray.dev/en/stable/user-guide/io.html
+Error occurred for arguments ('po', '210920'): did not find a match in any of xarray's currently installed IO backends ['netcdf4', 'scipy']. Consider explicitly selecting one of the installed engines via the ``engine`` parameter, or installing additional IO dependencies, see:
+https://docs.xarray.dev/en/stable/getting-started-guide/installing.html
+https://docs.xarray.dev/en/stable/user-guide/io.html
+Error occurred for arguments ('po', '031220'): did not find a match in any of xarray's currently installed IO backends ['netcdf4', 'scipy']. Consider explicitly selecting one of the installed engines via the ``engine`` parameter, or installing additional IO dependencies, see:
+https://docs.xarray.dev/en/stable/getting-started-guide/installing.html
+https://docs.xarray.dev/en/stable/user-guide/io.html

@@ -1,0 +1,7 @@
+Error occurred for arguments ('po', '040920'): index 0 is out of bounds for axis 0 with size 0
+Error occurred for arguments ('po', '291020'): index 0 is out of bounds for axis 0 with size 0
+Error occurred for arguments ('po', '011220'): index 0 is out of bounds for axis 0 with size 0
+Error occurred for arguments ('po', '190721'): index 0 is out of bounds for axis 0 with size 0
+Error occurred for arguments ('po', '040322'): index 0 is out of bounds for axis 0 with size 0
+Error occurred for arguments ('po', '280722'): index 0 is out of bounds for axis 0 with size 0
+Error occurred for arguments ('po', '210622'): need at least one array to stack

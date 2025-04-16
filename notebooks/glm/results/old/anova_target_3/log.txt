@@ -1,0 +1,18 @@
+Error occurred for arguments ('ka', '170920'): conflicting sizes for dimension 'time': length 1 on <this-array> and length 219845 on {'time': 'time', 'unit': 'unit'}
+Error occurred for arguments ('ka', '130422'): too many indices for array: array is 0-dimensional, but 1 were indexed
+Error occurred for arguments ('po', '040920'): index 0 is out of bounds for axis 0 with size 0
+Error occurred for arguments ('ka', '010922'): Not enough trials to run the analysis: there are 40 trials, limit is set to 50
+Error occurred for arguments ('po', '080920'): Not enough trials to run the analysis: there are 15 trials, limit is set to 50
+Error occurred for arguments ('po', '051020'): Not enough trials to run the analysis: there are 13 trials, limit is set to 50
+Error occurred for arguments ('po', '210920'): Not enough trials to run the analysis: there are 24 trials, limit is set to 50
+Error occurred for arguments ('po', '121020'): Not enough trials to run the analysis: there are 26 trials, limit is set to 50
+Error occurred for arguments ('po', '291020'): index 0 is out of bounds for axis 0 with size 0
+Error occurred for arguments ('po', '011220'): index 0 is out of bounds for axis 0 with size 0
+Error occurred for arguments ('po', '211020'): Not enough trials to run the analysis: there are 43 trials, limit is set to 50
+Error occurred for arguments ('po', '071220'): Not enough trials to run the analysis: there are 42 trials, limit is set to 50
+Error occurred for arguments ('po', '080321'): Not enough trials to run the analysis: there are 41 trials, limit is set to 50
+Error occurred for arguments ('po', '190321'): Not enough trials to run the analysis: there are 34 trials, limit is set to 50
+Error occurred for arguments ('po', '190721'): index 0 is out of bounds for axis 0 with size 0
+Error occurred for arguments ('po', '040322'): index 0 is out of bounds for axis 0 with size 0
+Error occurred for arguments ('po', '280722'): index 0 is out of bounds for axis 0 with size 0
+Error occurred for arguments ('po', '220422'): Not enough trials to run the analysis: there are 33 trials, limit is set to 50

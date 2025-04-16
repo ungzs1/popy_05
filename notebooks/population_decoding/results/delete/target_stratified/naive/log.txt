@@ -1,0 +1,150 @@
+2025-01-21 11:30:16,220 - INFO - decoding the selected Q-values with a 3 fold cross-validation (naive to the target), 1000 permutations. The dataset is balanced for the "target"
+2025-01-21 11:30:16,220 - INFO - Started at 2025-01-21 11:30:16
+2025-01-21 11:33:58,052 - INFO - Finished for monkey ka and session 230520
+2025-01-21 11:34:12,839 - INFO - Finished for monkey ka and session 090720
+2025-01-21 11:36:48,820 - INFO - Finished for monkey ka and session 230720
+2025-01-21 11:37:15,260 - INFO - Finished for monkey ka and session 080620
+2025-01-21 11:37:19,654 - INFO - Finished for monkey ka and session 160620
+2025-01-21 11:37:26,846 - INFO - Finished for monkey ka and session 170720
+2025-01-21 11:37:33,088 - INFO - Finished for monkey ka and session 100620
+2025-01-21 11:37:33,713 - INFO - Finished for monkey ka and session 150720
+2025-01-21 11:37:33,915 - INFO - Finished for monkey ka and session 050620
+2025-01-21 11:37:39,091 - INFO - Finished for monkey ka and session 010720
+2025-01-21 11:38:02,644 - INFO - Finished for monkey ka and session 190620
+2025-01-21 11:40:53,134 - INFO - Finished for monkey ka and session 300720
+2025-01-21 11:41:04,336 - INFO - Finished for monkey ka and session 270720
+2025-01-21 11:44:03,014 - INFO - Finished for monkey ka and session 050820
+2025-01-21 11:44:19,395 - INFO - Finished for monkey ka and session 120820
+2025-01-21 11:44:31,443 - INFO - Finished for monkey ka and session 170920
+2025-01-21 11:44:31,914 - INFO - Finished for monkey ka and session 100820
+2025-01-21 11:44:32,990 - INFO - Finished for monkey ka and session 200820
+2025-01-21 11:44:33,350 - INFO - Finished for monkey ka and session 240820
+2025-01-21 11:44:46,841 - INFO - Finished for monkey ka and session 310820
+2025-01-21 11:44:57,865 - INFO - Finished for monkey ka and session 100920
+2025-01-21 11:45:55,142 - INFO - Finished for monkey ka and session 011020
+2025-01-21 11:48:16,884 - INFO - Finished for monkey ka and session 221020
+2025-01-21 11:48:27,866 - INFO - Finished for monkey ka and session 081020
+2025-01-21 11:48:39,216 - INFO - Finished for monkey ka and session 180221
+2025-01-21 11:51:13,399 - INFO - Finished for monkey ka and session 281020
+2025-01-21 11:52:01,917 - INFO - Finished for monkey ka and session 101220
+2025-01-21 11:52:26,144 - INFO - Finished for monkey ka and session 120821
+2025-01-21 11:52:35,146 - INFO - Finished for monkey ka and session 041220
+2025-01-21 11:52:48,548 - INFO - Finished for monkey ka and session 150221
+2025-01-21 11:53:09,822 - INFO - Finished for monkey ka and session 180121
+2025-01-21 11:53:16,229 - INFO - Finished for monkey ka and session 040321
+2025-01-21 11:53:23,459 - INFO - Finished for monkey ka and session 250121
+2025-01-21 11:53:26,444 - INFO - Finished for monkey ka and session 110321
+2025-01-21 11:56:11,842 - INFO - Finished for monkey ka and session 180321
+2025-01-21 11:56:14,492 - INFO - Finished for monkey ka and session 190821
+2025-01-21 11:56:20,712 - INFO - Finished for monkey ka and session 070322
+2025-01-21 11:59:03,040 - INFO - Finished for monkey ka and session 290921
+2025-01-21 12:00:04,524 - INFO - Finished for monkey ka and session 080622
+2025-01-21 12:00:52,415 - INFO - Finished for monkey ka and session 130422
+2025-01-21 12:00:54,357 - INFO - Finished for monkey ka and session 280322
+2025-01-21 12:00:59,645 - INFO - Finished for monkey ka and session 030322
+2025-01-21 12:01:25,053 - INFO - Finished for monkey ka and session 200422
+2025-01-21 12:01:30,753 - INFO - Finished for monkey ka and session 050422
+2025-01-21 12:01:44,710 - INFO - Finished for monkey ka and session 210322
+2025-01-21 12:01:49,859 - INFO - Finished for monkey ka and session 250422
+2025-01-21 12:03:45,276 - INFO - Finished for monkey ka and session 030522
+2025-01-21 12:03:47,886 - INFO - Finished for monkey ka and session 020622
+2025-01-21 12:06:57,741 - INFO - Finished for monkey ka and session 130622
+2025-01-21 12:07:32,188 - INFO - Finished for monkey ka and session 150622
+2025-01-21 12:08:18,522 - INFO - Finished for monkey ka and session 200622
+2025-01-21 12:08:48,852 - INFO - Finished for monkey ka and session 230622
+2025-01-21 12:09:03,013 - INFO - Finished for monkey ka and session 300622
+2025-01-21 12:09:05,196 - INFO - Finished for monkey ka and session 210722
+2025-01-21 12:09:18,123 - INFO - Finished for monkey ka and session 280622
+2025-01-21 12:09:33,285 - INFO - Finished for monkey ka and session 270722
+2025-01-21 12:10:03,337 - INFO - Finished for monkey ka and session 070722
+2025-01-21 12:12:31,276 - INFO - Finished for monkey po and session 070920
+2025-01-21 12:13:02,277 - INFO - Finished for monkey ka and session 010822
+2025-01-21 12:13:39,427 - INFO - Finished for monkey ka and session 080822
+2025-01-21 12:13:47,245 - INFO - Finished for monkey po and session 140920
+2025-01-21 12:15:45,621 - INFO - Finished for monkey po and session 040920
+2025-01-21 12:15:54,592 - INFO - Finished for monkey ka and session 060922
+2025-01-21 12:15:56,354 - INFO - Finished for monkey ka and session 010922
+2025-01-21 12:16:03,517 - INFO - Finished for monkey po and session 080920
+2025-01-21 12:16:18,675 - INFO - Finished for monkey ka and session 300822
+2025-01-21 12:16:24,496 - INFO - Finished for monkey po and session 090920
+2025-01-21 12:16:28,735 - INFO - Finished for monkey po and session 110920
+2025-01-21 12:16:43,059 - INFO - Finished for monkey po and session 150920
+2025-01-21 12:19:30,517 - INFO - Finished for monkey po and session 211020
+2025-01-21 12:20:03,034 - INFO - Finished for monkey po and session 160920
+2025-01-21 12:21:03,807 - INFO - Finished for monkey po and session 210920
+2025-01-21 12:21:18,471 - INFO - Finished for monkey po and session 180920
+2025-01-21 12:22:06,435 - INFO - Finished for monkey po and session 021020
+2025-01-21 12:22:25,121 - INFO - Finished for monkey po and session 121020
+2025-01-21 12:22:39,716 - INFO - Finished for monkey po and session 051020
+2025-01-21 12:23:00,661 - INFO - Finished for monkey po and session 291020
+2025-01-21 12:23:03,408 - INFO - Finished for monkey po and session 141020
+2025-01-21 12:23:29,476 - INFO - Finished for monkey po and session 261020
+2025-01-21 12:23:47,005 - INFO - Finished for monkey po and session 011220
+2025-01-21 12:25:09,292 - INFO - Finished for monkey po and session 070121
+2025-01-21 12:26:19,701 - INFO - Finished for monkey po and session 031220
+2025-01-21 12:27:02,160 - INFO - Finished for monkey po and session 071220
+2025-01-21 12:27:29,415 - INFO - Finished for monkey po and session 111220
+2025-01-21 12:29:32,110 - INFO - Finished for monkey po and session 120121
+2025-01-21 12:29:40,761 - INFO - Finished for monkey po and session 190121
+2025-01-21 12:29:51,851 - INFO - Finished for monkey po and session 140121
+2025-01-21 12:30:09,937 - INFO - Finished for monkey po and session 080321
+2025-01-21 12:30:28,471 - INFO - Finished for monkey po and session 190321
+2025-01-21 12:30:38,202 - INFO - Finished for monkey po and session 100321
+2025-01-21 12:30:39,702 - INFO - Finished for monkey po and session 270121
+2025-01-21 12:31:45,570 - INFO - Finished for monkey po and session 240321
+2025-01-21 12:32:54,923 - INFO - Finished for monkey po and session 090421
+2025-01-21 12:34:07,236 - INFO - Finished for monkey po and session 280421
+2025-01-21 12:34:07,748 - INFO - Finished for monkey po and session 071021
+2025-01-21 12:34:57,451 - INFO - Finished for monkey po and session 230421
+2025-01-21 12:36:26,271 - INFO - Finished for monkey po and session 190721
+2025-01-21 12:36:31,946 - INFO - Finished for monkey po and session 300421
+2025-01-21 12:36:50,035 - INFO - Finished for monkey po and session 090721
+2025-01-21 12:37:05,662 - ERROR - Error occurred for arguments ('po', '140622'): n_splits=3 cannot be greater than the number of members in each class.
+2025-01-21 12:37:28,990 - INFO - Finished for monkey po and session 280721
+2025-01-21 12:37:34,310 - INFO - Finished for monkey po and session 240921
+2025-01-21 12:37:53,415 - INFO - Finished for monkey po and session 040322
+2025-01-21 12:39:25,422 - INFO - Finished for monkey po and session 090322
+2025-01-21 12:39:35,724 - INFO - Finished for monkey po and session 180322
+2025-01-21 12:40:41,446 - INFO - Finished for monkey po and session 300322
+2025-01-21 12:41:07,627 - INFO - Finished for monkey po and session 080422
+2025-01-21 12:42:00,560 - INFO - Finished for monkey po and session 140422
+2025-01-21 12:42:51,843 - INFO - Finished for monkey po and session 220422
+2025-01-21 12:42:56,496 - INFO - Finished for monkey po and session 210422
+2025-01-21 12:43:50,748 - INFO - Finished for monkey po and session 050922
+2025-01-21 12:44:19,856 - INFO - Finished for monkey po and session 280722
+2025-01-21 12:44:25,065 - INFO - Finished for monkey po and session 080722
+2025-01-21 12:44:56,969 - INFO - Finished for monkey po and session 210622
+2025-01-21 12:45:10,351 - INFO - Finished for monkey po and session 310822
+2025-01-21 12:45:10,733 - INFO - Finished for monkey po and session 200722
+2025-01-21 12:46:01,887 - INFO - Finished for monkey po and session 090822
+2025-01-21 12:46:02,313 - INFO - Finished at 2025-01-21 12:46:02
+f range
+2025-01-21 12:38:12,541 - ERROR - Error occurred for arguments ('po', '140121'): list index out of range
+2025-01-21 12:38:54,844 - ERROR - Error occurred for arguments ('po', '190121'): list index out of range
+2025-01-21 12:39:28,059 - ERROR - Error occurred for arguments ('po', '270121'): list index out of range
+2025-01-21 12:39:49,359 - ERROR - Error occurred for arguments ('po', '080321'): list index out of range
+2025-01-21 12:40:45,494 - ERROR - Error occurred for arguments ('po', '100321'): list index out of range
+2025-01-21 12:41:09,427 - ERROR - Error occurred for arguments ('po', '190321'): list index out of range
+2025-01-21 12:41:37,871 - ERROR - Error occurred for arguments ('po', '240321'): list index out of range
+2025-01-21 12:41:56,317 - ERROR - Error occurred for arguments ('po', '090421'): list index out of range
+2025-01-21 12:42:56,181 - ERROR - Error occurred for arguments ('po', '230421'): list index out of range
+2025-01-21 12:43:13,904 - ERROR - Error occurred for arguments ('po', '280421'): list index out of range
+2025-01-21 12:43:49,568 - ERROR - Error occurred for arguments ('po', '300421'): list index out of range
+2025-01-21 12:44:27,399 - ERROR - Error occurred for arguments ('po', '090721'): list index out of range
+2025-01-21 12:44:45,192 - ERROR - Error occurred for arguments ('po', '190721'): list index out of range
+2025-01-21 12:45:21,654 - ERROR - Error occurred for arguments ('po', '280721'): list index out of range
+2025-01-21 12:46:01,567 - ERROR - Error occurred for arguments ('po', '240921'): list index out of range
+2025-01-21 12:46:31,026 - ERROR - Error occurred for arguments ('po', '071021'): list index out of range
+2025-01-21 12:47:04,819 - ERROR - Error occurred for arguments ('po', '040322'): list index out of range
+2025-01-21 12:47:25,780 - ERROR - Error occurred for arguments ('po', '090322'): list index out of range
+2025-01-21 12:47:45,943 - ERROR - Error occurred for arguments ('po', '180322'): list index out of range
+2025-01-21 12:48:27,104 - ERROR - Error occurred for arguments ('po', '300322'): list index out of range
+2025-01-21 12:48:45,750 - ERROR - Error occurred for arguments ('po', '080422'): list index out of range
+2025-01-21 12:49:00,772 - ERROR - Error occurred for arguments ('po', '140422'): list index out of range
+2025-01-21 12:49:35,249 - ERROR - Error occurred for arguments ('po', '210422'): list index out of range
+2025-01-21 12:49:42,268 - ERROR - Error occurred for arguments ('po', '220422'): list index out of range
+2025-01-21 12:50:13,262 - ERROR - Error occurred for arguments ('po', '140622'): list index out of range
+2025-01-21 12:50:48,229 - ERROR - Error occurred for arguments ('po', '210622'): list index out of range
+2025-01-21 12:51:14,617 - ERROR - Error occurred for arguments ('po', '080722'): list index out of range
+2025-01-21 12:51:50,882 - ERROR - Error occurred for arguments ('po', '200722'): list index out of range
+2025-01-21 12:52:35,386 - ERROR - Error occurred for arguments ('po', '280722'): list index out of range
