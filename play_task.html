@@ -1,0 +1,802 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monkey Bandit Task</title>
+    <!-- Add Plotly.js for visualization -->
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            text-align: center;
+        }
+        .feedback-label {
+            height: 60px;
+            font-size: 18px;
+            font-weight: bold;
+            margin: 20px 0;
+        }
+        .button-frame {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin: 30px 0;
+        }
+        .arm-button {
+            width: 100px;
+            height: 60px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        .key-instructions {
+            font-size: 14px;
+            margin: 20px 0;
+        }
+        .control-frame {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin: 20px 0;
+        }
+        .control-button {
+            padding: 10px 20px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+        .highlighted {
+            background-color: grey;
+        }
+        #plotContainer {
+            width: 100%;
+            height: 500px;
+            display: none;
+            margin-top: 30px;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.4);
+        }
+        .modal-content {
+            background-color: #fefefe;
+            margin: 5% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 90%;
+            max-width: 900px;
+        }
+        .close-button {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .close-button:hover,
+        .close-button:focus {
+            color: black;
+            text-decoration: none;
+            cursor: pointer;
+        }
+        #fileSelectContainer {
+            margin: 20px 0;
+            display: none;
+        }
+        .legend-container {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin: 10px 0;
+            flex-wrap: wrap;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin: 5px;
+        }
+        .legend-marker {
+            width: 15px;
+            height: 15px;
+            margin-right: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Monkey Bandit Task</h1>
+    
+    <div class="instructions">
+        <p>Choose one button per trial to earn rewards</p>
+    </div>
+    
+    <div class="feedback-label" id="feedback">
+        <!-- Feedback will be displayed here -->
+    </div>
+    
+    <div class="button-frame">
+        <button class="arm-button" id="button1" disabled>Button 1</button>
+        <button class="arm-button" id="button2" disabled>Button 2</button>
+        <button class="arm-button" id="button3" disabled>Button 3</button>
+    </div>
+    
+    <div class="key-instructions">
+        You can also use arrow keys: ← (Left), ↑ (Up), → (Right)
+    </div>
+    
+    <div class="control-frame">
+        <button class="control-button" id="startButton">Start Task</button>
+        <button class="control-button" id="saveButton">Quit & Save Data</button>
+        <button class="control-button" id="plotButton">Plot Behavior</button>
+    </div>
+    
+    <div id="fileSelectContainer">
+        <p>Select a saved behavior data file (CSV):</p>
+        <input type="file" id="fileInput" accept=".csv" />
+    </div>
+    
+    <!-- Modal for plot -->
+    <div id="plotModal" class="modal">
+        <div class="modal-content">
+            <span class="close-button" id="closeModal">&times;</span>
+            <h2>Behavioral Performance</h2>
+            <div id="plotContainer"></div>
+            <div class="legend-container">
+                <div class="legend-item">
+                    <div class="legend-marker" style="background-color: #90c6f2; border-radius: 50%"></div>
+                    <span>Rewarded - HIGH target 1</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-marker" style="background-color: #ffb273; border-radius: 50%"></div>
+                    <span>Rewarded - HIGH target 2</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-marker" style="background-color: #dea8dd; border-radius: 50%"></div>
+                    <span>Rewarded - HIGH target 3</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-marker" style="border: 1px solid #90c6f2; border-radius: 50%"></div>
+                    <span>Rewarded - LOW target</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-marker" style="font-size: 18px; line-height: 12px; color: #90c6f2">×</div>
+                    <span>Unrewarded target</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // MonkeyBanditTask implementation
+        class MonkeyBanditTask {
+            constructor(nArms = 3) {
+                this.nArms = nArms;
+                this._bestArm = 0;
+                this._nextBestArm = 0;
+                this._blockLength = 40;
+                this._trialInBlockCounter = 0;
+                this._blockCounter = 0;
+                this.rewardsInBlock = Array(nArms).fill().map(() => Array(40).fill(0));
+                
+                this.reset();
+            }
+            
+            reset() {
+                this._atNewBlock();
+                this._blockCounter = 0;
+                return { observation: 0, info: this._getInfo() };
+            }
+            
+            _getInfo() {
+                return {
+                    blockId: this._blockCounter,
+                    trialInBlockId: this._trialInBlockCounter,
+                    bestArm: this._bestArm,
+                    blockLength: this._blockLength,
+                    rewardRates: this.rewardsInBlock.map(arr => arr[this._trialInBlockCounter])
+                };
+            }
+            
+            _getReward(action) {
+                return this.rewardsInBlock[action][this._trialInBlockCounter];
+            }
+            
+            _atNewBlock() {
+                // Update best arm logic
+                this._bestArm = this._nextBestArm;
+                let newBestArm;
+                do {
+                    newBestArm = Math.floor(Math.random() * this.nArms);
+                } while (newBestArm === this._bestArm);
+                this._nextBestArm = newBestArm;
+                
+                // Reset counters and set block length
+                this._blockLength = 40 + Math.floor(Math.random() * 11) - 5;
+                this._trialInBlockCounter = 0;
+                this._blockCounter += 1;
+                
+                // Create reward structure
+                for (let arm = 0; arm < this.nArms; arm++) {
+                    this.rewardsInBlock[arm] = Array(this._blockLength).fill(0);
+                }
+                
+                // Good arm rewards (70% reward rate)
+                const goodArmBaseTrials = this._blockLength - 5;
+                const goodArmRewardedTrials = Math.round(goodArmBaseTrials * 0.7);
+                const goodArmIndices = this._getRandomIndices(goodArmBaseTrials, goodArmRewardedTrials);
+                
+                for (let i = 0; i < goodArmIndices.length; i++) {
+                    this.rewardsInBlock[this._bestArm][goodArmIndices[i]] = 1;
+                }
+                
+                // Bad arm rewards (25% reward rate)
+                const badArmRewardedTrials = Math.round(goodArmBaseTrials * 0.25);
+                
+                // Set rewards for all arms
+                for (let arm = 0; arm < this.nArms; arm++) {
+                    if (arm === this._bestArm) {
+                        // Add transition rewards for best arm
+                        const rewardRates = [0.625, 0.55, 0.475, 0.4, 0.325];
+                        for (let i = 0; i < 5; i++) {
+                            this.rewardsInBlock[arm][goodArmBaseTrials + i] = 
+                                Math.random() < rewardRates[i] ? 1 : 0;
+                        }
+                    } else if (arm === this._nextBestArm) {
+                        // Regular bad arm base rewards
+                        const badArmIndices = this._getRandomIndices(goodArmBaseTrials, badArmRewardedTrials);
+                        for (let i = 0; i < badArmIndices.length; i++) {
+                            this.rewardsInBlock[arm][badArmIndices[i]] = 1;
+                        }
+                        
+                        // Add transition rewards for next best arm
+                        const rewardRates = [0.625, 0.55, 0.475, 0.4, 0.325];
+                        for (let i = 0; i < 5; i++) {
+                            this.rewardsInBlock[arm][goodArmBaseTrials + i] = 
+                                Math.random() < (1 - rewardRates[i]) ? 1 : 0;
+                        }
+                    } else {
+                        // Regular bad arm
+                        const badArmIndices = this._getRandomIndices(goodArmBaseTrials, badArmRewardedTrials);
+                        for (let i = 0; i < badArmIndices.length; i++) {
+                            this.rewardsInBlock[arm][badArmIndices[i]] = 1;
+                        }
+                        
+                        // Add constant 25% reward rate for last 5 trials
+                        for (let i = 0; i < 5; i++) {
+                            this.rewardsInBlock[arm][goodArmBaseTrials + i] = 
+                                Math.random() < 0.25 ? 1 : 0;
+                        }
+                    }
+                }
+            }
+            
+            _getRandomIndices(max, count) {
+                const indices = [];
+                while (indices.length < count) {
+                    const idx = Math.floor(Math.random() * max);
+                    if (!indices.includes(idx)) {
+                        indices.push(idx);
+                    }
+                }
+                return indices;
+            }
+            
+            step(action) {
+                // Check if we need a new block
+                if (this._trialInBlockCounter >= this._blockLength) {
+                    this._atNewBlock();
+                }
+                
+                const reward = this._getReward(action);
+                const info = this._getInfo();
+                
+                // Update trial counter
+                this._trialInBlockCounter += 1;
+                
+                return {
+                    observation: 0,
+                    reward,
+                    terminated: false,
+                    truncated: false,
+                    info
+                };
+            }
+        }
+        
+        // GraphicalMonkeyBanditTask implementation as a JavaScript class
+        class GraphicalMonkeyBanditTask {
+            constructor() {
+                // Create environment
+                this.env = new MonkeyBanditTask(3);
+                
+                // Data storage
+                this.data = [];
+                this.trialCount = 0;
+                
+                // Control flow variables
+                this.waitingForAction = false;
+                this.userAction = null;
+                
+                // UI elements
+                this.buttons = [
+                    document.getElementById('button1'),
+                    document.getElementById('button2'),
+                    document.getElementById('button3')
+                ];
+                
+                this.feedbackLabel = document.getElementById('feedback');
+                this.startButton = document.getElementById('startButton');
+                this.saveButton = document.getElementById('saveButton');
+                this.plotButton = document.getElementById('plotButton');
+                this.fileInput = document.getElementById('fileInput');
+                this.fileSelectContainer = document.getElementById('fileSelectContainer');
+                this.plotModal = document.getElementById('plotModal');
+                this.closeModal = document.getElementById('closeModal');
+                this.plotContainer = document.getElementById('plotContainer');
+                
+                // Setup event listeners
+                this.setupEventListeners();
+            }
+            
+            setupEventListeners() {
+                // Button clicks
+                this.buttons.forEach((button, index) => {
+                    button.addEventListener('click', () => this.onButtonClick(index));
+                });
+                
+                // Start, save and plot buttons
+                this.startButton.addEventListener('click', () => this.startTask());
+                this.saveButton.addEventListener('click', () => this.saveAndQuit());
+                this.plotButton.addEventListener('click', () => this.showFilePicker());
+                
+                // File input change
+                this.fileInput.addEventListener('change', (event) => this.handleFileSelect(event));
+                
+                // Close modal
+                this.closeModal.addEventListener('click', () => {
+                    this.plotModal.style.display = 'none';
+                });
+                
+                // Close modal when clicking outside
+                window.addEventListener('click', (event) => {
+                    if (event.target === this.plotModal) {
+                        this.plotModal.style.display = 'none';
+                    }
+                });
+                
+                // Keyboard controls
+                document.addEventListener('keydown', (event) => {
+                    if (!this.waitingForAction) return;
+                    
+                    if (event.key === 'ArrowLeft') this.simulateButtonPress(0);
+                    else if (event.key === 'ArrowUp') this.simulateButtonPress(1);
+                    else if (event.key === 'ArrowRight') this.simulateButtonPress(2);
+                });
+            }
+            
+            simulateButtonPress(buttonIdx) {
+                if (this.waitingForAction) {
+                    // Highlight button
+                    this.highlightButton(buttonIdx);
+                    
+                    // Trigger button click action
+                    this.onButtonClick(buttonIdx);
+                }
+            }
+            
+            highlightButton(buttonIdx) {
+                this.buttons[buttonIdx].classList.add('highlighted');
+            }
+            
+            resetButtonHighlight(buttonIdx) {
+                this.buttons[buttonIdx].classList.remove('highlighted');
+            }
+            
+            startTask() {
+                this.startButton.disabled = true;
+                const { observation, info } = this.env.reset();
+                this.trialCount = 0;
+                this.data = [];
+                
+                // Start the task
+                this.runNextTrial();
+            }
+            
+            runNextTrial() {
+                // Wait for user action
+                this.waitingForAction = true;
+                this.enableButtons(true);
+                this.feedbackLabel.textContent = "Choose a button";
+                this.feedbackLabel.style.color = "black";
+            }
+            
+            onButtonClick(arm) {
+                if (this.waitingForAction) {
+                    this.waitingForAction = false;
+                    this.userAction = arm;
+                    this.enableButtons(false);
+                    
+                    // Process the trial
+                    setTimeout(() => this.processTrial(arm), 500);
+                }
+            }
+            
+            processTrial(action) {
+                // Clear feedback
+                this.feedbackLabel.textContent = "";
+                
+                // Reset button highlight
+                this.resetButtonHighlight(action);
+                
+                // Execute action in environment
+                const { observation, reward, terminated, truncated, info } = this.env.step(action);
+                
+                // Store data
+                const newData = {
+                    trial_id: this.trialCount,
+                    block_id: info.blockId,
+                    best_arm: info.bestArm,
+                    action: action,
+                    reward: reward
+                };
+                this.data.push(newData);
+                this.trialCount++;
+                
+                console.log(newData); // Log data for debugging
+                
+                // Update UI with result
+                if (reward > 0) {
+                    this.feedbackLabel.textContent = "You won!\n1$";
+                    this.feedbackLabel.style.color = "green";
+                } else {
+                    this.feedbackLabel.textContent = "No reward!\n0$";
+                    this.feedbackLabel.style.color = "red";
+                }
+                
+                // Continue with next trial after delay
+                setTimeout(() => {
+                    this.feedbackLabel.textContent = "";
+                    this.runNextTrial();
+                }, 1000);
+            }
+            
+            enableButtons(enable) {
+                this.buttons.forEach(button => {
+                    button.disabled = !enable;
+                });
+            }
+            
+            saveAndQuit() {
+                // Convert data to CSV format
+                let csvContent = "data:text/csv;charset=utf-8,";
+                csvContent += "trial_id,block_id,best_arm,action,reward\n";
+                
+                this.data.forEach(row => {
+                    csvContent += `${row.trial_id},${row.block_id},${row.best_arm},${row.action},${row.reward}\n`;
+                });
+                
+                // Create download link
+                const encodedUri = encodeURI(csvContent);
+                const link = document.createElement("a");
+                link.setAttribute("href", encodedUri);
+                link.setAttribute("download", "local_run.csv");
+                document.body.appendChild(link);
+                
+                // Trigger download
+                link.click();
+                document.body.removeChild(link);
+                
+                alert("Data saved as local_run.csv");
+            }
+            
+            showFilePicker() {
+                this.fileSelectContainer.style.display = 'block';
+            }
+            
+            handleFileSelect(event) {
+                const file = event.target.files[0];
+                if (!file) return;
+                
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const data = this.parseCSV(e.target.result);
+                        this.plotData(data);
+                    } catch (error) {
+                        console.error('Error parsing CSV:', error);
+                        alert('Could not parse the CSV file. Please check the format.');
+                    }
+                };
+                reader.readAsText(file);
+            }
+            
+            parseCSV(csvText) {
+                const lines = csvText.split('\n');
+                const headers = lines[0].split(',');
+                
+                const data = [];
+                for (let i = 1; i < lines.length; i++) {
+                    if (lines[i].trim() === '') continue;
+                    
+                    const values = lines[i].split(',');
+                    const row = {};
+                    
+                    for (let j = 0; j < headers.length; j++) {
+                        const value = values[j].trim();
+                        row[headers[j]] = isNaN(value) ? value : parseFloat(value);
+                    }
+                    data.push(row);
+                }
+                
+                return data;
+            }
+            
+            // Convert simulation data format to visualization format
+            prepareDataForPlot(data) {
+                // Convert action 0,1,2 to target 1,2,3 to match the plotting function
+                data.forEach(row => {
+                    if ('action' in row) {
+                        row.target = row.action + 1;
+                        row.feedback = row.reward;
+                        row.best_target = row.best_arm + 1;
+                    }
+                });
+                
+                // Group by block_id
+                const blockGroups = {};
+                data.forEach(row => {
+                    const blockId = row.block_id;
+                    if (!blockGroups[blockId]) {
+                        blockGroups[blockId] = [];
+                    }
+                    blockGroups[blockId].push(row);
+                });
+                
+                // Add trial_id_in_block
+                Object.values(blockGroups).forEach(blockData => {
+                    blockData.sort((a, b) => a.trial_id - b.trial_id);
+                    blockData.forEach((row, index) => {
+                        row.trial_id_in_block = index;
+                    });
+                });
+                
+                return data;
+            }
+            
+            plotData(data) {
+                // Convert data to proper format
+                const preparedData = this.prepareDataForPlot(data);
+                
+                // Group data by block_id
+                const blockGroups = {};
+                preparedData.forEach(row => {
+                    const blockId = row.block_id;
+                    if (!blockGroups[blockId]) {
+                        blockGroups[blockId] = [];
+                    }
+                    blockGroups[blockId].push(row);
+                });
+                
+                // Setup subplot grid
+                const numBlocks = Object.keys(blockGroups).length;
+                const plotHeight = 250 * numBlocks;
+                
+                this.plotContainer.style.height = `${plotHeight}px`;
+                this.plotContainer.style.display = 'block';
+                this.plotModal.style.display = 'block';
+                
+                // Empty the plot container
+                this.plotContainer.innerHTML = '';
+                
+                // Create a div for each block
+                const plotDivs = [];
+                for (let i = 0; i < numBlocks; i++) {
+                    const div = document.createElement('div');
+                    div.id = `plot-block-${i}`;
+                    div.style.width = '100%';
+                    div.style.height = `${plotHeight / numBlocks}px`;
+                    this.plotContainer.appendChild(div);
+                    plotDivs.push(div);
+                }
+                
+                // Target colors matching the Python code
+                const targetColors = {
+                    1: '#90c6f2',
+                    2: '#ffb273',
+                    3: '#dea8dd'
+                };
+                
+                // Create plots
+                Object.entries(blockGroups).forEach(([blockId, blockData], index) => {
+                    const targets = [1, 2, 3];
+                    const traces = [];
+                    
+                    // Calculate value function if available
+                    let valueTrace = null;
+                    if (blockData.some(row => 'value_function' in row)) {
+                        const valueData = blockData
+                            .filter(row => row.value_function !== null && !isNaN(row.value_function))
+                            .map(row => ({
+                                x: row.trial_id_in_block,
+                                y: row.value_function
+                            }));
+                        
+                        valueTrace = {
+                            x: valueData.map(d => d.x),
+                            y: valueData.map(d => d.y),
+                            name: 'Value Function',
+                            mode: 'lines',
+                            line: {
+                                color: 'grey',
+                                width: 2
+                            },
+                            yaxis: 'y2'
+                        };
+                    }
+                    
+                    // Add traces for each target
+                    targets.forEach(target => {
+                        // Rewarded trials for HIGH target (target == best_target)
+                        const rewardedHighTargetTrials = blockData.filter(row => 
+                            row.target === target && 
+                            row.feedback === 1 && 
+                            row.best_target === target
+                        );
+                        
+                        // Rewarded trials for LOW target (target != best_target)
+                        const rewardedLowTargetTrials = blockData.filter(row => 
+                            row.target === target && 
+                            row.feedback === 1 && 
+                            row.best_target !== target
+                        );
+                        
+                        // Unrewarded trials for HIGH target
+                        const unrewardedHighTargetTrials = blockData.filter(row => 
+                            row.target === target && 
+                            row.feedback === 0 && 
+                            row.best_target === target
+                        );
+                        
+                        // Unrewarded trials for LOW target
+                        const unrewardedLowTargetTrials = blockData.filter(row => 
+                            row.target === target && 
+                            row.feedback === 0 && 
+                            row.best_target !== target
+                        );
+                        
+                        // Add rewarded HIGH target trace
+                        traces.push({
+                            x: rewardedHighTargetTrials.map(row => row.trial_id_in_block),
+                            y: Array(rewardedHighTargetTrials.length).fill(1),
+                            mode: 'markers',
+                            marker: {
+                                color: targetColors[target],
+                                size: 12,
+                                symbol: 'circle'
+                            },
+                            name: `Rewarded HIGH Target ${target}`,
+                            showlegend: false
+                        });
+                        
+                        // Add rewarded LOW target trace
+                        traces.push({
+                            x: rewardedLowTargetTrials.map(row => row.trial_id_in_block),
+                            y: Array(rewardedLowTargetTrials.length).fill(1),
+                            mode: 'markers',
+                            marker: {
+                                color: 'white',
+                                size: 12,
+                                line: {
+                                    color: targetColors[target],
+                                    width: 1
+                                },
+                                symbol: 'circle'
+                            },
+                            name: `Rewarded LOW Target ${target}`,
+                            showlegend: false
+                        });
+                        
+                        // Add unrewarded HIGH target trace
+                        traces.push({
+                            x: unrewardedHighTargetTrials.map(row => row.trial_id_in_block),
+                            y: Array(unrewardedHighTargetTrials.length).fill(1),
+                            mode: 'markers',
+                            marker: {
+                                color: targetColors[target],
+                                size: 10,
+                                symbol: 'x'
+                            },
+                            name: `Unrewarded HIGH Target ${target}`,
+                            showlegend: false
+                        });
+                        
+                        // Add unrewarded LOW target trace
+                        traces.push({
+                            x: unrewardedLowTargetTrials.map(row => row.trial_id_in_block),
+                            y: Array(unrewardedLowTargetTrials.length).fill(1),
+                            mode: 'markers',
+                            marker: {
+                                color: targetColors[target],
+                                size: 10,
+                                symbol: 'x-open'
+                            },
+                            name: `Unrewarded LOW Target ${target}`,
+                            showlegend: false
+                        });
+                    });
+                    
+                    // Add vertical line for transition phase (last 5 trials)
+                    const maxTrials = Math.max(...blockData.map(row => row.trial_id_in_block));
+                    traces.push({
+                        x: [maxTrials - 5 + 0.5, maxTrials - 5 + 0.5],
+                        y: [0.8, 1.2],
+                        mode: 'lines',
+                        line: {
+                            color: 'black',
+                            width: 1,
+                            dash: 'dash'
+                        },
+                        showlegend: false
+                    });
+                    
+                    // Add value function trace if available
+                    if (valueTrace) {
+                        traces.push(valueTrace);
+                    }
+                    
+                    // Create layout
+                    const layout = {
+                        title: `Block ${blockId}`,
+                        xaxis: {
+                            title: 'Trial in Block',
+                            range: [-0.5, 45],
+                            tickvals: Array.from({length: 10}, (_, i) => i * 5),
+                            ticktext: Array.from({length: 10}, (_, i) => i * 5)
+                        },
+                        yaxis: {
+                            title: '',
+                            range: [0.8, 1.2],
+                            showticklabels: false,
+                            fixedrange: true
+                        },
+                        height: plotHeight / numBlocks,
+                        margin: {
+                            l: 50,
+                            r: 50,
+                            t: 30,
+                            b: 50
+                        }
+                    };
+                    
+                    // Add secondary axis for value function if needed
+                    if (valueTrace) {
+                        layout.yaxis2 = {
+                            title: 'Value',
+                            titlefont: {color: 'grey'},
+                            tickfont: {color: 'grey'},
+                            overlaying: 'y',
+                            side: 'right',
+                            range: [-0.05, 1.05]
+                        };
+                    }
+                    
+                    Plotly.newPlot(plotDivs[index].id, traces, layout);
+                });
+            }
+        }
+        
+        // Initialize the application when the page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            const app = new GraphicalMonkeyBanditTask();
+        });
+    </script>
+</body>
+</html>

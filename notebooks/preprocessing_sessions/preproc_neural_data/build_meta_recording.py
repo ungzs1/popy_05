@@ -1,0 +1,188 @@
+#%% 
+""" 
+This notebook is to test the functions that build a meta neural dataset, i.e. across session integration of trials.
+"""
+
+import numpy
+import xarray
+import pandas
+import matplotlib.pyplot as plt
+import matplotlib
+import logging
+import datetime
+
+from popy.io_tools import *
+from popy.behavior_data_tools import *
+from popy.neural_data_tools import *
+from popy.config import PROJECT_PATH_LOCAL
+
+# %%
+##% data loading
+def init_log(PARAMS):
+
+    # configure logging
+    logging.basicConfig(filename=os.path.join(PARAMS['floc'], 'log.txt'),
+                level=logging.INFO,
+                format='%(asctime)s - %(levelname)s - %(message)s',
+                filemode='w')  # 'w' mode will overwrite the log file
+
+    start_time = datetime.datetime.now()
+    logging.info("PARAMS:")
+    for key, value in PARAMS.items():
+        logging.info(f'{key}: {value}')
+    logging.info(f"Started at {start_time.strftime('%Y-%m-%d %H:%M:%S')}")
+
+def end_log():
+    # start time is the first log entry
+    end_time = datetime.datetime.now()
+    logging.info(f"Finished at {end_time.strftime('%Y-%m-%d %H:%M:%S')}")
+
+def load_data_custom(monkey, session, n_extra_trials=(-1, 0)):
+      # 1. Behavior data
+
+      # Load behavior data
+      behav = load_behavior(monkey, session)
+      behav = drop_time_fields(behav)
+      behav = add_history_of_feedback(behav, num_trials=3, binary=True)  # add history of feedback
+      behav = add_value_function(behav)  # add value function for its decoding
+      behav = behav.dropna()
+
+      # 2. Neural data
+
+      # Load neural data
+      neural_data = load_neural_data(monkey, session, hz=1000)
+
+      # remove some units
+      neural_data = remove_low_fr_neurons(neural_data, 1, print_usr_msg=False)
+      neural_data = remove_trunctuated_neurons(neural_data, delay_limit=10, mode='set_nan')
+
+      # process neural data
+      neural_data = add_firing_rates(neural_data, drop_spike_trains=True, method='gauss', std=.05)
+      neural_data = downsample_time(neural_data, 100)
+      neural_data = time_normalize_session(neural_data)
+
+      # 3. build neural dataset and merge with behavior
+      neural_dataset = build_trial_dataset(neural_data, mode='full_trial', n_extra_trials=n_extra_trials, monkey=monkey, session=session)
+      neural_dataset = merge_behavior(neural_dataset, behav)
+
+      '''print(f"Monkey: {monkey}, Session: {session}\n",
+            f"Removed {n_units_all - n_units_kept} / {n_units_all} neurons\n")'''
+
+      return neural_dataset
+
+# %%
+PARAMS = {
+    'floc': os.path.join(PROJECT_PATH_LOCAL, 'data', 'processed', 'neural_data', 'meta_rates_20'),
+    'label': 'history_of_feedback',
+    'm': 20
+    }
+
+# get all sessions info
+session_metadata = load_metadata()
+session_metadata = session_metadata[session_metadata['block_len_valid']]
+
+init_log(PARAMS)
+
+# loop over sessions, get unit data
+info_df = []
+empty_file = True
+floc_xr = os.path.join(PARAMS['floc'], 'meta_rates.nc')
+for s, ((monkey, session), _) in enumerate(session_metadata.groupby(['monkey', 'session'])):
+    print(f"{s}/{len(session_metadata)}, Processing monkey {monkey}, session {session}")
+    # create labelled dataset for session
+    try:
+        neural_dataset = load_data_custom(monkey, session)
+        # add monkey and session as coordinates along dimension unitx
+
+    except Exception as e:
+        logging.info(f"Error loading data for monkey {monkey}, session {session}: {e}")
+        continue
+
+    session_ds = []
+    for unit in neural_dataset.unit.values:
+        try:
+            ## 1. get unit data
+
+            # get unit data, but preserve unit dimension
+            unit_index = list(neural_dataset.unit.values).index(unit)
+            unit_data = neural_dataset.isel(unit=[unit_index])  # Using a list preserves dimension
+
+            # remove trials with NaN values
+            unit_data = unit_data.dropna(dim='trial_id', how='any')
+            
+            ## 2. get info: number of available trials per class for this unit
+
+            # select m trial ids from all classes
+            class_labels = unit_data[PARAMS['label']].values
+            trial_ids = unit_data['trial_id'].values
+
+            # get number of trials for each label
+            n_trials_per_label = pandas.Series(class_labels).value_counts()
+            n_trials_per_label = n_trials_per_label.sort_index()
+
+            # create one row of the info_df for this unit (merge infor with number of trials)
+            renamed_counts = {f"{PARAMS['label']}_{str(k)}": v for k, v in n_trials_per_label.to_dict().items()}
+            info_df_temp = {'monkey': monkey, 'session': session, 'unit': unit}
+            info_df_temp.update(renamed_counts)
+            info_df.append(info_df_temp.copy())
+
+            ## 3. process neural data
+
+            # check if all labels have at least m trials - dont use process the unit if not
+            if any(n_trials_per_label < PARAMS['m']):
+                print(f"Not enough trials for label {PARAMS['label']} in session {session}, unit {unit}")
+                continue
+
+            # select m trials randomly from each class (now define trial ids to select)
+            trial_ids_selected = []
+            for label_temp in np.sort(np.unique(class_labels)):
+                # get all trial ids for this label
+                trial_ids_label = trial_ids[class_labels == label_temp]
+                # select m trials randomly
+                trial_ids_selected.append(numpy.random.choice(trial_ids_label, size=PARAMS['m'], replace=False))
+            trial_ids_selected = numpy.concatenate(trial_ids_selected)
+
+            # get unit_data for selected trials
+            unit_data_selected = unit_data.sel(trial_id=trial_ids_selected)
+
+            # reset_trial_id
+            new_trial_ids = np.arange(len(unit_data_selected.trial_id.values))
+            unit_data_selected = unit_data_selected.assign_coords(trial_id=new_trial_ids)
+
+            # drop all coordinates along the trial axis (except for 'label')
+            coords_to_drop = [coord for coord in unit_data_selected.trial_id.coords if coord not in ['trial_id', PARAMS['label']]]
+            unit_data_selected = unit_data_selected.drop(coords_to_drop)
+
+            session_ds.append(unit_data_selected)
+
+        except Exception as e:
+            logging.info(f"Error processing unit {unit} in monkey {monkey}, session {session}: {e}")
+            continue
+
+    # concatenate all units data
+    try:
+        session_ds = xarray.concat(session_ds, dim='unit')
+    except Exception as e:
+        logging.info(f"Error concatenating data for session {session} - maybe no units left: {e}")
+        continue
+
+    # save session data to file
+    try:
+        if empty_file:
+            # save the first unit data
+            session_ds.to_netcdf(floc_xr)
+            empty_file = False
+        else:
+            # append the unit data
+            with xr.open_dataset(floc_xr) as meta_ds:
+                combined_ds = xr.concat([meta_ds, session_ds], dim='unit')
+
+            combined_ds.to_netcdf(floc_xr)
+    except Exception as e:
+        logging.info(f"Error saving data for monkey {monkey}, session {session}: {e}")
+        continue
+
+# save info dataframe to file
+info_df = pandas.DataFrame(info_df)
+info_df.to_csv(os.path.join(PARAMS['floc'], 'info_df.csv'), index=False)
+end_log()
