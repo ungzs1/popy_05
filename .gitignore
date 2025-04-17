@@ -30,14 +30,16 @@ notebooks/random/*
 .DS_Store
 env.yml
 
-notebooks/decoders/population_decoding/results/*
-notebooks/decoders/glm/results/*
+notebooks/population_decoding/results/*
+
 notebooks/decoders/target_and_value/results/*
 notebooks/decoders/results/*
 notebooks/decoders/val.pdf
 notebooks/decoders/test.html
 notebooks/decoders/results/log.txt
-notebooks/decoders/glm/delete.nc
+
+notebooks/glm/results/*
+notebooks/glm/delete.nc
 
 popy.egg-info/*
 env_office_02_2025_checkpoint.yml

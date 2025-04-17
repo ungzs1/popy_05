@@ -1,3 +1,7 @@
+"""
+The main code that runs the GLM analysis for all units of sessions (and all time points).
+"""
+
 import os
 
 import pandas as pd
@@ -59,17 +63,17 @@ def save_results(xr, floc):
 ### Set parameters
 
 PARAMS = {
-    'model': 'glm_cpd',  # 'linear_correlation' or 'anova' or 'glm' or 'glm_cpd'
-    'glm_predictors': ['feedback', 'value_function'],
+    'model': 'glm',  # 'linear_correlation' or 'anova' or 'glm' or 'glm_cpd'
+    'glm_predictors': ['feedback'],
     #'cpd_predictors': ['feedback', 'R_1', 'R_2', 'R_3', 'R_4', 'R_5', 'R_6'],
-    'cpd_targets': ['feedback', 'value_function'],  # ['feedback', 'R_1', 'R_2', 'R_3', 'R_4'],
+    #'cpd_targets': ['feedback', 'value_function'],  # ['feedback', 'R_1', 'R_2', 'R_3', 'R_4'],
     'neural_data_type': 'spike_counts',  # 'firing_rates' or 'spike_counts'
-    'value_type': 'continuous',  # 'discrete' or 'continuous'
+    #'value_type': 'continuous',  # 'discrete' or 'continuous'
     'step_time': .05,
     'n_permutations': 500,
 
-    'floc': os.path.join(cfg.PROJECT_PATH_LOCAL, 'notebooks', 'decoders', 'glm', 'results', 'fb_value_cpd'),  # Folder to save results
-    'msg': 'Fitting a GLM with feedback and value, computing CPD for feedback and value with permutations',
+    'floc': os.path.join(cfg.PROJECT_PATH_LOCAL, 'notebooks', 'glm', 'results', 'fb_glm'),  # Folder to save results
+    'msg': 'Fitting a GLM with feedback only, it is for matteo to have an idea of each unit (if feedback sensitive and the sign)'
     }
 
 ### Run

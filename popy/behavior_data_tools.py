@@ -451,11 +451,10 @@ def add_value_function(behav_original, digitize=False, n_classes=4):
         bin_edges = np.linspace(0, 1, n_classes+1)
                 
         # Perform the binning
-        behavior['value_function'] = pd.cut(
+        behavior['value_function'] = np.digitize(
             behavior['value_function'], 
             bins=bin_edges, 
-            include_lowest=True
-        )
+            right=False) - 1
 
     return behavior
 

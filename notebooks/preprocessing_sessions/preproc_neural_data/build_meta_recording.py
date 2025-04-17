@@ -19,7 +19,9 @@ from popy.config import PROJECT_PATH_LOCAL
 # %%
 ##% data loading
 def init_log(PARAMS):
-
+    # mkdir
+    if not os.path.exists(PARAMS['floc']):
+        os.makedirs(PARAMS['floc'])
     # configure logging
     logging.basicConfig(filename=os.path.join(PARAMS['floc'], 'log.txt'),
                 level=logging.INFO,
@@ -44,8 +46,9 @@ def load_data_custom(monkey, session, n_extra_trials=(-1, 0)):
       behav = load_behavior(monkey, session)
       behav = drop_time_fields(behav)
       behav = add_history_of_feedback(behav, num_trials=3, binary=True)  # add history of feedback
-      behav = add_value_function(behav)  # add value function for its decoding
+      behav = add_value_function(behav, digitize=True, n_classes=4)  # add value function for its decoding
       behav = behav.dropna()
+      behav['feedback'] = behav['feedback'].astype('int')  # convert feedback to int
 
       # 2. Neural data
 
@@ -53,7 +56,7 @@ def load_data_custom(monkey, session, n_extra_trials=(-1, 0)):
       neural_data = load_neural_data(monkey, session, hz=1000)
 
       # remove some units
-      neural_data = remove_low_fr_neurons(neural_data, 1, print_usr_msg=False)
+      #neural_data = remove_low_fr_neurons(neural_data, 1, print_usr_msg=False)
       neural_data = remove_trunctuated_neurons(neural_data, delay_limit=10, mode='set_nan')
 
       # process neural data
@@ -72,10 +75,13 @@ def load_data_custom(monkey, session, n_extra_trials=(-1, 0)):
 
 # %%
 PARAMS = {
-    'floc': os.path.join(PROJECT_PATH_LOCAL, 'data', 'processed', 'neural_data', 'meta_rates_20'),
-    'label': 'history_of_feedback',
+    'floc': os.path.join(PROJECT_PATH_LOCAL, 'data', 'processed', 'neural_data', 'meta_rates_value'),
+    'label': 'value_function * feedback',
+    'n_extra_trials': (0, 1),  # (-1, 0) means no extra trials
     'm': 20
     }
+
+floc_xr = os.path.join(PARAMS['floc'], 'meta_rates.nc')
 
 # get all sessions info
 session_metadata = load_metadata()
@@ -86,18 +92,17 @@ init_log(PARAMS)
 # loop over sessions, get unit data
 info_df = []
 empty_file = True
-floc_xr = os.path.join(PARAMS['floc'], 'meta_rates.nc')
 for s, ((monkey, session), _) in enumerate(session_metadata.groupby(['monkey', 'session'])):
     print(f"{s}/{len(session_metadata)}, Processing monkey {monkey}, session {session}")
     # create labelled dataset for session
     try:
-        neural_dataset = load_data_custom(monkey, session)
+        neural_dataset = load_data_custom(monkey, session, n_extra_trials=PARAMS['n_extra_trials'])
         # add monkey and session as coordinates along dimension unitx
 
     except Exception as e:
         logging.info(f"Error loading data for monkey {monkey}, session {session}: {e}")
         continue
-
+    
     session_ds = []
     for unit in neural_dataset.unit.values:
         try:
@@ -105,7 +110,7 @@ for s, ((monkey, session), _) in enumerate(session_metadata.groupby(['monkey', '
 
             # get unit data, but preserve unit dimension
             unit_index = list(neural_dataset.unit.values).index(unit)
-            unit_data = neural_dataset.isel(unit=[unit_index])  # Using a list preserves dimension
+            unit_data = neural_dataset.isel(unit=[unit_index])  # Using a list preserves 'unit' dimension
 
             # remove trials with NaN values
             unit_data = unit_data.dropna(dim='trial_id', how='any')
@@ -113,15 +118,25 @@ for s, ((monkey, session), _) in enumerate(session_metadata.groupby(['monkey', '
             ## 2. get info: number of available trials per class for this unit
 
             # select m trial ids from all classes
-            class_labels = unit_data[PARAMS['label']].values
+            if len(PARAMS['label'].split(' * ')) == 1:
+                class_labels = [str(x) for x in unit_data[PARAMS['label']].values]
+            elif len(PARAMS['label'].split(' * ')) == 2:
+                class_labels_1 = [str(x) for x in unit_data[PARAMS['label'].split(' * ')[0]].values]
+                class_labels_2 = [str(x) for x in unit_data[PARAMS['label'].split(' * ')[1]].values]
+                class_labels = ['{} * {}'.format(x, y) for x, y in zip(class_labels_1, class_labels_2)]
+
             trial_ids = unit_data['trial_id'].values
 
+            # create one row of the info_df for this unit (merge infor with number of trials)
             # get number of trials for each label
             n_trials_per_label = pandas.Series(class_labels).value_counts()
             n_trials_per_label = n_trials_per_label.sort_index()
-
-            # create one row of the info_df for this unit (merge infor with number of trials)
-            renamed_counts = {f"{PARAMS['label']}_{str(k)}": v for k, v in n_trials_per_label.to_dict().items()}
+            if len(PARAMS['label'].split(' * ')) == 1:
+                renamed_counts = {f"{PARAMS['label']}_{k}": v for k, v in n_trials_per_label.to_dict().items()}
+            elif len(PARAMS['label'].split(' * ')) == 2:
+                label_1 = PARAMS['label'].split(' * ')[0]
+                label_2 = PARAMS['label'].split(' * ')[1]
+                renamed_counts = {f"{label_1}_{k.split(' * ')[0]} * {label_2}_{k.split(' * ')[1]}": v for k, v in n_trials_per_label.to_dict().items()}
             info_df_temp = {'monkey': monkey, 'session': session, 'unit': unit}
             info_df_temp.update(renamed_counts)
             info_df.append(info_df_temp.copy())
@@ -137,7 +152,8 @@ for s, ((monkey, session), _) in enumerate(session_metadata.groupby(['monkey', '
             trial_ids_selected = []
             for label_temp in np.sort(np.unique(class_labels)):
                 # get all trial ids for this label
-                trial_ids_label = trial_ids[class_labels == label_temp]
+                trial_ids_label_tf = [class_label == label_temp for class_label in class_labels]
+                trial_ids_label = trial_ids[trial_ids_label_tf]
                 # select m trials randomly
                 trial_ids_selected.append(numpy.random.choice(trial_ids_label, size=PARAMS['m'], replace=False))
             trial_ids_selected = numpy.concatenate(trial_ids_selected)
@@ -150,7 +166,7 @@ for s, ((monkey, session), _) in enumerate(session_metadata.groupby(['monkey', '
             unit_data_selected = unit_data_selected.assign_coords(trial_id=new_trial_ids)
 
             # drop all coordinates along the trial axis (except for 'label')
-            coords_to_drop = [coord for coord in unit_data_selected.trial_id.coords if coord not in ['trial_id', PARAMS['label']]]
+            coords_to_drop = [coord for coord in unit_data_selected.trial_id.coords if coord not in ['trial_id']+[label for label in PARAMS['label'].split(' * ')]]
             unit_data_selected = unit_data_selected.drop(coords_to_drop)
 
             session_ds.append(unit_data_selected)
@@ -178,6 +194,8 @@ for s, ((monkey, session), _) in enumerate(session_metadata.groupby(['monkey', '
                 combined_ds = xr.concat([meta_ds, session_ds], dim='unit')
 
             combined_ds.to_netcdf(floc_xr)
+
+        logging.info(f"Saved data for monkey {monkey}, session {session} to {floc_xr}")
     except Exception as e:
         logging.info(f"Error saving data for monkey {monkey}, session {session}: {e}")
         continue

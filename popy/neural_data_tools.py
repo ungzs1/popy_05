@@ -469,7 +469,7 @@ def run_normalization(neural_data_original, print_usr_msg=False):
 
             # compute the desired length of the current epoch
             curr_ep_bins_len = ep_lens[epoch_index]
-            norm_epoch_time = np.linspace(epoch.time[0], epoch.time[-1], curr_ep_bins_len)  
+            norm_epoch_time = np.linspace(epoch.time.data[0], epoch.time.data[-1], curr_ep_bins_len)  
             
             # time normalization of time
             epoch_norm = xr.Dataset()
@@ -477,7 +477,7 @@ def run_normalization(neural_data_original, print_usr_msg=False):
                 if not len(epoch.time) > 1:  # if we have at least 2 time points, we can interpolate, but not otherwise TODO: this is ugly code...
                     xxx = xr.concat([epoch[data_var], epoch[data_var]], dim='time')
                     xxx.time.data[1] = xxx.time.data[1]+.0001                
-                    norm_epoch_time = np.linspace(epoch.time[0], epoch.time[-1]+.0001, curr_ep_bins_len)  
+                    norm_epoch_time = np.linspace(epoch.time.data[0], epoch.time.data[-1]+.0001, curr_ep_bins_len)  
                     x = xxx.interp(time=norm_epoch_time, method=methods[data_var], assume_sorted=True)
                 else:
                     x = epoch[data_var].interp(time=norm_epoch_time, method=methods[data_var], assume_sorted=True)

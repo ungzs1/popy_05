@@ -11,6 +11,8 @@ import statsmodels.api as sm
 from statsmodels.formula.api import ols
 from sklearn import linear_model
 from sklearn.metrics import mean_poisson_deviance
+from sklearn.model_selection import cross_val_score
+from sklearn.linear_model import PoissonRegressor
 
 from popy.io_tools import load_behavior, load_neural_data
 from popy.behavior_data_tools import add_value_function, add_switch_info, add_history_of_feedback
@@ -39,10 +41,13 @@ def fit_eval_glm(y_true, X):
     # predict
     y_pred = model.predict(X)
 
-    # get the explained variance: 1 - (D / total devience), where D is the devience of the model, and total devience is the devience of the mean model
+    # (Pseudo R2, whatever it means) get the explained variance: 1 - (D / total devience), where D is the devience of the model, and total devience is the devience of the mean model
     D_true = mean_poisson_deviance(y_true, y_pred)
     D_mean = mean_poisson_deviance(y_true, np.asarray(y_true).mean() * np.ones_like(y_true))
     ED = (1 - D_true / D_mean) * 100 # get the coefficient of determination?
+
+    '''model = PoissonRegressor()
+    cv_score = cross_val_score(model, X, y_true, cv=10, scoring='accuracy')'''
 
     return ED, coeffs, tvals, pvals
 
@@ -84,11 +89,13 @@ class SingleUnitAnalysis:
         #self.linear_predictors = None  # condition of interest, e.g. ['target', 'feedback', 'value_function]
         #self.anova_predictors = None  # condition of interest, e.g. ['target', 'feedback', 'value_function]
         self.glm_predictors = [None]  # condition of interest, e.g. ['target', 'feedback', 'value_function]
+        self.cpd_predictors = [None]
         self.cpd_targets = [None]  # the predictors to remove (one by one) from the full model to get the CPD, e.g. ['feedback', 'value_function'] -> it means two CPD values will be calculated (using 2 models), one for feedback and one for value_function
                 
         self.model = None  # model to run, 'linear_correlation' or 'anova' or 'glm' or 'glm_cpd' (only glm and glm_cpd are implemented)
         
         self.neural_data_type = None  # type of neural data, 'spike_counts' or 'firing_rates'
+        self.value_type = None  # type of value, 'discrete' or 'continuous'
         #self.n_extra_trials = -1  # number of extra trials to add to the dataset
         
         ###self.glm_results = {'coeffs': None, 'tvals': None, 'p_vals': None}
@@ -143,47 +150,23 @@ class SingleUnitAnalysis:
     
 
     def permutation_glm(self, y, X):
-        """
-        Runs a simple GLM model and a permutation test to get the p-values of the coefficients.
-        
-        Parameters
-        ----------
-        y : array
-            The dependent variable, e.g. spike counts.
-        X : array
-            The independent variables, e.g. predictors.
-
-        Returns
-        -------
-        coeffs_ture : array
-            The true coefficients of the model.
-        coeffs_pvals : array
-            The p-values of the coefficients.
-        D_true : float
-            The D2 value of the true model (which i think is a generalization of the R2 value).
-        D_pval : float
-            The p-value of the D2 value.
-        """        
+        raise NotImplementedError("This function is not implemented yet. Please use the permutation_glm_CPD function instead.")
         # Fit the true model
-        ED_true, coeffs_ture, coeffs_pvals = fit_eval_glm(y, X)
+        ED, coeffs, tvals, pvals = fit_eval_glm(y, X)
         
         # Run permutation test - fit shuffled models N times
-        # TODO reset the permutation test instead of the student test of the GLM model
-        '''n_perm = self.n_permutations
-        coeffs_perm = pd.DataFrame(index=X.columns, columns=range(n_perm))  # create pandas df to store coefficients: indices are columns of X, cols are the permuted coefficients per iteration
-        D_perm = np.empty(n_perm)  # create empty array to store D2 values for permuted models
+        n_perm = self.n_permutations
+        EDs_perm = np.zeros(n_perm)
         for i in range(n_perm):
-            X_shuffled = X.sample(frac=1)  # shuffle labels
-            coeffs_perm_temp, D_perm_temp = fit_eval_glm(y, X_shuffled)
-            coeffs_perm[i] = coeffs_perm_temp
-            D_perm[i] = D_perm_temp
+            y_perm = np.random.permutation(y)
+            ED_perm, coeffs_perm, tvals_perm, pvals_perm = fit_eval_glm(y_perm, X)
+            EDs_perm[i] = ED_perm
 
-        # get the number of times the permuted coefficients are larger than the true coefficient and if smaller, then select the smaller one
-        coeffs_pvals = pd.Series([get_p_val(coeffs_perm.loc[idx], coeffs_ture[idx]) for idx in coeffs_perm.index], index=coeffs_perm.index)
-        D_pval = get_p_val(D_perm, D_true)  # TODO: extend this line to multiple predictors'''
+        # get p-values for the coefficients
+        coeffs_pvals = np.zeros(len(coeffs))
 
-        ED_pval = np.nan 
-        return ED_true, ED_pval, coeffs_ture, coeffs_pvals
+            
+        return ED, coeffs, tvals, pvals
     
 
     def permutation_glm_CPD(self, y_true, X_full, target_predictors):
@@ -242,9 +225,10 @@ class SingleUnitAnalysis:
         
         # 1. Behavior data
         session_data = load_behavior(self.monkey, self.session)
-        session_data = add_value_function(session_data, monkey=self.monkey, digitize=False)
-        session_data['value_fb_pos'] = session_data['value_function'] * session_data['feedback']  # add value feedback interaction
-        session_data['value_fb_neg'] = session_data['value_function'] * (1 - session_data['feedback'])  # add value feedback interaction
+        if not self.value_type is None:
+            session_data = add_value_function(session_data, digitize=False)
+            session_data['value_fb_pos'] = session_data['value_function'] * session_data['feedback']  # add value feedback interaction
+            session_data['value_fb_neg'] = session_data['value_function'] * (1 - session_data['feedback'])  # add value feedback interaction
         session_data = add_switch_info(session_data)
         session_data = add_history_of_feedback(session_data, num_trials=8, one_column=False)
         session_data = session_data.dropna()  # remove nan values, the glm can not handle them
@@ -264,7 +248,10 @@ class SingleUnitAnalysis:
         #neural_data = remove_low_varance_neurons(neural_data, var_limit=.2, print_usr_msg=True)  # remove neurons with low variance
         #neural_data = remove_drift_neurons(neural_data, corr_limit=.2)  # remove neurons with drift
         #neural_data = remove_low_fr_neurons(neural_data, 1)  # remove low_firing units
-        neural_data = add_firing_rates(neural_data, method='count', win_len=0.200, drop_spike_trains=True)  # convert neural data to firing rates or binned spike counts
+        if self.neural_data_type == 'spike_counts':
+            neural_data = add_firing_rates(neural_data, method='count', win_len=0.200, drop_spike_trains=True)  # convert neural data to firing rates or binned spike counts
+        elif self.neural_data_type == 'firing_rates':
+            neural_data = add_firing_rates(neural_data, method='gauss', drop_spike_trains=True)
         neural_data = downsample_time(neural_data, 100)  # downsample neural data to 100 Hz
         
         # build dataset
@@ -369,12 +356,13 @@ class SingleUnitAnalysis:
             self.results[f't_vals_{predictor_name}'] = (['unit', 'time'], tvals[:, :, i])
             self.results[f'p_vals_{predictor_name}'] = (['unit', 'time'], coeffs_pvals[:, :, i])
 
-        predictor_names_cpd = self.cpd_targets
-        for i, predictor_name in enumerate(predictor_names_cpd):  # TODO this can be too confusing maybe?
-            if isinstance(predictor_name, list):  # if there are multiple predictors in the CPD test
-                predictor_name = '_'.join(predictor_name)
-            self.results[f'CPDs_{predictor_name}'] = (['unit', 'time'], CPDs[:, :, i])
-            self.results[f'CPDs_p_vals_{predictor_name}'] = (['unit', 'time'], CPDs_pvals[:, :, i])
+        if self.model == 'glm_cpd':
+            predictor_names_cpd = self.cpd_targets
+            for i, predictor_name in enumerate(predictor_names_cpd):  # TODO this can be too confusing maybe?
+                if isinstance(predictor_name, list):  # if there are multiple predictors in the CPD test
+                    predictor_name = '_'.join(predictor_name)
+                self.results[f'CPDs_{predictor_name}'] = (['unit', 'time'], CPDs[:, :, i])
+                self.results[f'CPDs_p_vals_{predictor_name}'] = (['unit', 'time'], CPDs_pvals[:, :, i])
 
         return self.results, self.log
 
