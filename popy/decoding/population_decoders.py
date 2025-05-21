@@ -5,10 +5,14 @@ from sklearn.model_selection import StratifiedKFold, permutation_test_score, KFo
 import xarray as xr
 from sklearn.preprocessing import LabelEncoder
 from sklearn.model_selection import LeaveOneGroupOut
+from sklearn.metrics import make_scorer
+from scipy.stats import pearsonr
+
 
 from popy.io_tools import load_behavior, load_neural_data
 from popy.neural_data_tools import *
 from popy.behavior_data_tools import *
+from popy.config import PROJECT_PATH_LOCAL
 
 
 # Data processing #
@@ -24,24 +28,26 @@ def _get_data_of_interest(neural_data, step_len):
     return neural_data.isel(time=times_idx)
 
 
-def _create_results_xr(conditions, time_vector, areas):
-    xr_scores = xr.Dataset(
-        {
-            'scores': (['target', 'time', 'area'], np.full((len(conditions), len(time_vector), len(areas)), np.nan)),
-            'pvals': (['target', 'time', 'area'], np.full((len(conditions), len(time_vector), len(areas)), np.nan)),
-            'perm_mean': (['target', 'time', 'area'], np.full((len(conditions), len(time_vector), len(areas)), np.nan)),
-            'perm_std': (['target', 'time', 'area'], np.full((len(conditions), len(time_vector), len(areas)), np.nan)),
-            #'cv_mean': (['target', 'time', 'area'], np.full((len(conditions), len(time_vector), len(areas)), np.nan)),
-            #'cv_std': (['target', 'time', 'area'], np.full((len(conditions), len(time_vector), len(areas)), np.nan)),
-        },
-        coords={
+def _create_results_xr(conditions, group_targets, time_vector, areas):
+    coords = {
             'target': np.array(conditions, dtype='U50'),  # Unicode string with max length 50
             'area': np.array(areas, dtype='U10'),         # Unicode string with max length 10
             'time': time_vector,
         }
-    )
+    
+    shape = (len(conditions), len(group_targets), len(time_vector), len(areas))
+    data_vars = {
+        'scores': (['target', 'group_target', 'time', 'area'], np.full(shape, np.nan)),
+        'pvals': (['target', 'group_target', 'time', 'area'], np.full(shape, np.nan)),
+        'perm_mean': (['target', 'group_target', 'time', 'area'], np.full(shape, np.nan)),
+        'perm_std': (['target', 'group_target', 'time', 'area'], np.full(shape, np.nan)),
+        #'cv_mean': (['target', 'time', 'area'], np.full((len(conditions), len(time_vector), len(areas)), np.nan)),
+        #'cv_std': (['target', 'time', 'area'], np.full((len(conditions), len(time_vector), len(areas)), np.nan)),
+    }
 
-    return xr_scores
+    coords['group_target'] = np.array(group_targets, dtype='U50')  # Unicode string with max length 50
+
+    return  xr.Dataset(data_vars=data_vars, coords=coords)
 
 
 def _label_encoder(y):
@@ -93,7 +99,6 @@ def _preproc_data(neural_dataset_original,
     """
 
     neural_dataset = neural_dataset_original.copy(deep=True)
-    y_groups = None
 
     # Step 0. Drop nan trials from labels (and groups)
     neural_dataset = remove_nan_labels(neural_dataset, target_name)  # drop trials with nan behavioural label
@@ -105,21 +110,28 @@ def _preproc_data(neural_dataset_original,
     n_classes = len(np.unique(neural_dataset[target_name].data))
     
     n_trials_before = len(neural_dataset)
+    coords = None  # coords to balance the dataset on
     if n_classes <= 5 and group_target_name is None:  # if y is categorical and groups are not provided
-        neural_dataset = balance_labels(neural_dataset, coords=target_name)
+        coords = target_name
     elif n_classes <= 5 and group_target_name is not None:  # if y is categorical and groups are provided
-        neural_dataset = balance_labels(neural_dataset, coords=[target_name, group_target_name])
+        coords = [target_name, group_target_name]
     elif n_classes > 5 and group_target_name is not None:  # if y is continuous and groups are provided
-        neural_dataset = balance_labels(neural_dataset, coords=group_target_name)
+        coords = group_target_name
 
-    n_trials_after = len(neural_dataset)
-    print(f"Removed {n_trials_before - n_trials_after}/{n_trials_before} trials with unbalanced classes.\n")
+    if coords is not None:  
+        # neural_dataset = balance_labels(neural_dataset, coords=coords)  # TODO: re-put this line after target CV decoder!!!!
+        n_trials_after = len(neural_dataset)
+        print(f"Removed {n_trials_before - n_trials_after}/{n_trials_before} to balance the dataset on: {coords}")
+    else:
+        print(f"Dataset is not balanced, no trials removed.")
 
     # Step 2. Creating data matrix and labels
     X = neural_dataset.data
     y = neural_dataset[target_name].data
     if group_target_name is not None:
         y_groups = neural_dataset[group_target_name].data
+    else:
+        y_groups = None
 
     # Step 3. Encode categoricaxl labels
     if len(np.unique(y)) <= 5:  # if y is categorical
@@ -130,9 +142,40 @@ def _preproc_data(neural_dataset_original,
 
     return X, y, y_groups
 
+def _shuffle_preserve_nan(arr):
+    arr = np.array(arr)
+    mask = ~np.isnan(arr)
+    shuffled = arr[mask].copy()
+    np.random.shuffle(shuffled)
+    result = arr.copy()
+    result[mask] = shuffled
+    return result
 
 # Decoding #
 
+# Create a custom scorer that returns the Pearson correlation coefficient
+def pearson_scorer(y_true, y_pred):
+    return pearsonr(y_true, y_pred)[0]  # Returns the correlation value, not the p-value
+# train on one target, test on the others
+def target_cv_score(decoder, X_temp, y, groups):
+    scores_all = []
+    for group_temp in np.unique(groups):
+        # train test split: train on one target, test on the others
+        train_ids, test_ids = np.where(groups == group_temp)[0], np.where(groups != group_temp)[0]  # train on one target, test on the others
+        y_train = y[train_ids]  # y_train is the target variable for the training set
+        y_test = y[test_ids]  # y_test is the target variable for the test set
+        X_temp_train = X_temp[train_ids, :]  # X_temp_train is the neural data for the training set
+        X_temp_test = X_temp[test_ids, :]  # X_temp_test is the neural data for the test set
+
+        # fit the decoder on the training data, evaluate on the test data
+        decoder_fit = decoder.fit(X_temp_train, y_train)  # fit the decoder on the training data
+        y_pred = decoder_fit.predict(X_temp_test)  # predict the test data
+        corr = pearson_scorer(y_test, y_pred)  # compute the correlation between the predicted and true values
+        scores_all.append(corr)  # append the correlation to the list
+
+    # compute the mean correlation across all targets
+    score = np.mean(scores_all)  # take the mean of the correlations
+    return score
 
 def linear_decoding(X, y, groups=None, K_fold=None, n_perm=1000, n_jobs=1):
     """
@@ -156,7 +199,10 @@ def linear_decoding(X, y, groups=None, K_fold=None, n_perm=1000, n_jobs=1):
             kf = LeaveOneGroupOut()  # use LeaveOneGroupOut decode the value across targets (trained on one target, tested on the other) 
         decoder = LinearRegression()
         #decoder = Lasso(alpha=.05)
-        scoring_function = 'r2'
+        #scoring_function = 'r2'
+        # Create a scorer object
+        scoring_function = make_scorer(pearson_scorer)  # TODO this is custom for the across target CV, change this when finished
+
     elif dtype == 'discrete':  # in case of dicrete data -> classification
         if groups is None:
             kf = StratifiedKFold(n_splits=K_fold, shuffle=True)  # use stratified KFold to preserve the ratio of classes in each fold
@@ -180,17 +226,37 @@ def linear_decoding(X, y, groups=None, K_fold=None, n_perm=1000, n_jobs=1):
     for i_train, t_train in enumerate(np.arange(X.shape[2])):
         X_temp = X[:, :, t_train]  # select (trial, unit) data at time t_train
         if groups is None:
-            res = permutation_test_score(decoder, X_temp, y, scoring=scoring_function, cv=kf, n_permutations=n_perm, n_jobs=n_jobs)  # TODO maybe its not necessary to avoid passing groups=None?
-        else:
-            res = permutation_test_score(decoder, X_temp, y, groups=groups, scoring=scoring_function, cv=kf, n_permutations=n_perm, n_jobs=n_jobs)
-    
-        # unpack results and store them
-        score, perm_scores, pvalue = res
+            res = permutation_test_score(decoder, X_temp, y, cv=kf, 
+                                         scoring=scoring_function, n_permutations=n_perm, n_jobs=n_jobs)
+            # unpack results and store them
+            score, perm_scores, pvalue = res
+            # perm_scores is a list of scores for each permutation
+            perm_scores_mean_temp = np.mean(perm_scores)  # convert to numpy array
+            perm_scores_std_temp = np.std(perm_scores)  # compute the std of the permutation scores
 
+        else:
+            score = target_cv_score(decoder, X_temp, y, groups)  # compute the score for the current time point
+
+            # compute the permutation test
+            # shuffle the labels and compute the score
+
+            perm_scores_all = []
+            for i in range(n_perm):
+                # shuffle the labels
+                y_temp = np.random.permutation(y)
+                # compute the score
+                score_temp = target_cv_score(decoder, X_temp, y_temp, groups)
+                perm_scores_all.append(score_temp)
+            perm_scores_mean_temp = np.mean(perm_scores_all)  # convert to numpy array
+            perm_scores_std_temp = np.std(perm_scores_all)  # compute the std of the permutation scores
+
+            pvalue = np.sum(np.abs(perm_scores_all) >= np.abs(score)) / n_perm  # compute the pvalue
+
+        # store the results
         scores[i_train] = score
         pvals[i_train] = pvalue
-        perm_scores_mean[i_train] = np.mean(perm_scores)
-        perm_scores_std[i_train] = np.std(perm_scores)
+        perm_scores_mean[i_train] = perm_scores_mean_temp
+        perm_scores_std[i_train] = perm_scores_std_temp
 
         # cross-validation scores without permutation (sanity check)
         '''score = cross_val_score(decoder, X_temp, y, groups=groups, cv=kf, scoring=scoring_function)
@@ -208,27 +274,26 @@ def load_data_for_decoder(monkey, session, n_extra_trials=(-1, 1)):
     behav = drop_time_fields(behav)
 
     # add behav vars to decode
-    behav = add_value_function(behav)  # add value function for its decoding
-    behav = add_shift_value(behav)  # add shift value for its decoding
+    behav = add_stay_value(behav)  # add shift value for its decoding
     behav = add_switch_info(behav)  # add switch information for its decoding
+    behav = add_history_of_feedback(behav, num_trials=2, one_column=False)
 
     '''for alpha in np.linspace(.05, 1, 20):
         behav = add_shift_value(behav, alpha_ka=alpha, alpha_po=alpha)
         behav = behav.rename(columns={'shift_value': f'shift_value_{alpha:.2f}'})'''
     #behav = add_shift_value(behav)  # add shift value for its decoding
 
-    behav['target_shuffled'] = behav['target'].copy()
-    behav['target_shuffled'] = behav['target'].sample(frac=1).values
+    # set target == 2 to nan
+    behav['target'] = behav['target'].where(behav['target'] != 2, np.nan)  # set target == 2 to nan
 
-    behav['target_no_2'] = behav['target'].copy()
-    behav['target_no_2'] = behav['target_no_2'].replace({2: np.nan})
-    behav['target_no_2_shuffled'] = behav['target_no_2'].copy()
-    behav['target_no_2_shuffled'] = behav['target_no_2_shuffled'].sample(frac=1).values
+    # shuffle non-nan ids: where its nan, keep as nan, but shuffle randomly the others
+    targets = behav['target'].copy()
+    behav['target_shuffled'] = _shuffle_preserve_nan(targets)
 
-    # print number of targets
-    for target in behav['target'].unique():
-        n_targets = len(behav[behav['target'] == target])
-        print(f"Target {target}: {n_targets} trials")
+    # vreate 'stay_value_{target}' variable
+    for target in np.unique(behav['target'].values):
+        behav[f'stay_value_{target}'] = behav['stay_value'].copy()
+        behav[f'stay_value_{target}'] = behav[f'stay_value_{target}'].where(behav['target'] == target, np.nan)  # keep only the values for the current target
     
     # 2. Neural data
 
@@ -237,8 +302,8 @@ def load_data_for_decoder(monkey, session, n_extra_trials=(-1, 1)):
     n_units_all = len(neural_data['unit'].values)
 
     # remove some units
-    neural_data = remove_low_fr_neurons(neural_data, 1, print_usr_msg=False)
-    neural_data = remove_trunctuated_neurons(neural_data, mode='remove', delay_limit=10, print_usr_msg=False)
+    neural_data = remove_low_fr_neurons(neural_data, 1, print_usr_msg=True)
+    neural_data = remove_trunctuated_neurons(neural_data, mode='remove', delay_limit=10, print_usr_msg=True)
     n_units_kept = len(neural_data['unit'].values)
     if len(neural_data['unit'].values) == 0:
         raise ValueError(f"No neurons left for {monkey}_{session}")
@@ -261,7 +326,7 @@ def load_data_for_decoder(monkey, session, n_extra_trials=(-1, 1)):
 
 ### Decoding pipeline
 
-def run_decoder(monkey, session, PARAMS, n_jobs=1):
+def run_decoder(monkey, session, PARAMS, n_jobs=1, load_data=False, save_data=False):
     """
     Decoding the target variable from the neural data.
 
@@ -275,54 +340,69 @@ def run_decoder(monkey, session, PARAMS, n_jobs=1):
     # if targets is not a list, make it a list (i.e. if only one target is passed as string)
     if not isinstance(PARAMS['conditions'], list): 
         PARAMS['conditions'] = [PARAMS['conditions']]
+    if not isinstance(PARAMS['group_targets'], list):
+        PARAMS['group_targets'] = [PARAMS['group_targets']]
 
     # print log
     print(f"Running for monkey {monkey} and session {session}")
 
     ## init data
-    neural_dataset = load_data_for_decoder(monkey, session, PARAMS['n_extra_trials'])
+    #load if exist, else prepare
+    floc = os.path.join(PROJECT_PATH_LOCAL, 'notebooks', 'population_decoding', 'data', f'{monkey}_{session}_neural.nc')
+    if os.path.exists(floc) and load_data:
+        neural_dataset = xr.open_dataset(floc)
+    else:
+        neural_dataset = load_data_for_decoder(monkey, session, PARAMS['n_extra_trials'])
 
-    # sanity: groups must be categorical
-    if PARAMS['group_target'] is not None:
-        groups = neural_dataset[PARAMS['group_target']].data
-        assert len(np.unique(groups)) <= 5, "Groups must be categorical."
+    if save_data:    
+        # save data
+        neural_dataset.to_netcdf(floc)
     
     # 0. get bins of interest
     neural_data = _get_data_of_interest(neural_dataset, PARAMS['step_len'])
 
-    # Create an empty dataset with dimensions 'time' and 'area'
+    # Create an empty dataset with dimensions [target, *, time, area] - groups are added to * if its not None, else this dimension is omitted
     xr_scores = _create_results_xr(
         PARAMS['conditions'], 
+        PARAMS['group_targets'],
         time_vector= neural_data.time.data,
         areas=['LPFC', 'MCC'])
-    
+
     for target in PARAMS['conditions']:
-        for area in ['LPFC', 'MCC']:
-            print(f"Decoding {target} in {area}")
-            #try:
-            neural_data_temp = neural_data.where(neural_data.area == area, drop=True)
-            if len(neural_data_temp.unit) == 0:
-                continue
+        for group_target in PARAMS['group_targets']:
+            # sanity: groups must be categorical
+            if group_target is not None:
+                assert len(np.unique(neural_data[group_target].data)) <= 5, f"Groups must be categorical - {group_target}"
 
-            # 1. preprocess data -> create a matrix of regressors (X) and a vector of labels (y)
+            for area in np.unique(neural_data.area.values):
+                print(f"Decoding {target} in {area}")
+                #try:
+                neural_data_temp = neural_data.where(neural_data.area == area, drop=True)
 
-            X, y, groups = _preproc_data(neural_data_temp.firing_rates, target, PARAMS['group_target'])
+                '''if monkey == 'po' and group_target.split('_')[0] == 'target':
+                    # remove trials with target 2 (po_2) for po monkey
+                    neural_data_temp = neural_data_temp.where(neural_data_temp.target != 2, drop=True)'''
 
-            # 2. run decoder on the labelled dataset
-            res = linear_decoding(X, y, groups, K_fold=PARAMS['K_fold'], n_perm=PARAMS['n_perm'], n_jobs=n_jobs)
+                if len(neural_data_temp.unit) == 0:
+                    continue
 
-            scores, pvals, perm_mean, perm_std = res#, cv_mean, cv_std = res
+                # 1. preprocess data -> create a matrix of regressors (X) and a vector of labels (y)
 
-            # create xarray dataset, dimension is time, vars are scores
-            xr_scores.scores.loc[target, :, area] = scores
-            xr_scores.pvals.loc[target, :, area] = pvals
-            xr_scores.perm_mean.loc[target, :, area] = perm_mean
-            xr_scores.perm_std.loc[target, :, area] = perm_std
-            #xr_scores.cv_mean.loc[target, :, area] = cv_mean
-            #xr_scores.cv_std.loc[target, :, area] = cv_std
+                X, y, groups = _preproc_data(neural_data_temp.firing_rates, target, group_target)
 
-            """except Exception as e:
-                print(f"Error decoding {target} in {area}: {e}")"""
+                # 2. run decoder on the labelled dataset
+                scores, pvals, perm_mean, perm_std = linear_decoding(X, y, groups, K_fold=PARAMS['K_fold'], n_perm=PARAMS['n_perm'], n_jobs=n_jobs)
+
+                # create xarray dataset, dimension is time, vars are scores
+                xr_scores.scores.loc[target, str(group_target), :, area] = scores
+                xr_scores.pvals.loc[target, str(str(group_target)), :, area] = pvals
+                xr_scores.perm_mean.loc[target, str(group_target), :, area] = perm_mean
+                xr_scores.perm_std.loc[target, str(group_target), :, area] = perm_std
+                #xr_scores.cv_mean.loc[target, :, area] = cv_mean
+                #xr_scores.cv_std.loc[target, :, area] = cv_std
+
+                """except Exception as e:
+                    print(f"Error decoding {target} in {area}: {e}")"""
 
     # add monkey and session information
     xr_scores = xr_scores.assign_coords(session=f'{monkey}_{session}')

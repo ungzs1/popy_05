@@ -50,10 +50,24 @@ COLORS = {
     'MCC': 'grey',
     'ka': 'tab:purple',
     'po': 'tab:green',
-    'simulation_ka': 'tab:orange',
-    'simulation_po': 'tab:red',
+    'ka_simulation': 'tab:brown',
+    'po_simulation': 'tab:red',
+    'yu_DCZ': 'tab:blue',
+    'yu_sham': 'tab:orange',
     }
 
+
+# Optimal parameters for the models
+MODEL_PARAMS = {'ka': {'alpha': 0.40963354578309075, 'V0': 0.11827469139505799, 'beta': 10.638021927670694},
+                'po': {'alpha': 0.3037981353357479, 'V0': 0.18398040544466904, 'beta': 6.973374756267803},
+                'yu_sham': {'alpha': 0.4513693025955279, 'V0': 0.16954116683423484, 'beta': 7.678119299510347},
+                'yu_DCZ': {'alpha': 0.4942628307389808, 'V0': 0.1283662338249597, 'beta': 6.46241106842488}}
+MODEL_PARAMS['ka_simulation'] = MODEL_PARAMS['ka']
+MODEL_PARAMS['po_simulation'] = MODEL_PARAMS['po']
+MODEL_PARAMS['yu_sham_simulation'] = MODEL_PARAMS['yu_sham']
+MODEL_PARAMS['yu_DCZ_simulation'] = MODEL_PARAMS['yu_DCZ']
+
+# Cage plotting things
 coord_chars = [chr(i) for i in range(97, 97+19)]
 
 def_coords_ka = np.array([[0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,

@@ -174,8 +174,11 @@ def load_behavior(monkey=None, session=None):
     """
 
     base_path = config.PROJECT_PATH_LOCAL
-    data_path = os.path.join(base_path, 'data', 'processed', 'behavior', 'behavior.pkl')
+    data_path = os.path.join(base_path, 'data', 'processed', 'behavior', 'behavior_kapo.pkl')
     concat_data = pd.read_pickle(data_path)
+
+    # sort by [monkey, session, trial_id]
+    concat_data = concat_data.sort_values(by=['monkey', 'session', 'trial_id'])
     
     # set 'feedback' to float
     concat_data['feedback'] = concat_data['feedback'].astype(float)
@@ -190,6 +193,17 @@ def load_behavior(monkey=None, session=None):
     elif (monkey is None) and (session is None):
         return concat_data
     
+def load_behavior_yuri():
+    """
+    Loads the behavior dataset in xarray format.
+    """
+
+    base_path = config.PROJECT_PATH_LOCAL
+    data_path = os.path.join(base_path, 'data', 'processed', 'behavior', 'behavior_yuri.pkl')
+    data = pd.read_pickle(data_path)
+
+    # sort by [monkey, session, trial_id]
+    return data    
 
 def load_neural_data(monkey, session, hz=100, *args, **kwargs):
     """

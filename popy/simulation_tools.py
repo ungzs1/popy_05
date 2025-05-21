@@ -471,7 +471,20 @@ class ShiftValueAgent:
     def reset(self):
         """Reset the agent to its initial state."""
         self.V = self.V0
-        self.last_action = np.random.choice(self.n_arms)       
+        self.last_action = np.random.choice(self.n_arms)    
+
+    def _get_stay_proba(self) -> float:   
+        # get the probability of shifting actions, according to the logistic function 
+        proba_shift = 1 / (1 + np.exp(self.beta * (self.V - self.V0)))
+        proba_stay = 1 - proba_shift
+
+        return proba_stay
+    
+    def _get_min_max_stay_proba(self) -> tuple:
+        min_proba_stay = 1 / (1 + np.exp(self.beta * (self.V0 - 0)))
+        max_proba_stay = 1 / (1 + np.exp(self.beta * (self.V0 - 1)))
+
+        return min_proba_stay, max_proba_stay
 
     def get_action_probas(self) -> int:
         """

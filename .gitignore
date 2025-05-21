@@ -43,3 +43,8 @@ notebooks/glm/delete.nc
 
 popy.egg-info/*
 env_office_02_2025_checkpoint.yml
+notebooks/behav_modeling/figs/*
+notebooks/pca/figs/*
+notebooks/population_decoding/data/*
+notebooks/preprocessing_sessions/preproc_behavioral_data/*.pkl
+notebooks/behav_modeling/results/*

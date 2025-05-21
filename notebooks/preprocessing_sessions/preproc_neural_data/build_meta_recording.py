@@ -40,46 +40,49 @@ def end_log():
     logging.info(f"Finished at {end_time.strftime('%Y-%m-%d %H:%M:%S')}")
 
 def load_data_custom(monkey, session, n_extra_trials=(-1, 0)):
-      # 1. Behavior data
+    # 1. Behavior data
 
-      # Load behavior data
-      behav = load_behavior(monkey, session)
-      behav = drop_time_fields(behav)
-      behav = add_history_of_feedback(behav, num_trials=3, binary=True)  # add history of feedback
-      behav = add_value_function(behav, digitize=True, n_classes=4)  # add value function for its decoding
-      behav = behav.dropna()
-      behav['feedback'] = behav['feedback'].astype('int')  # convert feedback to int
+    # Load behavior data
+    behav = load_behavior(monkey, session)
+    behav = drop_time_fields(behav)
+    #behav = add_history_of_feedback(behav, num_trials=3, binary=True)  # add history of feedback
+    behav = add_stay_value(behav, digitize=True, n_classes=4)  # add value function for its decoding
+    #behav = add_switch_info(behav)  # add last target
+    behav = behav.dropna()
+    behav['feedback'] = behav['feedback'].astype('int')  # convert feedback to int
+    '''behav['target'] = behav['target'].astype('int')  # convert target to int
+    behav['switch'] = behav['switch'].astype('int')  # convert switch to int'''
 
-      # 2. Neural data
+    # 2. Neural data
 
-      # Load neural data
-      neural_data = load_neural_data(monkey, session, hz=1000)
+    # Load neural data
+    neural_data = load_neural_data(monkey, session, hz=1000)
 
-      # remove some units
-      #neural_data = remove_low_fr_neurons(neural_data, 1, print_usr_msg=False)
-      neural_data = remove_trunctuated_neurons(neural_data, delay_limit=10, mode='set_nan')
+    # remove some units
+    #neural_data = remove_low_fr_neurons(neural_data, 1, print_usr_msg=False)
+    neural_data = remove_trunctuated_neurons(neural_data, delay_limit=10, mode='set_nan')
 
-      # process neural data
-      neural_data = add_firing_rates(neural_data, drop_spike_trains=True, method='gauss', std=.05)
-      neural_data = downsample_time(neural_data, 100)
-      neural_data = time_normalize_session(neural_data)
+    # process neural data
+    neural_data = add_firing_rates(neural_data, drop_spike_trains=True, method='gauss', std=.05)
+    neural_data = downsample_time(neural_data, 100)
+    neural_data = time_normalize_session(neural_data)
 
-      # 3. build neural dataset and merge with behavior
-      neural_dataset = build_trial_dataset(neural_data, mode='full_trial', n_extra_trials=n_extra_trials, monkey=monkey, session=session)
-      neural_dataset = merge_behavior(neural_dataset, behav)
+    # 3. build neural dataset and merge with behavior
+    neural_dataset = build_trial_dataset(neural_data, mode='full_trial', n_extra_trials=n_extra_trials, monkey=monkey, session=session)
+    neural_dataset = merge_behavior(neural_dataset, behav)
 
-      '''print(f"Monkey: {monkey}, Session: {session}\n",
-            f"Removed {n_units_all - n_units_kept} / {n_units_all} neurons\n")'''
+    '''print(f"Monkey: {monkey}, Session: {session}\n",
+        f"Removed {n_units_all - n_units_kept} / {n_units_all} neurons\n")'''
 
-      return neural_dataset
+    return neural_dataset
 
 # %%
 PARAMS = {
-    'floc': os.path.join(PROJECT_PATH_LOCAL, 'data', 'processed', 'neural_data', 'meta_rates_value'),
-    'label': 'value_function * feedback',
-    'n_extra_trials': (0, 1),  # (-1, 0) means no extra trials
-    'm': 20
-    }
+    'floc': os.path.join(PROJECT_PATH_LOCAL, 'data', 'processed', 'neural_data', 'meta_rates_value_target'),
+    'label': 'stay_value * target',
+    'n_extra_trials': (-1, 0),  # (-1, 0) means no extra trials
+    'm': 12
+}
 
 floc_xr = os.path.join(PARAMS['floc'], 'meta_rates.nc')
 
@@ -99,10 +102,14 @@ for s, ((monkey, session), _) in enumerate(session_metadata.groupby(['monkey', '
         neural_dataset = load_data_custom(monkey, session, n_extra_trials=PARAMS['n_extra_trials'])
         # add monkey and session as coordinates along dimension unitx
 
+        if monkey == 'po' and 'target' in PARAMS['label'].split(' * '):
+            # remove trials with target == 2
+            neural_dataset = neural_dataset.where(neural_dataset['target'] != 2, drop=True)
+
     except Exception as e:
         logging.info(f"Error loading data for monkey {monkey}, session {session}: {e}")
         continue
-    
+
     session_ds = []
     for unit in neural_dataset.unit.values:
         try:

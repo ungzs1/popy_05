@@ -15,6 +15,28 @@ from popy.simulation_tools import *
 
 ### General tools
 
+def add_block_info(behav):
+    curr_best_target = -1
+    trial_in_block_counter = -1
+    block_counter = -1
+    trial_in_block_vector = []
+    block_id_vector = []
+    for i, row in behav.iterrows():
+        if row['best_arm'] != curr_best_target:
+            trial_in_block_counter = 0
+            block_counter += 1
+            curr_best_target = row['best_arm']
+        else:
+            trial_in_block_counter += 1
+
+        trial_in_block_vector.append(trial_in_block_counter)
+        block_id_vector.append(block_counter)
+    
+    behav['block_id'] = block_id_vector
+    behav["trial_in_block"] = trial_in_block_vector
+
+    return behav
+
 def add_trial_in_block(behav):
     """
     Adds a 'trial_id_in_block' column to the behav DataFrame, which represents the trial index within each block.
@@ -135,15 +157,6 @@ def convert_column_format(behav, original='simulation'):
         behav['best_arm'] = best_arm
         behav = behav.rename(columns={'best_arm': 'best_target'})
 
-        behav['monkey'] = 'simulation'
-        behav['session'] = -1
-
-        # reorder so that monkey is first and session is second
-        cols = behav.columns.tolist()
-        cols = cols[-2:] + cols[:-2]
-
-        behav = behav[cols]
-
     else:
         raise ValueError("Invalid original format.")
         
@@ -205,29 +218,18 @@ def add_history_of_feedback(behav_original, num_trials=8, one_column=True, codin
     behav['feedback'] = behav['feedback'].replace(0, coding[0])
     behav['feedback'] = behav['feedback'].replace(1, coding[1])
 
-    # iterate over subdf's of (monkey, session)
-    hist_fb = {f'R_{j+1}': [] for j in range(num_trials)}  # {R-1: [], R-2: [], ...}
-    hist_target = {f'T_{j+1}': [] for j in range(num_trials)}  # {T-1: [], T-2: [], ...}
+    subdfs = []
     for _, subdf in behav.groupby(['monkey', 'session']):
         # iterate row by row in behav
-        for i, _ in subdf.iterrows():
-            for j in range(num_trials):  # iterate over the last N trials
-                index = i - j - 1  # get the index of the trial in the past
-                if index < subdf.index[0]:  # if the index is out of range, set it to nan
-                    hist_fb[f'R_{j+1}'].append(np.nan)
-                    hist_target[f'T_{j+1}'].append(np.nan)
-                else:
-                    fb_historic = subdf.loc[index, 'feedback']  # get the feedback of the trial in the past
-                    target_historic = subdf.loc[index, 'target']  # get the target of the trial in the past
+        for j in range(1, num_trials+1):
+            subdf[f'R_{j}'] = subdf['feedback'].shift(j)          
+        for j in range(1, num_trials+1): 
+            subdf[f'T_{j}'] = subdf['target'].shift(j)  # shift the target column by i trials
 
-                    if np.isnan(fb_historic):  # if the feedback is nan (interrupted trial), set it to nan
-                        hist_fb[f'R_{j+1}'].append(np.nan)
-                        hist_target[f'T_{j+1}'].append(np.nan)
-                    else:  # if everything is fine, append the feedback (or target_weighted feedback if cmw is True)
-                        hist_fb[f'R_{j+1}'].append(int(fb_historic))
-                        hist_target[f'T_{j+1}'].append(int(target_historic))
+        subdfs.append(subdf)
 
-                    
+    behav = pd.concat(subdfs, ignore_index=True)  # concatenate the subdfs
+
     # add to dataframe
     if one_column:
         column_data = []
@@ -252,13 +254,11 @@ def add_history_of_feedback(behav_original, num_trials=8, one_column=True, codin
             column_data.append(trial_data)
 
         behav_original.loc[:, 'history_of_feedback'] = column_data
+        return behav_original
     else:
-        for key in hist_fb.keys():
-            behav_original[key] = hist_fb[key]
-        for key in hist_target.keys():
-            behav_original[key] = hist_target[key]
+        return behav
 
-    return behav_original
+
 
 ### Performance monitoring functions
 
@@ -398,6 +398,7 @@ def add_value_function(behav_original, digitize=False, n_classes=4):
 
     This function calculates the weighted average of the history of feedback using the shift-value model, with no reset.
     """
+    raise NotImplementedError("Use 'add_stay_value' instead!!!")
 
     behavior = behav_original.copy()
     behavior.reset_index(drop=True, inplace=True)  # reset index 
@@ -418,11 +419,13 @@ def add_value_function(behav_original, digitize=False, n_classes=4):
 
         agent = agent_class(**params, **fixed_params)
 
-        shift_values = np.zeros(len(behav))
+        stay_values = np.zeros(len(behav))
+        stay_probas = np.zeros(len(behav))
         session_previous = 'none'
         for i, (_, row) in enumerate(behav.iterrows()):
             # Get latent value function
-            shift_values[i] = agent.V
+            stay_values[i] = agent.V
+            stay_probas[i] = agent._get_stay_proba()
 
             # Get the action and reward taken by the agent
             action, reward = row["target"], row["feedback"]
@@ -430,7 +433,8 @@ def add_value_function(behav_original, digitize=False, n_classes=4):
 
             # Skip NaN actions (interrupted trials)
             if np.isnan(action):
-                shift_values[i] = np.nan
+                stay_values[i] = np.nan
+                stay_probas[i] = np.nan
                 continue
 
             # If we are in a new session, reset the agent
@@ -441,10 +445,12 @@ def add_value_function(behav_original, digitize=False, n_classes=4):
             # update the agent
             agent.update_values(int(action), int(reward))
 
-        behav.loc[:, 'value_function'] = shift_values
+        behav.loc[:, 'value_function'] = stay_values
+        behav.loc[:, 'stay_proba'] = stay_probas
 
         # write back the q_values to the original dataframe, matching the indices
         behavior.loc[behav.index, 'value_function'] = behav.loc[behav.index, 'value_function'].values
+        behavior.loc[behav.index, 'stay_proba'] = behav.loc[behav.index, 'stay_proba'].values
 
     if digitize:
         # Create bin edges (from min to max value, or 0-1 if specified)
@@ -455,10 +461,18 @@ def add_value_function(behav_original, digitize=False, n_classes=4):
             behavior['value_function'], 
             bins=bin_edges, 
             right=False) - 1
+        
+        behavior['stay_proba'] = np.digitize(
+            behavior['stay_proba'], 
+            bins=bin_edges, 
+            right=False) - 1
 
     return behavior
 
-def add_shift_value(behav_original, digitize=False, n_classes=4, alpha_ka=None, alpha_po=None):
+def add_shift_value(*args, **kwargs):
+    raise NotImplementedError("Use 'add_stay_value(...)' instead, and change 'shift_value' to 'stay_value'")
+
+def add_stay_value(behav_original, digitize=False, n_classes=4, alpha_ka=None, alpha_po=None):
     """
     VALUE CORRESPONDING TO TRIAL t IS THE ONE KNOWN BEFORE THE FEEDBACK OF TRIAL t IS RECEIVED!
 
@@ -474,27 +488,17 @@ def add_shift_value(behav_original, digitize=False, n_classes=4, alpha_ka=None, 
         # init an agent
         agent_class = ShiftValueAgent
         fixed_params = {'reset_on_switch': True}
-        if monkey == 'ka':
-            params = {
-                'alpha': 0.41 if alpha_ka is None else alpha_ka,
-                #'beta': None,  # beta is not used unless we make decisions 
-                'V0': 0.1}
-        elif monkey == 'po':
-            params = {
-                'alpha': 0.32 if alpha_po is None else alpha_po,
-                #'beta': None,  # beta is not used unless we make decisions
-                'V0': 0.16}
-        else:
-            # for the simulations there is already a value function, but for sanity, we can add it instead of using the simulated one
-            continue
+        params = cfg.MODEL_PARAMS[monkey]  # get the parameters for the monkey
 
         agent = agent_class(**params, **fixed_params)
 
-        shift_values = np.zeros(len(behav))
+        stay_values = np.zeros(len(behav))
+        stay_probas = np.zeros(len(behav))
         session_previous = 'none'
         for i, (_, row) in enumerate(behav.iterrows()):
             # Get latent value function
-            shift_values[i] = agent.V
+            stay_values[i] = agent.V
+            stay_probas[i] = agent._get_stay_proba()
 
             # Get the action and reward taken by the agent
             action, reward = row["target"], row["feedback"]
@@ -502,7 +506,8 @@ def add_shift_value(behav_original, digitize=False, n_classes=4, alpha_ka=None, 
 
             # Skip NaN actions (interrupted trials)
             if np.isnan(action):
-                shift_values[i] = np.nan
+                stay_values[i] = np.nan
+                stay_probas[i] = np.nan
                 continue
 
             # If we are in a new session, reset the agent
@@ -513,21 +518,30 @@ def add_shift_value(behav_original, digitize=False, n_classes=4, alpha_ka=None, 
             # update the agent
             agent.update_values(int(action), int(reward))
         
-        behav.loc[:, 'shift_value'] = shift_values
+        behav.loc[:, 'stay_value'] = stay_values
+        behav.loc[:, 'stay_proba'] = stay_probas
 
         # write back the q_values to the original dataframe, matching the indices
-        behavior.loc[behav.index, 'shift_value'] = behav.loc[behav.index, 'shift_value'].values
+        behavior.loc[behav.index, 'stay_value'] = behav.loc[behav.index, 'stay_value'].values
+        behavior.loc[behav.index, 'stay_proba'] = behav.loc[behav.index, 'stay_proba'].values
 
     if digitize:
         # Create bin edges (from min to max value, or 0-1 if specified)
-        bin_edges = np.linspace(0, 1, n_classes+1)
+        min_V, max_V = 0, 1
+        bin_edges = np.linspace(min_V, max_V, n_classes+1)
                 
         # Perform the binning
-        behavior['shift_value'] = pd.cut(
-            behavior['shift_value'], 
+        behavior['stay_value'] = np.digitize(
+            behavior['stay_value'], 
             bins=bin_edges, 
-            include_lowest=True
-        )
+            right=False) - 1
+        
+        min_proba_stay, max_proba_stay = agent._get_min_max_stay_proba()
+        bins_edges = np.linspace(min_proba_stay, max_proba_stay, n_classes+1)
+        behavior['stay_proba'] = np.digitize(
+            behavior['stay_proba'], 
+            bins=bin_edges, 
+            right=False) - 1
 
     return behavior
 
@@ -553,7 +567,7 @@ def add_RPE(behav, scale_RPE=False):
 
 ### Decision making functions
 
-def add_phase_info(behav_original, exploration_limit=5, transition_limit=5, numeric=False):
+def add_phase_info(behav_original, exploration_limit=5, transition_limit=0, numeric=False):
     """
     Add phase (i.e. 'search', 'transition' or 'repeat') info to behav. We define the phases based on the number of consecutive selections of the same action.
     
@@ -623,36 +637,48 @@ def add_phase_info(behav_original, exploration_limit=5, transition_limit=5, nume
 
 def add_switch_info(behav_full, add_trials_since_switch=False, flip_coding=False):
     """
-    Is the decision during this trial means a Switch (from the previous trial)?
+    Is the decision during this trial means a Switch from the previous trial.
 
     Add switch info to behav. A trial is assigned with a True value if the current target is the same as the previous,
     while a False value is assigned if the current target is different from the previous.
     """
-    # add switch info
-    switch_info = []
-    trials_since_switch_info = []
-    for session_id, behav in behav_full.groupby(['monkey', 'session']):
-        last_switch_index = 0
-        for i, index in enumerate(behav.index):
-            if i == 0:
-                switch = np.nan
+    # sort by monkey, session, block_id, trial_id
+    #behav_full = behav_full.sort_values(['monkey', 'session', 'trial_id'])
+
+    behavs = []
+    for (monkey, session), behav in behav_full.groupby(['monkey', 'session']):
+        # reset index of behav
+        switches = [np.nan]
+        trials_since_switch = [0]
+        targets = behav.target.values
+
+        n_since_switch = 0
+        for i in range(1, len(targets)):
+            if np.isnan(targets[i]) or np.isnan(targets[i-1]):
+                switches.append(np.nan)
+                n_since_switch += 1
+            elif targets[i] == targets[i-1]:
+                switches.append(False)
+                n_since_switch += 1
             else:
-                switch = behav.target[index] != behav.target[index-1]
+                switches.append(True)
+                n_since_switch = 0
 
-            switch_info.append(switch)
-            trials_since_switch_info.append(index - last_switch_index)
+            trials_since_switch.append(n_since_switch)
 
-            if switch:
-                last_switch_index = index
-    behav_full['switch'] = switch_info
+        # add to the behav dataframe
+        behav['switch'] = switches
+        if add_trials_since_switch:
+            behav['trials_since_switch'] = trials_since_switch
+
+        behavs.append(behav)
+
+    # concatenate the behavs
+    behav_full = pd.concat(behavs, ignore_index=True)
     behav_full['switch'] = behav_full['switch'].astype(float)
-
     if flip_coding:
-        behav_full['switch'] = behav_full['switch'].apply(lambda x: not x)
-
-    if add_trials_since_switch:
-        behav_full['trials_since_switch'] = trials_since_switch_info
-
+        behav_full['switch'] = behav_full['switch'].apply(lambda x: not x if not pd.isna(x) else x)
+    
     return behav_full
 
 def add_reaction_time(behav):

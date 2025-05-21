@@ -51,14 +51,14 @@ def save_results(xr, floc):
 ### Set parameters
 
 PARAMS = {
-    'conditions': [f'shift_value_{alpha:.2f}' for alpha in  np.linspace(.05, .95, 19)],  # Conditions to decode
-    'group_target': None,
-    'K_fold': 5,
+    'conditions': [f'stay_value'],  # Conditions to decode
+    'group_targets': ['target', 'target_shuffled'],
+    'K_fold': None,
     'step_len': .05,
     'n_perm': 500, 
     'n_extra_trials': (0, 0),
-    'floc': os.path.join(cfg.PROJECT_PATH_LOCAL, 'notebooks', 'decoders', 'population_decoding', 'results', 'multiple_alphas'),
-    'msg': 'Lets see if the alpha of the behavioral model matches with the alpha of that best describes the neural data'
+    'floc': os.path.join(cfg.PROJECT_PATH_LOCAL, 'notebooks', 'population_decoding', 'results', 'value_x_target_po_no_target2'),
+    'msg': 'Trying to decode value across targets to see if its RL-based (assoc. w. targets) or foraging based (assoc. w. staying)',
 }
 
 ### Run
@@ -73,8 +73,10 @@ if __name__ == '__main__':
         # submit jobs
         futures, future_proxy_mapping = [], {}
         for monkey, session in zip(monkeys, sessions):
+            if monkey != 'po':
+                continue
 
-            future = executor.submit(run_decoder, monkey, session, PARAMS)  # Run decoder for each session
+            future = executor.submit(run_decoder, monkey, session, PARAMS, load_data=False, save_data=False)  # Run decoder for each session
             futures.append(future)
             future_proxy_mapping[future] = (monkey, session)
 

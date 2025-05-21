@@ -10,11 +10,324 @@ import seaborn as sns
 
 from popy.neural_data_tools import *
 from popy.behavior_data_tools import *
-from popy.behavior_data_tools import add_trial_in_block, add_phase_info
 
 import os
 import warnings
 
+
+import numpy as np
+import matplotlib.pyplot as plt
+
+from popy.config import COLORS, MODEL_PARAMS
+from matplotlib.colors import to_rgba
+
+
+### behavior plotting tools
+##% helper functions
+def get_prop_event(behav_all_pd_original, column='switch'):
+    """
+    Calculates the proportion of events for each monkey and session, across blocks.
+    """
+    behav_all_pd = behav_all_pd_original.copy()
+
+    monkeys = behav_all_pd['monkey'].unique()
+    percent_selection = {monkey: [] for monkey in monkeys}
+
+    # nominal length = 40 - blocks will be interpolated to this length
+    LEN_BLOCK = 40
+
+    # fill nans and convert to float
+    behav_all_pd[column] = behav_all_pd[column].fillna(method='ffill')
+    behav_all_pd[column] = behav_all_pd[column].fillna(method='bfill')
+    behav_all_pd[column] = behav_all_pd[column].astype(float)  # see if its best target
+
+    for monkey, behav_monkey in behav_all_pd.groupby('monkey'):
+        for session, behav_session in behav_monkey.groupby('session'):
+            for block_id, behav_block in behav_session.groupby('block_id'):
+                if len(behav_block) < 35:
+                    continue
+
+                # get best target selection and shift vectors per block
+                column_vector = behav_block[column]
+
+                # interpolate to LEN_BLOCK
+                column_vector = np.interp(np.linspace(0, LEN_BLOCK, LEN_BLOCK), np.linspace(0, LEN_BLOCK, len(column_vector)), column_vector)
+
+                # append to list
+                percent_selection[monkey].append(column_vector)
+
+        # create array of best target selection
+        percent_selection[monkey] = np.array(percent_selection[monkey])
+        #percent_shift[monkey] = np.array(percent_shift[monkey])
+        
+    return percent_selection# percent_shift
+
+
+def plot_strategy(behav, ax=None, saveas=None, paper_format=False, title=None, show_error=True):
+
+    # get best target selection and shift vectors
+    behav = add_switch_info(behav)
+    behav['if_best_target'] = behav['target'] == behav['best_target']
+
+    percent_selection = get_prop_event(behav, 'if_best_target')
+    percent_shift = get_prop_event(behav, 'switch')
+
+    monkeys = percent_selection.keys()
+
+    ### Print stats
+    # percent correct for each monkey and together
+    for monkey in monkeys:
+        print(f'{monkey} - percent correct: {np.mean(percent_selection[monkey]):.2f}')
+        print(f'{monkey} - percent shift: {np.mean(percent_shift[monkey]):.2f}')
+    print(f'Both monkeys - percent correct: {np.mean(np.concatenate(list(percent_selection.values()), axis=0)):.2f}')
+    print(f'Both monkeys - percent shift: {np.mean(np.concatenate(list(percent_shift.values()), axis=0)):.2f}')
+    
+
+    LEN_BLOCK = percent_selection[list(percent_selection.keys())[0]].shape[1]
+    if ax is None:
+        # plotting, figsize is 130mm x 9 mm
+        cm = 1/2.54  # centimeters in inches
+        if paper_format:
+            fig, axs = plt.subplots(1, 2, figsize=(10*cm, 4*cm))
+        else:
+            fig, axs = plt.subplots(1, 2, figsize=(20*cm, 8*cm))   
+
+    if title is not None:
+        fig.suptitle(title)
+             
+    for monkey in monkeys:
+        # get mean and std for best target selection and shift
+        mean_best_selection = np.mean(percent_selection[monkey], axis=0)
+        std_best_selection = np.std(percent_selection[monkey], axis=0)
+        sem_best_selection = std_best_selection / np.sqrt(len(percent_selection[monkey]))
+
+        mean_shift = np.mean(percent_shift[monkey], axis=0)
+        std_shift = np.std(percent_shift[monkey], axis=0)
+        sem_shift = std_shift / np.sqrt(len(percent_shift[monkey]))
+
+        linestyle = 'dashed' if monkey.split('_')[-1] == 'simulation' else 'solid'
+        if linestyle == 'solid':
+            if monkey in COLORS.keys():
+                color = COLORS[monkey]
+            else:
+                color = None
+            if show_error:
+                axs[0].fill_between(np.arange(LEN_BLOCK), mean_best_selection-sem_best_selection, mean_best_selection+sem_best_selection, color=color, alpha=0.5)
+        else:
+            color = COLORS['_'.join(monkey.split('_')[:-1])]
+        axs[0].plot(mean_best_selection, color=color, label=monkey.upper(), linestyle=linestyle)
+
+        axs[1].plot(mean_shift, color=color , label=monkey.upper(), linestyle=linestyle)
+        if linestyle == 'solid' and show_error:
+            axs[1].fill_between(np.arange(LEN_BLOCK), mean_shift-sem_shift, mean_shift+sem_shift, color=color, alpha=0.5)
+
+    # plot settings
+    ax = axs[0]
+    ax.axvline(LEN_BLOCK-5, color='k', linestyle='--', alpha=0.5)
+    #ax.set_title('Best target selection')
+    ax.set_xlabel('Trials in block')
+    ax.set_ylabel('Proportion of best\ntarget selection')
+    #ax.set_ylim([0.2, 1])
+    # set ticks every .2
+    #ax.set_yticks(np.arange(0.2, 1.1, 0.2))
+    ax.legend(loc='lower right', frameon=True)
+
+    # hide the spines between ax and ax2
+    ax.spines['right'].set_visible(False)
+    ax.spines['top'].set_visible(False)
+
+    ax = axs[1]
+    ax.axvline(LEN_BLOCK-5, color='k', linestyle='--', alpha=0.5)
+    #ax.set_title('Shift')
+    ax.set_xlabel('Trials in block')
+    ax.set_ylabel('Probability of shift')
+    #ax.set_yticks(np.arange(0, 1.1, 0.1))
+    #ax.set_ylim([-0.02, .45])
+    ax.legend(loc='upper right', frameon=True)
+
+    ax.spines['right'].set_visible(False)
+    ax.spines['top'].set_visible(False)
+
+    return fig, axs
+
+def plot_summary_stats(behav_original, title=None):
+
+    fig, axs = plt.subplots(1, 2, figsize=(8, 2))
+    
+    if title is not None:
+        fig.suptitle(title)
+
+    # plot mean +- 2 std
+    
+    for i, (monkey, behav_original_temp) in enumerate(behav_original.groupby('monkey')):
+        behav = behav_original_temp.copy()
+        behav = add_block_info(behav)
+        behav['best_action'] = behav['action'] == behav['best_arm']
+        behav['shift'] = behav['action'] != behav['action'].shift(1)
+
+        # create matrices of first/last 20 trials of each block
+        blocks_is_best_selection = []
+        blocks_is_rewarded = []
+        blocks_is_shift = []
+
+        for block_id, behav_block in behav.groupby('block_id'):
+            is_best_selection = behav_block['best_action']
+            is_rewarded = behav_block['reward']
+            is_shift = behav_block['shift']
+
+            # interploate to have 40 length
+            is_best_selection = np.interp(np.linspace(0, len(is_best_selection)-1, 40), np.arange(len(is_best_selection)), is_best_selection)
+            is_rewarded = np.interp(np.linspace(0, len(is_rewarded)-1, 40), np.arange(len(is_rewarded)), is_rewarded)
+            is_shift = np.interp(np.linspace(0, len(is_shift)-1, 40), np.arange(len(is_shift)), is_shift)
+
+            blocks_is_best_selection.append(is_best_selection)
+            blocks_is_rewarded.append(is_rewarded)
+            blocks_is_shift.append(is_shift)
+        
+        blocks_is_best_selection = np.array(blocks_is_best_selection)
+        blocks_is_rewarded = np.array(blocks_is_rewarded)
+        blocks_is_shift = np.array(blocks_is_shift)
+        
+        axs[0].plot(np.arange(0, 40), blocks_is_best_selection.mean(axis=0), label=f'{monkey}')
+        axs[1].plot(np.arange(0, 40), blocks_is_shift.mean(axis=0))
+
+        #ax.plot(np.arange(0, 40), blocks_is_rewarded.mean(axis=0), color='tab:orange', label='p(reward)')
+
+    ax = axs[0]
+
+    ax.set_xlabel('trials in block')
+    ax.set_ylabel('p(best arm)')
+
+    ax.spines["right"].set_visible(False)
+    ax.spines["top"].set_visible(False)
+
+    ax.set_xlim(-1, 41)
+    ax.set_ylim(0, 1)
+
+    ax.axvline(35, linestyle='--', color='black', alpha=.7)
+    ax.grid(alpha=.5)
+    ax.legend(loc='upper center', bbox_to_anchor=(.5, -.5), ncol=1)
+
+    # plot p(shift)
+    ax = axs[1]
+
+    ax.set_ylabel('p(shift)')
+    ax.set_xlabel('trials in block')
+
+    ax.spines["right"].set_visible(False)
+    ax.spines["top"].set_visible(False)
+
+    ax.set_xlim(-1, 41)
+    ax.set_ylim(0, .5)
+
+    ax.axvline(35, linestyle='--', color='black', alpha=.7)
+    ax.grid(alpha=.5)  
+
+    #plt.tight_layout()
+    plt.show()
+
+def plot_performances(behavs):
+    fig, ax = plt.subplots(1, 1, figsize=(5, 3))
+    for key, value in behavs.items():
+        prop_best_arm = (value["best_arm"].values == value["action"].values).mean()
+        mean_rr = value["reward"].mean()
+
+        if key == 'Bayesian':
+            ax.axhline(prop_best_arm, color='black', linestyle='--', label='Normative')
+        else:
+
+            if key == 'MONKEY KA':
+                color = COLORS['ka']
+            elif key == 'MONKEY PO':
+                color = COLORS['po']
+            else:
+                color = 'grey'
+
+            ax.bar(key, prop_best_arm, alpha=0.8, color=color, zorder=2)
+
+    # rotate x-axis labels
+    plt.xticks(rotation=90)
+
+    ax.set_ylabel("Proportion of best arm choices")
+    ax.set_title("Performance of different agents")
+    ax.set_ylim(0.5, 1)
+    ax.grid(axis="y", zorder=0)
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+    plt.show()
+
+def plot_hist_thingy(behav_original, title=None):
+    labels = [ f"+ + +", f"o + +" , f"+ o +", f"o o +", f"+ + o", f"o + o", f"+ o o", f"o o o"]
+
+    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(6, 4), gridspec_kw={'height_ratios': [2, 1], 'hspace': 0})
+
+    if title is not None:
+        fig.suptitle(title)
+
+    ax = ax1
+
+    for i, (monkey, behav_data) in enumerate(behav_original.groupby('monkey')):
+        behav = behav_data.copy()
+
+        #balance for shifts (random undersampling majority class)
+        '''n_switch = np.sum(behav['switch'])
+        n_no_switch = len(behav) - n_switch
+        n_minority = int(np.min([n_switch, n_no_switch]))
+        behav = behav.groupby('switch').apply(lambda x: x.sample(n=n_minority, random_state=42)).reset_index(drop=True)'''
+
+        # downsample each groups
+        comb_counts = behav.groupby(['R_1', 'R_2', 'R_3']).size().reset_index(name='counts')
+        min_count = comb_counts['counts'].min()  # Determine the minimum count among the combinations
+        # Function to undersample each combination
+        def undersample(group):
+            return group.sample(n=min_count, random_state=42)
+        behav = behav.groupby(['R_1', 'R_2', 'R_3']).apply(undersample).reset_index(drop=True)  # Apply undersampling
+
+        all_trials_vector = []
+        for (R_1, R_2, R_3), behav_temp in behav.groupby(['R_1', 'R_2', 'R_3']):
+            all_trials_vector.append(behav_temp['switch'].mean())
+
+        ax.plot(all_trials_vector, label=f'{monkey}', marker='o', color=COLORS[monkey])
+
+    ax.set_xticks([])
+    #ax.set_xticklabels(labels, rotation=90)
+
+    ax.set_xlabel('')
+    ax.set_ylabel('p(switch)')
+
+    ax.spines["right"].set_visible(False)
+    ax.spines["top"].set_visible(False)
+    ax.spines["bottom"].set_visible(False)
+
+    # legend to the right
+    ax.legend(loc='upper right', bbox_to_anchor=(1.3, 1), ncol=1)
+
+    ax = ax2
+    for i, label in enumerate(labels):
+        for j, marker in enumerate(label.split(' ')):        
+            ax.scatter(i, j, marker='o' if marker == 'o' else 'x', c='tab:green' if marker == 'o' else 'tab:red')
+
+    ax.set_xticks([])
+
+    ax.set_yticks([0,1,2])
+    ax.set_yticklabels(['t-3', 't-2', 't-1'])
+    ax.set_ylim(-1, 3)
+
+    ax.set_ylabel('past trials')
+
+    # make legend: o for rewarded, x for unrewarded
+    ax.scatter([], [], color="tab:green", marker="o", label="Rewarded")
+    ax.scatter([], [], color="tab:red", marker="x", label="Unrewarded")
+    ax.legend(loc='lower center', bbox_to_anchor=(0.8, -0.5), ncol=1)
+
+    ax.spines["right"].set_visible(False)
+    #ax.spines["top"].set_visible(False)
+    ax.spines["bottom"].set_visible(False)
+
+    plt.tight_layout()
+
+    return fig, (ax1, ax2)
+    
 
 def show_target_selection(session_data_original, title=None, background_value=None, savedir=None, show=True, add_phase=False):
     """
@@ -175,7 +488,7 @@ def show_target_selection(session_data_original, title=None, background_value=No
         plt.show()
     else:
         plt.close()
-        
+
 def show_target_selection_compact(
         session_data_original, 
         title=None, 
@@ -207,6 +520,11 @@ def show_target_selection_compact(
     # work on a copy of the original data
     session_data = session_data_original.copy()
 
+    if len(session_data['monkey'].unique()) != 1:
+        raise ValueError('session_data should contain only one monkey')
+    monkey = session_data['monkey'].unique()[0]
+    v0 = MODEL_PARAMS[monkey]['V0']
+
     # set the colors of the targets in RGBA format
     target_colors = {1: '#90c6f2ff', 2: '#ffb273ff', 3: '#dea8ddff'}
 
@@ -225,7 +543,7 @@ def show_target_selection_compact(
     else:
         h = 4
         w = 15
-        s_marker = 20
+        s_marker = 40
         linewidth_marker = 1
     fig = plt.figure(figsize=(w*cm_to_in, h*n_rows*cm_to_in))
     outer_grid = plt.GridSpec(n_rows, 1)  # Create the main grid for blocks
@@ -242,6 +560,15 @@ def show_target_selection_compact(
         ax_measure = plt.Subplot(fig, inner_grid[1])
         fig.add_subplot(ax_markers)
         fig.add_subplot(ax_measure)
+
+        # set background of axmarkers to best target color
+        best_target = session_data.loc[session_data['block_id'] == i, 'best_target'].values[0]
+        # Convert the color to RGBA with alpha
+        rgba_color = to_rgba(target_colors[best_target], alpha=0.2)
+
+        # Set the face color of the axis
+        ax_markers.set_facecolor(rgba_color)
+
 
         # plot the target selection
         for target_id in [1, 2, 3]:  # plot the targets
@@ -266,15 +593,15 @@ def show_target_selection_compact(
             ax_markers.scatter(
                 rewarded_trials_of_low_target,
                 np.ones_like(rewarded_trials_of_low_target),
-                color=target_colors[target_id], marker='o', facecolors='none', s=s_marker, linewidth=linewidth_marker)  # plot rewarded trials
+                color=target_colors[target_id], marker='o', facecolors=target_colors[target_id], s=s_marker, linewidth=linewidth_marker)  # plot rewarded trials
             ax_markers.scatter(
                 unrewarded_trials_of_high_target,
                 np.ones_like(unrewarded_trials_of_high_target),
-                color=target_colors[target_id], marker='x', facecolors=target_colors[target_id], s=s_marker, linewidths=linewidth_marker)
+                color=target_colors[target_id], marker='o', facecolors='none', s=s_marker, linewidths=linewidth_marker)
             ax_markers.scatter(
                 unrewarded_trials_of_low_target,
                 np.ones_like(unrewarded_trials_of_low_target),
-                color=target_colors[target_id], marker='X', facecolors='none', s=s_marker, linewidths=linewidth_marker)
+                color=target_colors[target_id], marker='o', facecolors='none', s=s_marker, linewidths=linewidth_marker)
             
         # plot interrupted trials
         interrupted_trials_id = session_data.loc[
@@ -293,8 +620,10 @@ def show_target_selection_compact(
                 label='best target', color='green', alpha=.3, linewidth=20)'''
 
         # plot MEASURE (i.e. value)
-        measure = session_data.loc[(session_data['block_id'] == i), background_value].to_numpy()
-        ax_measure.plot(measure, color='grey', alpha=.6)  # plot the measure on the twin axis
+        if background_value is not None:
+            measure = session_data.loc[(session_data['block_id'] == i), background_value].to_numpy()
+            ax_measure.plot(measure, color='grey', alpha=.6)  # plot the measure on the twin axis
+            ax_measure.axhline(v0, color='grey', linewidth=1, linestyle='-')
 
         # mark last 5 trials per block (here the reward probabilities gradually change)
         no_of_trials = len(session_data.loc[session_data['block_id'] == i])  # number of trials in the block
@@ -323,7 +652,8 @@ def show_target_selection_compact(
 
         if i == n_rows - 1:
             ax_measure.set_xlabel('trials in block (trials in session)')
-        ax_measure.set_ylabel(background_value)
+        if background_value is not None:
+            ax_measure.set_ylabel(background_value)
 
         # set xticks to trial ids
         trial_ids = session_data.loc[session_data['block_id'] == i, 'trial_id'].values
@@ -345,24 +675,23 @@ def show_target_selection_compact(
         ax_measure.spines['right'].set_visible(False)
         ax_measure.spines['bottom'].set_visible(False)
 
-
-
         '''ax_measure.grid()
         ax_markers.grid()'''
 
     # add legend to last subplot, below in the middle
-    ax_markers.scatter([], [], color='grey', marker='o', facecolors='grey', s=30, label='Rewarded - HIGH target')
-    ax_markers.scatter([], [], color='grey', marker='o', facecolors='none', s=30, label='Rewarded - LOW target')
-    ax_markers.scatter([], [], color='grey', marker='X', facecolors='grey', s=30, label='Unrewarded - HIGH target')
-    ax_markers.scatter([], [], color='grey', marker='X', facecolors='none', s=30, label='Unrewarded - LOW target')
-    ax_markers.legend(loc='center', bbox_to_anchor=(.5, -8), ncol=2)
+    ax_markers.scatter([], [], color='grey', marker='o', facecolors='grey', s=30, label='Rewarded ')
+    ax_markers.scatter([], [], color='grey', marker='o', facecolors='none', s=30, label='Non-Rewarded ')
+    ax_markers.scatter([], [], color=target_colors[1], marker='o', label='target 1')   
+    ax_markers.scatter([], [], color=target_colors[2], marker='o', label='target 2')
+    ax_markers.scatter([], [], color=target_colors[3], marker='o', label='target 3')
+    ax_markers.legend(loc='center', bbox_to_anchor=(.5, -8), ncol=1)
 
     plt.tight_layout()
     if title is not None:
         plt.suptitle(title, y=1)
 
     if savedir is not None:
-        plt.savefig(savedir, dpi=300, bbox_inches='tight', transparent=True)
+        plt.savefig(savedir, dpi=300, bbox_inches='tight', transparent=False)
     if show:
         plt.show()
     else:
