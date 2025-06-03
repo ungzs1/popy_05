@@ -387,8 +387,8 @@ def add_behav_info(neural_data, session_data):
     Add trial and epoch info to spike train or firing rate data.
     """
     # get trial and epoch info
-    trial_vector = np.array([np.nan for i in range(len(neural_data.time))])
-    epoch_vector = np.array([np.nan for i in range(len(neural_data.time))])
+    trial_vector = np.full(len(neural_data.time), np.nan)
+    epoch_vector = np.full(len(neural_data.time), np.nan)
 
     # fill trial and epoch info
     for trial_id in session_data.trial_id.unique():
@@ -404,22 +404,34 @@ def add_behav_info(neural_data, session_data):
         trial_end = session_data_temp.trial_end_time.values[0]
 
         # fill in trial info
-        time_ids = np.where((neural_data.time >= trial_start) & (neural_data.time < trial_end))[0]
-        trial_vector[time_ids] = trial_id
+        time_ids_trial = np.where((neural_data.time >= trial_start) & (neural_data.time < trial_end))[0]
+        trial_vector[time_ids_trial] = trial_id
 
-        # fill in epoch info
-        time_ids = np.where((neural_data.time >= trial_start) & (neural_data.time < lever_touch))[0]
-        epoch_vector[time_ids] = 0
-        time_ids = np.where((neural_data.time >= lever_touch) & (neural_data.time < lever_validation))[0]
-        epoch_vector[time_ids] = 1
-        time_ids = np.where((neural_data.time >= lever_validation) & (neural_data.time < target_touch))[0]    
-        epoch_vector[time_ids] = 2
-        time_ids = np.where((neural_data.time >= target_touch) & (neural_data.time < target_validation))[0]
-        epoch_vector[time_ids] = 3
-        time_ids = np.where((neural_data.time >= target_validation) & (neural_data.time < feedback))[0]
-        epoch_vector[time_ids] = 4
-        time_ids = np.where((neural_data.time >= feedback) & (neural_data.time < trial_end))[0]
-        epoch_vector[time_ids] = 5
+        if neural_data.time[0] > trial_start:
+            warnings.warn(f"Trial {trial_id} starts at {trial_start}, but the first time point in neural data is {neural_data.time[0]}. "
+                          f"Recording starts in the middle of a trial, thus filling the epoch info to nans and passing to the next trial.")
+            continue
+        if trial_end >= neural_data.time[-1]:
+            warnings.warn(f"Trial {trial_id} ends at {trial_end}, but the last time point in neural data is {neural_data.time[-1]}. "
+                          f"Recording end in the middle of a trial, thus filling the epoch infor to nans and ending the session here.")
+            break
+        else:
+            # fill in epoch info
+            time_ids = {
+                0: np.where((neural_data.time >= trial_start) & (neural_data.time < lever_touch))[0],
+                1: np.where((neural_data.time >= lever_touch) & (neural_data.time < lever_validation))[0],
+                2: np.where((neural_data.time >= lever_validation) & (neural_data.time < target_touch))[0],
+                3: np.where((neural_data.time >= target_touch) & (neural_data.time < target_validation))[0],
+                4: np.where((neural_data.time >= target_validation) & (neural_data.time < feedback))[0],
+                5: np.where((neural_data.time >= feedback) & (neural_data.time < trial_end))[0]
+            }
+
+            epoch_vector[time_ids[0]] = 0
+            epoch_vector[time_ids[1]] = 1
+            epoch_vector[time_ids[2]] = 2
+            epoch_vector[time_ids[3]] = 3
+            epoch_vector[time_ids[4]] = 4
+            epoch_vector[time_ids[5]] = 5
 
     # add to neural_data
     neural_data = neural_data.assign_coords(trial_id=("time", trial_vector))

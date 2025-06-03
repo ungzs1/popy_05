@@ -48,6 +48,8 @@ import numpy as np
 COLORS = {
     'LPFC': 'tab:blue',
     'MCC': 'grey',
+    'dLPFC': 'tab:blue',
+    'vLPFC': 'tab:purple',
     'ka': 'tab:purple',
     'po': 'tab:green',
     'ka_simulation': 'tab:brown',
@@ -66,6 +68,11 @@ MODEL_PARAMS['ka_simulation'] = MODEL_PARAMS['ka']
 MODEL_PARAMS['po_simulation'] = MODEL_PARAMS['po']
 MODEL_PARAMS['yu_sham_simulation'] = MODEL_PARAMS['yu_sham']
 MODEL_PARAMS['yu_DCZ_simulation'] = MODEL_PARAMS['yu_DCZ']
+
+MODEL_PARAMS_RL = {'ka': {'alpha': 0.12667346795497197, 'beta': 8.706042488026716},
+                   'po': {'alpha': 0.14989319361701048, 'beta': 4.613720171756842},
+                   'yu_sham': {'alpha': 0.20112907842232014, 'beta': 5.335652953142322},
+                   'yu_DCZ': {'alpha': 0.20897838964272342, 'beta': 4.78188888988298}}
 
 # Cage plotting things
 coord_chars = [chr(i) for i in range(97, 97+19)]

@@ -284,7 +284,7 @@ def load_data_for_decoder(monkey, session, n_extra_trials=(-1, 1)):
     #behav = add_shift_value(behav)  # add shift value for its decoding
 
     # set target == 2 to nan
-    behav['target'] = behav['target'].where(behav['target'] != 2, np.nan)  # set target == 2 to nan
+    #behav['target'] = behav['target'].where(behav['target'] != 2, np.nan)  # set target == 2 to nan
 
     # shuffle non-nan ids: where its nan, keep as nan, but shuffle randomly the others
     targets = behav['target'].copy()

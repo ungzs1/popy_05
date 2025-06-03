@@ -31,6 +31,8 @@ def get_all_sessions():
     session_metadata = session_metadata[session_metadata['block_len_valid'] == True]  # remove session with block_len_valid==False
     monkeys = session_metadata['monkey'].values
     sessions = session_metadata['session'].values
+
+
     return monkeys, sessions
 
 ### Configure logging
@@ -63,16 +65,16 @@ def save_results(xr, floc):
 ### Set parameters
 
 PARAMS = {
-    'model': 'glm',  # 'linear_correlation' or 'anova' or 'glm' or 'glm_cpd'
-    'glm_predictors': ['feedback'],
-    #'cpd_predictors': ['feedback', 'R_1', 'R_2', 'R_3', 'R_4', 'R_5', 'R_6'],
-    #'cpd_targets': ['feedback', 'value_function'],  # ['feedback', 'R_1', 'R_2', 'R_3', 'R_4'],
+    'model': 'glm_cpd',  # 'linear_correlation' or 'anova' or 'glm' or 'glm_cpd'
+    'glm_predictors': ['feedback', 'stay_value'],
+    #'cpd_predictors': ['feedback'],  DEPRECATED, use 'glm_predictors' instead to provide the full model predictors
+    'cpd_targets': ['feedback', 'stay_value'],  # ['feedback', 'R_1', 'R_2', 'R_3', 'R_4'],
     'neural_data_type': 'spike_counts',  # 'firing_rates' or 'spike_counts'
-    #'value_type': 'continuous',  # 'discrete' or 'continuous'
+    'value_type': 'continuous',  # 'discrete' or 'continuous'
     'step_time': .05,
     'n_permutations': 500,
 
-    'floc': os.path.join(cfg.PROJECT_PATH_LOCAL, 'notebooks', 'glm', 'results', 'fb_glm'),  # Folder to save results
+    'floc': os.path.join(cfg.PROJECT_PATH_LOCAL, 'notebooks', 'glm', 'results', 'fb_stayvalue_cpd'),  # Folder to save results
     'msg': 'Fitting a GLM with feedback only, it is for matteo to have an idea of each unit (if feedback sensitive and the sign)'
     }
 
@@ -83,7 +85,7 @@ if __name__ == '__main__':
 
     monkeys, sessions = get_all_sessions()
 
-    n_cores = np.min([11, os.cpu_count()-1])  # get number of cores in the machine
+    n_cores = np.min([100, os.cpu_count()])  # get number of cores in the machine
     with concurrent.futures.ProcessPoolExecutor(max_workers=n_cores) as executor:
         # submit jobs
         futures, future_proxy_mapping = [], {}  # init lists to store futures and their arguments

@@ -15,7 +15,7 @@ from sklearn.model_selection import cross_val_score
 from sklearn.linear_model import PoissonRegressor
 
 from popy.io_tools import load_behavior, load_neural_data
-from popy.behavior_data_tools import add_value_function, add_switch_info, add_history_of_feedback
+from popy.behavior_data_tools import add_stay_value, add_switch_info, add_history_of_feedback
 from popy.neural_data_tools import *
 
 def statistics(a, b):
@@ -89,7 +89,6 @@ class SingleUnitAnalysis:
         #self.linear_predictors = None  # condition of interest, e.g. ['target', 'feedback', 'value_function]
         #self.anova_predictors = None  # condition of interest, e.g. ['target', 'feedback', 'value_function]
         self.glm_predictors = [None]  # condition of interest, e.g. ['target', 'feedback', 'value_function]
-        self.cpd_predictors = [None]
         self.cpd_targets = [None]  # the predictors to remove (one by one) from the full model to get the CPD, e.g. ['feedback', 'value_function'] -> it means two CPD values will be calculated (using 2 models), one for feedback and one for value_function
                 
         self.model = None  # model to run, 'linear_correlation' or 'anova' or 'glm' or 'glm_cpd' (only glm and glm_cpd are implemented)
@@ -226,9 +225,9 @@ class SingleUnitAnalysis:
         # 1. Behavior data
         session_data = load_behavior(self.monkey, self.session)
         if not self.value_type is None:
-            session_data = add_value_function(session_data, digitize=False)
-            session_data['value_fb_pos'] = session_data['value_function'] * session_data['feedback']  # add value feedback interaction
-            session_data['value_fb_neg'] = session_data['value_function'] * (1 - session_data['feedback'])  # add value feedback interaction
+            session_data = add_stay_value(session_data, digitize=False)
+            session_data['value_fb_pos'] = session_data['stay_value'] * session_data['feedback']  # add value feedback interaction
+            session_data['value_fb_neg'] = session_data['stay_value'] * (1 - session_data['feedback'])  # add value feedback interaction
         session_data = add_switch_info(session_data)
         session_data = add_history_of_feedback(session_data, num_trials=8, one_column=False)
         session_data = session_data.dropna()  # remove nan values, the glm can not handle them

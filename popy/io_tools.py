@@ -144,8 +144,16 @@ def process_neural_data(behav_data, sr=1000, *args, **kwargs):
 
     # concatenate spike trains on time axis (if only one exists, it is supposed to work as well)
     if len(xr_both) == 2:
-        xr_both = xr.align(xr_both[0], xr_both[1], join="inner", exclude=['unit'])  # Align the two datasets to keep only the overlapping parts
-    xr_spikes = xr.concat(xr_both, dim='unit')
+        if xr_both[0].time[0].values != xr_both[1].time[0].values or xr_both[0].time[-1].values != xr_both[1].time[-1].values:
+            warnings.warn(f"Time axes of LPFC and MCC spike trains are not aligned in m:{monkey} s:{session}: {xr_both[0].time[0].values} vs {xr_both[1].time[0].values} and {xr_both[0].time[-1].values} vs {xr_both[1].time[-1].values}. Filling with nans the non-overlapping times.")
+    
+            # Align the two datasets to keep only the overlapping parts# Step 1: Align the datasets with outer join to ensure compatible coordinates
+            xr_both = xr.align(xr_both[0], xr_both[1], join="outer", exclude=['unit'])
+            
+        xr_spikes = xr.concat(xr_both, dim='unit')
+        
+    elif len(xr_both) == 1:
+        xr_spikes = xr_both[0]
 
     #  append trial and epoch info
     xr_spikes = add_behav_info(xr_spikes, behav_data)

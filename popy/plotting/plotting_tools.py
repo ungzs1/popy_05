@@ -88,7 +88,9 @@ def plot_strategy(behav, ax=None, saveas=None, paper_format=False, title=None, s
         # plotting, figsize is 130mm x 9 mm
         cm = 1/2.54  # centimeters in inches
         if paper_format:
-            fig, axs = plt.subplots(1, 2, figsize=(10*cm, 4*cm))
+            # fontsize = 18
+            plt.rcParams.update({'font.size': 18})
+            fig, axs = plt.subplots(1, 2, figsize=(12, 4))
         else:
             fig, axs = plt.subplots(1, 2, figsize=(20*cm, 8*cm))   
 
@@ -115,9 +117,9 @@ def plot_strategy(behav, ax=None, saveas=None, paper_format=False, title=None, s
                 axs[0].fill_between(np.arange(LEN_BLOCK), mean_best_selection-sem_best_selection, mean_best_selection+sem_best_selection, color=color, alpha=0.5)
         else:
             color = COLORS['_'.join(monkey.split('_')[:-1])]
-        axs[0].plot(mean_best_selection, color=color, label=monkey.upper(), linestyle=linestyle)
+        axs[0].plot(mean_best_selection, color=color, label=monkey.upper(), linestyle=linestyle, linewidth=2)
 
-        axs[1].plot(mean_shift, color=color , label=monkey.upper(), linestyle=linestyle)
+        axs[1].plot(mean_shift, color=color , label=monkey.upper(), linestyle=linestyle, linewidth=2)
         if linestyle == 'solid' and show_error:
             axs[1].fill_between(np.arange(LEN_BLOCK), mean_shift-sem_shift, mean_shift+sem_shift, color=color, alpha=0.5)
 
@@ -492,10 +494,10 @@ def show_target_selection(session_data_original, title=None, background_value=No
 def show_target_selection_compact(
         session_data_original, 
         title=None, 
-        background_value=None, 
+        background_values=None, 
         background_value_lims=None,
         savedir=None, 
-        paper_format=True,
+        format='paper',
         show=True):
     """
     Generates a figure illustrating the target selection, feedback, and target value.
@@ -520,6 +522,9 @@ def show_target_selection_compact(
     # work on a copy of the original data
     session_data = session_data_original.copy()
 
+    if background_values is None and not isinstance(background_values, list):
+        background_values = [background_values]
+
     if len(session_data['monkey'].unique()) != 1:
         raise ValueError('session_data should contain only one monkey')
     monkey = session_data['monkey'].unique()[0]
@@ -535,16 +540,24 @@ def show_target_selection_compact(
     # init plot
     cm_to_in = 0.393701
     n_rows = len(session_data['block_id'].unique())
-    if paper_format:
+    if format == 'paper':
         h = 2.5  # height of each block in cm
         w = 10  # width of each block in cm
         s_marker = 12
         linewidth_marker = .6
+        height_ratios = [1, 3]  # for the inner grid
+    elif format == 'poster':
+        h = 3.5
+        w = 10
+        s_marker = 12
+        linewidth_marker = 1
+        height_ratios = [1, 5]  # for the inner grid
     else:
         h = 4
         w = 15
         s_marker = 40
         linewidth_marker = 1
+        height_ratios = [1, 3]  # for the inner grid
     fig = plt.figure(figsize=(w*cm_to_in, h*n_rows*cm_to_in))
     outer_grid = plt.GridSpec(n_rows, 1)  # Create the main grid for blocks
 
@@ -552,7 +565,7 @@ def show_target_selection_compact(
         # Create a subdivision of the block's grid space
         inner_grid = gridspec.GridSpecFromSubplotSpec(2, 1,
                                                     subplot_spec=outer_grid[i],
-                                                    height_ratios=[1, 3],
+                                                    height_ratios=height_ratios,
                                                     hspace=0)
         
         # Create the two axes for this block
@@ -620,10 +633,15 @@ def show_target_selection_compact(
                 label='best target', color='green', alpha=.3, linewidth=20)'''
 
         # plot MEASURE (i.e. value)
-        if background_value is not None:
-            measure = session_data.loc[(session_data['block_id'] == i), background_value].to_numpy()
-            ax_measure.plot(measure, color='grey', alpha=.6)  # plot the measure on the twin axis
-            ax_measure.axhline(v0, color='grey', linewidth=1, linestyle='-')
+        bg_val_colors = {'stay_value': 'grey', 'V0': 'grey', 
+                         'Q_1': target_colors[1], 'Q_2': target_colors[2], 'Q_3': target_colors[3]}
+        alphas = {'V0': 0.4}
+        if background_values is not None:
+            for background_value in background_values:
+                measure = session_data.loc[(session_data['block_id'] == i), background_value].to_numpy()
+                color = bg_val_colors.get(background_value, 'grey')
+                alpha = alphas.get(background_value, .7)
+                ax_measure.plot(measure, color=color, alpha=alpha)  # plot the measure on the twin axis
 
         # mark last 5 trials per block (here the reward probabilities gradually change)
         no_of_trials = len(session_data.loc[session_data['block_id'] == i])  # number of trials in the block

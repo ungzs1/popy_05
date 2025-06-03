@@ -22,12 +22,12 @@ def _init_location_grid():
     """
     
     # lat-med axis
-    coords_num_x = np.arange(-9, 10)  
+    coords_num_x = np.arange(9, -10, -1)  
     coords_char_x = ['s','r','q','p','o','n','m','l','k','j','i','h','g','f','e','d','c','b','a']
 
     # ant-post axis
-    coords_num_y = np.arange(-9, 10) 
-    coords_chars_y = ['a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s']
+    coords_num_y = np.arange(-9, 10)
+    coords_chars_y = ['s','r','q','p','o','n','m','l','k','j','i','h','g','f','e','d','c','b','a']
 
     # create empty grid
     matrix_nans = np.ones((len(coords_num_x), len(coords_num_y)))
@@ -39,10 +39,10 @@ def _init_location_grid():
                                    'loc_y': ('y', coords_chars_y)},
                            dims=("x", "y"),
                            attrs={'description': 'Cortical grid of Clement (with his wierd coding)',
-                                  'x': 'lat-med axis coordinates, from lateral (most negative) to medial (most positive)',
-                                  'y': 'ant-post axis coordinates, from anterior (most negative) to posterior (most positive)',
-                                  'loc_x': 'lat-med axis letter codes, from lateral (last letter "s") to medial (first letter "a")',
-                                  'loc_y': 'ant-post axis coordinates, from anterior (first letter "a") to posterior (last letter "s")'})
+                                  'x': 'post-ant axis coordinates, from post (most positive) to ant (most negative)',
+                                  'y': 'med-lat axis coordinates, from med (most positive) to lateral (most negative)',
+                                  'loc_x': 'post-ant axis letter codes, from post (last letter "s") to ant (first letter "a")',
+                                  'loc_y': 'med-lat axis coordinates, from med (first letter "a") to lat (last letter "s")'})
     
     return data_xr
 
@@ -51,11 +51,11 @@ def _get_grid_location(monkey, session, area):
     """
     Helper function for plot_on_cortical_grid().
 
-    An easy way to get the grid location of a monkey and session. Returns the (x, y) coordinates of the grid (i.e. (med-lat, ant-post) coord).
+    An easy way to get the grid location of a monkey and session. Returns the (x, y) coordinates of the grid (i.e. (post-ant, med-lat) coord).
 
-    The positions are two letters, the first one is the medial-lateral axis, the second one is the anterior-posterior axis.
+    The positions are two letters, the first one is the post-ant axis, the second one is the medial-lateral axis.
 
-    e.g. ['a', 'a'] is the most medial and most anterior position, which translates to coordinater (9, -9) thanks to Clement...
+    e.g. ['a', 'a'] is the most anterior and most medial position, which translates to coordinater (-9, 9) thanks to Clement...
     """
     
     # load metadata
@@ -68,10 +68,10 @@ def _get_grid_location(monkey, session, area):
         print(f"No position information for recording: monkey {monkey}, session {session}, area {area}")
         return np.nan
 
-    decode_first_pos = {'a': 9, 'b': 8, 'c': 7, 'd': 6, 'e': 5, 'f': 4, 'g': 3, 'h': 2, 'i': 1, 'j': 0, 'k': -1, 'l': -2, 'm': -3, 'n': -4, 'o': -5, 'p': -6, 'q': -7, 'r': -8, 's': -9}
-    decode_second_pos = {'a': -9, 'b': -8, 'c': -7, 'd': -6, 'e': -5, 'f': -4, 'g': -3, 'h': -2, 'i': -1, 'j': 0, 'k': 1, 'l': 2, 'm': 3, 'n': 4, 'o': 5, 'p': 6, 'q': 7, 'r': 8, 's': 9}
+    decode_first_pos = {'a': -9, 'b': -8, 'c': -7, 'd': -6, 'e': -5, 'f': -4, 'g': -3, 'h': -2, 'i': -1, 'j': 0, 'k': 1, 'l': 2, 'm': 3, 'n': 4, 'o': 5, 'p': 6, 'q': 7, 'r': 8, 's': 9}
+    decode_second_pos = {'a': 9, 'b': 8, 'c': 7, 'd': 6, 'e': 5, 'f': 4, 'g': 3, 'h': 2, 'i': 1, 'j': 0, 'k': -1, 'l': -2, 'm': -3, 'n': -4, 'o': -5, 'p': -6, 'q': -7, 'r': -8, 's': -9}
 
-    return (decode_first_pos[position[0]], decode_second_pos[position[1]])
+    return (decode_first_pos[position[1]], decode_second_pos[position[0]])
 
 
 def _plot_matrix(grid: xr.DataArray,
@@ -230,10 +230,11 @@ def plot_on_cortical_grid(
         return ax
 
 
-def _plot_matrix_value_fb_custom(grid: xr.DataArray,
-                monkey: str,
-                not_signif_value: int,
-                ax=None, fig=None, title=None, save=False, show=True, label=None, vmin=None, vmax=None, cmap=None):
+def _plot_matrix_value_fb_custom(
+        grid: xr.DataArray,
+        monkey: str,
+        not_signif_value: int,
+        ax=None, fig=None, title=None, save=False, show=True, label=None, vmin=None, vmax=None, cmap=None):
     """
     Helper function for plot_on_cortical_grid().
 
@@ -258,6 +259,8 @@ def _plot_matrix_value_fb_custom(grid: xr.DataArray,
     # load sulcus png
     floc = os.path.join(cfg.PROJECT_PATH_LOCAL, 'data', 'recording_sites', f'sulci_{monkey}.png')
     img = plt.imread(floc)
+    # rotate 90 degrees counter-clockwise
+    img = np.rot90(img, k=3)  # rotate the image 90 degrees counter-clockwise
 
     # Create a custom colormap (reds, but lower values are not)
     ''' if cmap is None:
@@ -288,12 +291,13 @@ def _plot_matrix_value_fb_custom(grid: xr.DataArray,
     # plot balls for feedback
     color = 'tab:green'
     matrix_fb = grid.n_signif_feedback
-    max_value = matrix_fb.max().values
+    max_value = 1.00
     multiplier = 7.5/max_value
     for x in matrix_fb.coords['x']:
         for y in matrix_fb.coords['y']:
             n_signif = matrix_fb.sel(x=x, y=y).values
-            ax.plot(x-.2, y, 'o', color=color, markersize=n_signif*multiplier, alpha=.7, markeredgewidth=.5, zorder=6)
+            size_temp = np.min([n_signif*multiplier, max_value*multiplier])
+            ax.plot(-x-.2, y, 'o', color=color, markersize=size_temp, alpha=.7, markeredgewidth=.5, zorder=6, markeredgecolor='white')
 
     # create legend (plot the balls for feedback and value, for max_value, half and 1/4)
     ax.plot(-100, -100, 'o', color=color, markersize=max_value*multiplier, alpha=.7, label=f'Feedback, {round(max_value*100)}%', markeredgewidth=.5)
@@ -303,12 +307,13 @@ def _plot_matrix_value_fb_custom(grid: xr.DataArray,
 
     color = 'tab:orange'
     matrix_fb = grid.n_signif_value
-    max_value = matrix_fb.max().values
+    max_value = .75
     multiplier = 8/max_value
     for x in matrix_fb.coords['x']:
         for y in matrix_fb.coords['y']:
             n_signif = matrix_fb.sel(x=x, y=y).values
-            ax.plot(x+.2, y, 'o', color=color, markersize=n_signif*multiplier, alpha=.5, markeredgewidth=.5, zorder=6)
+            size_temp = np.min([n_signif*multiplier, max_value*multiplier])
+            ax.plot(-x+.2, y, 'o', color=color, markersize=size_temp, alpha=.5, markeredgewidth=.5, zorder=6, markeredgecolor='white')
 
     
     # create legend (plot the balls for feedback and value, for max_value, half and 1/4)
@@ -335,19 +340,25 @@ def _plot_matrix_value_fb_custom(grid: xr.DataArray,
     # plot grey square where its not significant
     #ax.imshow(non_significants, cmap='Greys', alpha=.5, aspect='auto', origin='upper', extent=[-9, 9, -9, 9], vmin=-.1, vmax=.1)
 
+    # rotate plot 90 degrees counter-clockwise
+
+
     # put text on top of the grid (LPFC MCC)
-    pos_1 = [2, 8]
-    pos_2 = [-4, -8.5]
-    ax.text(pos_1[0], pos_1[1], 'MCC', ha="center", va="center", color="black", fontsize=10)
-    ax.text(pos_2[0], pos_2[1], 'LPFC', ha="center", va="center", color="black", fontsize=10)
+    pos_mcc = [7, 8]
+    pos_dlpfc = [7, 2]
+    pos_vlpfc = [7, -5]
+    ax.text(pos_mcc[0], pos_mcc[1], 'MCC', ha="center", va="center", color="black", fontsize=10)
+    ax.text(pos_dlpfc[0], pos_dlpfc[1], 'dLPFC', ha="center", va="center", color="black", fontsize=10)
+    ax.text(pos_vlpfc[0], pos_vlpfc[1], 'vLPFC', ha="center", va="center", color="black", fontsize=10)
+
 
     # text on 'lateral, medial, anterior, posterior'
-    ax.set_xlabel('Pos. rel. cage (mm)')
-    ax.set_ylabel('Pos. rel. cage (mm)')
-    ax.text(-8, -11.5, 'lat.', ha="center", va="center", color="black")
-    ax.text(8, -11.5, 'med.', ha="center", va="center", color="black")
-    ax.text(-12, 8, 'post.', ha="center", va="center", color="black", rotation=90)
-    ax.text(-12, -8, 'ant.', ha="center", va="center", color="black", rotation=90)
+    ax.set_xlabel('Pos. on cage (mm)')
+    ax.set_ylabel('Pos. on cage (mm)')
+    ax.text(-8, -11.5, 'post.', ha="center", va="center", color="black")
+    ax.text(8, -11.5, 'ant.', ha="center", va="center", color="black")
+    ax.text(-12, 8, 'med.', ha="center", va="center", color="black", rotation=90)
+    ax.text(-12, -8, 'lat.', ha="center", va="center", color="black", rotation=90)
 
     # show minor ticks at every 1, major at every 2
     ax.set_xticks(np.arange(-8, 9, 1), minor=True)
@@ -430,20 +441,25 @@ def plot_on_cortical_grid_value_fb_custom(
                 if np.isnan(grid_loc).any():
                     continue
 
-                value = sub_df["n_signif_value"].values[0]
-                feedback = sub_df["n_signif_feedback"].values[0]
+                # get the values for the current session, area
                 n_units = sub_df["n_units"].values[0]
-                
+                prop_value = sub_df["n_signif_value"].values[0] / n_units
+                prop_feedback = sub_df["n_signif_feedback"].values[0] / n_units
+                                       
                 # add to the grid (if the location is not already used, esle use the better value)
                 if grid_loc not in locs_already_used:
-                    grid_ds.n_signif_value.loc[dict(x=grid_loc[0], y=grid_loc[1])] = value
-                    grid_ds.n_signif_feedback.loc[dict(x=grid_loc[0], y=grid_loc[1])] = feedback
+                    # set the values in the grid
+                    grid_ds.n_signif_value.loc[dict(x=grid_loc[0], y=grid_loc[1])] = prop_value
+                    grid_ds.n_signif_feedback.loc[dict(x=grid_loc[0], y=grid_loc[1])] = prop_feedback
                     grid_ds.n_units.loc[dict(x=grid_loc[0], y=grid_loc[1])] = n_units
+
+                    # add the location to the set of already used locations
                     locs_already_used.add(grid_loc)
-                else:  # use the best value
-                    if n_units > grid_ds.n_units.loc[dict(x=grid_loc[0], y=grid_loc[1])]:
-                        grid_ds.n_signif_value.loc[dict(x=grid_loc[0], y=grid_loc[1])] = value
-                        grid_ds.n_signif_feedback.loc[dict(x=grid_loc[0], y=grid_loc[1])] = feedback
+
+                else:  # use the best value, i.e. replace old if current is better
+                    if prop_value > grid_ds.n_signif_value.loc[dict(x=grid_loc[0], y=grid_loc[1])]:
+                        grid_ds.n_signif_value.loc[dict(x=grid_loc[0], y=grid_loc[1])] = prop_value
+                        grid_ds.n_signif_feedback.loc[dict(x=grid_loc[0], y=grid_loc[1])] = prop_feedback
                         grid_ds.n_units.loc[dict(x=grid_loc[0], y=grid_loc[1])] = n_units
 
         # plot the grid on the subplot

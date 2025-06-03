@@ -472,7 +472,7 @@ def add_value_function(behav_original, digitize=False, n_classes=4):
 def add_shift_value(*args, **kwargs):
     raise NotImplementedError("Use 'add_stay_value(...)' instead, and change 'shift_value' to 'stay_value'")
 
-def add_stay_value(behav_original, digitize=False, n_classes=4, alpha_ka=None, alpha_po=None):
+def add_stay_value(behav_original, digitize=False, n_classes=4, reset_on_switch=True):
     """
     VALUE CORRESPONDING TO TRIAL t IS THE ONE KNOWN BEFORE THE FEEDBACK OF TRIAL t IS RECEIVED!
 
@@ -487,7 +487,7 @@ def add_stay_value(behav_original, digitize=False, n_classes=4, alpha_ka=None, a
     for monkey, behav in behavior.groupby('monkey'):
         # init an agent
         agent_class = ShiftValueAgent
-        fixed_params = {'reset_on_switch': True}
+        fixed_params = {'reset_on_switch': reset_on_switch}
         params = cfg.MODEL_PARAMS[monkey]  # get the parameters for the monkey
 
         agent = agent_class(**params, **fixed_params)
@@ -516,13 +516,15 @@ def add_stay_value(behav_original, digitize=False, n_classes=4, alpha_ka=None, a
                 session_previous = session_curr
 
             # update the agent
-            agent.update_values(int(action), int(reward))
-        
+            action = int(action) - 1  # convert to 0-indexed
+            agent.update_values(action, int(reward))
+
         behav.loc[:, 'stay_value'] = stay_values
         behav.loc[:, 'stay_proba'] = stay_probas
 
         # write back the q_values to the original dataframe, matching the indices
         behavior.loc[behav.index, 'stay_value'] = behav.loc[behav.index, 'stay_value'].values
+        behavior['V0'] = params['V0']
         behavior.loc[behav.index, 'stay_proba'] = behav.loc[behav.index, 'stay_proba'].values
 
     if digitize:
@@ -544,6 +546,86 @@ def add_stay_value(behav_original, digitize=False, n_classes=4, alpha_ka=None, a
             right=False) - 1
 
     return behavior
+
+def add_RL_values(behav_original, digitize=False, n_classes=4, structure_aware=True):
+    """
+    VALUE CORRESPONDING TO TRIAL t IS THE ONE KNOWN BEFORE THE FEEDBACK OF TRIAL t IS RECEIVED!
+
+    Model-based value function calculation. 
+    
+    The value function is calculated based on the Shift-value model with reset.
+    """
+
+    behavior = behav_original.copy()
+    behavior.reset_index(drop=True, inplace=True)  # reset index 
+
+    for monkey, behav in behavior.groupby('monkey'):
+        # init an agent
+        agent_class = QLearner
+        fixed_params = {'structure_aware': structure_aware}
+        params = cfg.MODEL_PARAMS_RL[monkey]  # get the parameters for the monkey
+
+        agent = agent_class(**params, **fixed_params)
+
+        q_values = np.zeros((len(behav), 3))  # 3 targets
+        stay_probas = np.zeros(len(behav))
+        session_previous = 'none'
+        for i, (_, row) in enumerate(behav.iterrows()):
+            # Get latent value function
+            q_values[i] = agent.q_values
+            stay_probas[i] = np.nan  # agent._get_stay_proba()  # TODO: implement stay probability for RL agent
+
+            # Get the action and reward taken by the agent
+            action, reward = row["target"], row["feedback"]
+            action = int(action) - 1  # convert to 0-indexed
+            session_curr = row["session"]
+
+            # Skip NaN actions (interrupted trials)
+            if np.isnan(action):
+                q_values[i] = np.nan
+                stay_probas[i] = np.nan
+                continue
+
+            # If we are in a new session, reset the agent
+            if session_curr != session_previous:
+                agent.reset()
+                session_previous = session_curr
+
+            # update the agent
+            agent.update_values(int(action), int(reward))
+        
+        for j in range(3):
+            behav.loc[:, f'Q_{j+1}'] = q_values[:, j]
+        behav.loc[:, 'stay_proba'] = stay_probas
+
+        # write back the q_values to the original dataframe, matching the indices
+        behavior.loc[behav.index, 'Q_1'] = behav.loc[behav.index, 'Q_1'].values
+        behavior.loc[behav.index, 'Q_2'] = behav.loc[behav.index, 'Q_2'].values
+        behavior.loc[behav.index, 'Q_3'] = behav.loc[behav.index, 'Q_3'].values
+        behavior.loc[behav.index, 'stay_proba'] = behav.loc[behav.index, 'stay_proba'].values
+
+    if digitize:
+        raise NotImplementedError("Digitization is not implemented for RL values yet.")
+        # Create bin edges (from min to max value, or 0-1 if specified)
+        min_V, max_V = 0, 1
+        bin_edges = np.linspace(min_V, max_V, n_classes+1)
+                
+        # Perform the binning
+        behavior['stay_value'] = np.digitize(
+            behavior['stay_value'], 
+            bins=bin_edges, 
+            right=False) - 1
+        
+        min_proba_stay, max_proba_stay = agent._get_min_max_stay_proba()
+        bins_edges = np.linspace(min_proba_stay, max_proba_stay, n_classes+1)
+        behavior['stay_proba'] = np.digitize(
+            behavior['stay_proba'], 
+            bins=bin_edges, 
+            right=False) - 1
+
+    return behavior
+
+
 
 def add_RPE(behav, scale_RPE=False):
     if 'value_function' not in behav.columns:
