@@ -51,14 +51,14 @@ def save_results(xr, floc):
 ### Set parameters
 
 PARAMS = {
-    'conditions': [f'stay_value'],  # Conditions to decode
-    'group_targets': ['target', 'target_shuffled'],
-    'K_fold': None,
-    'step_len': .05,
-    'n_perm': 500, 
+    'conditions': [f"stay_value_{x:.2f}" for x in np.arange(0.05, 1, 0.05)],
+    'group_targets': None, #['target', 'target_shuffled'],
+    'K_fold': 10,
+    'step_len': .1,
+    'n_perm': 100, 
     'n_extra_trials': (0, 0),
-    'floc': os.path.join(cfg.PROJECT_PATH_LOCAL, 'notebooks', 'population_decoding', 'results', 'value_x_target_po_no_target2'),
-    'msg': 'Trying to decode value across targets to see if its RL-based (assoc. w. targets) or foraging based (assoc. w. staying)',
+    'floc': os.path.join(cfg.PROJECT_PATH_LOCAL, 'notebooks', 'population_decoding', 'results', 'multiple_alphas'),
+    'msg': 'Compute the stay value with different alpha parameters and try to see which is the best regressor',
 }
 
 ### Run
@@ -68,14 +68,11 @@ if __name__ == '__main__':
 
     monkeys, sessions = get_all_sessions()  # Get a pandas df containing all sessions' meta information
     
-    n_cores = np.min([11, os.cpu_count()-1])  # get number of cores in the machine
+    n_cores = np.min([100, os.cpu_count()-1])  # get number of cores in the machine
     with concurrent.futures.ProcessPoolExecutor(max_workers=n_cores) as executor:
         # submit jobs
         futures, future_proxy_mapping = [], {}
         for monkey, session in zip(monkeys, sessions):
-            if monkey != 'po':
-                continue
-
             future = executor.submit(run_decoder, monkey, session, PARAMS, load_data=False, save_data=False)  # Run decoder for each session
             futures.append(future)
             future_proxy_mapping[future] = (monkey, session)

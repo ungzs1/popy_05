@@ -15,7 +15,6 @@ import scipy.signal as scs
 from tqdm import tqdm
 import time
 
-
 ### Firing rate generation
 
 
@@ -418,7 +417,9 @@ def run_normalization(neural_data_original, print_usr_msg=False):
     firing rates of each neuron to the mean firing rate of the neuron across all trials.
     """
     assert isinstance(neural_data_original, xr.Dataset), "neural_data must be an xarray Dataset."
-        
+    
+    from popy.config import EPOCH_LENS  # import here to avoid circular import issues
+
     methods = {}
     for data_var in neural_data_original.data_vars:
         # if discrete data, use nearest interpolation, otherwise linear
@@ -429,9 +430,8 @@ def run_normalization(neural_data_original, print_usr_msg=False):
         else:
             methods[data_var] = 'linear'
     
-    EP_LENS = np.array([1., 1., 0.5, 0.5, 0.5, 4.])
     bin_size = np.round(neural_data_original.time[1].data - neural_data_original.time[0].data, 6)
-    ep_lens = (EP_LENS / bin_size.data).astype('int')  # epoch lengths in number of bins
+    ep_lens = (EPOCH_LENS / bin_size.data).astype('int')  # epoch lengths in number of bins
         
     # add attribute: original bin size (bcause it wont be calculatable anymore)
     neural_data_original.attrs['bin_size'] = bin_size    
@@ -493,7 +493,7 @@ def run_normalization(neural_data_original, print_usr_msg=False):
                 very_long_epoch_count += 1
                 
         trial_normalized = xr.concat(trial_normalized, dim='time')
-        trial_normalized = trial_normalized.assign_coords({'time_in_trial': ('time', np.linspace(0, EP_LENS.sum()-bin_size, len(trial_normalized.time)))})
+        trial_normalized = trial_normalized.assign_coords({'time_in_trial': ('time', np.linspace(0, EPOCH_LENS.sum()-bin_size, len(trial_normalized.time)))})
         data_normalized.append(trial_normalized)
     
     # concatenate all epochs  -- todo really slow

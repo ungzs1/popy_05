@@ -119,11 +119,11 @@ def _preproc_data(neural_dataset_original,
         coords = group_target_name
 
     if coords is not None:  
-        # neural_dataset = balance_labels(neural_dataset, coords=coords)  # TODO: re-put this line after target CV decoder!!!!
+        neural_dataset = balance_labels(neural_dataset, coords=coords)  # TODO: uncomment this line after target CV decoder!!!!
         n_trials_after = len(neural_dataset)
-        print(f"Removed {n_trials_before - n_trials_after}/{n_trials_before} to balance the dataset on: {coords}")
-    else:
-        print(f"Dataset is not balanced, no trials removed.")
+        #print(f"Removed {n_trials_before - n_trials_after}/{n_trials_before} to balance the dataset on: {coords}")
+    #else:
+        #print(f"Dataset is not balanced, no trials removed.")
 
     # Step 2. Creating data matrix and labels
     X = neural_dataset.data
@@ -185,10 +185,10 @@ def linear_decoding(X, y, groups=None, K_fold=None, n_perm=1000, n_jobs=1):
     In case of discrete data, the decoder is a logistic regression, and the scoring measure is 'accuracy'.
     """
 
+
+    ## DECODER SETUP
     if K_fold is None:
         K_fold = 10
-    ## DECODER SETUP
-
 
     # is data continuous or discrete?
     dtype = 'continuous' if len(np.unique(y)) > 5 else 'discrete'
@@ -199,9 +199,9 @@ def linear_decoding(X, y, groups=None, K_fold=None, n_perm=1000, n_jobs=1):
             kf = LeaveOneGroupOut()  # use LeaveOneGroupOut decode the value across targets (trained on one target, tested on the other) 
         decoder = LinearRegression()
         #decoder = Lasso(alpha=.05)
-        #scoring_function = 'r2'
+        scoring_function = 'r2'
         # Create a scorer object
-        scoring_function = make_scorer(pearson_scorer)  # TODO this is custom for the across target CV, change this when finished
+        #scoring_function = make_scorer(pearson_scorer)  # TODO this is custom for the across target CV, change this when finished
 
     elif dtype == 'discrete':  # in case of dicrete data -> classification
         if groups is None:
@@ -275,25 +275,25 @@ def load_data_for_decoder(monkey, session, n_extra_trials=(-1, 1)):
 
     # add behav vars to decode
     behav = add_stay_value(behav)  # add shift value for its decoding
-    behav = add_switch_info(behav)  # add switch information for its decoding
-    behav = add_history_of_feedback(behav, num_trials=2, one_column=False)
+    # behav = add_switch_info(behav)  # add switch information for its decoding
+    behav = add_history_of_feedback(behav, num_trials=8, one_column=False, add_history_of_targets=False)  # add history of feedback for its decoding
 
-    '''for alpha in np.linspace(.05, 1, 20):
-        behav = add_shift_value(behav, alpha_ka=alpha, alpha_po=alpha)
-        behav = behav.rename(columns={'shift_value': f'shift_value_{alpha:.2f}'})'''
+    for alpha in np.arange(0.05, 1, 0.05):
+        behav = add_stay_value(behav, alpha=alpha)
+        behav = behav.rename(columns={'stay_value': f'stay_value_{alpha:.2f}'})
     #behav = add_shift_value(behav)  # add shift value for its decoding
 
     # set target == 2 to nan
     #behav['target'] = behav['target'].where(behav['target'] != 2, np.nan)  # set target == 2 to nan
 
     # shuffle non-nan ids: where its nan, keep as nan, but shuffle randomly the others
-    targets = behav['target'].copy()
-    behav['target_shuffled'] = _shuffle_preserve_nan(targets)
+    '''targets = behav['target'].copy()
+    behav['target_shuffled'] = _shuffle_preserve_nan(targets)'''
 
     # vreate 'stay_value_{target}' variable
-    for target in np.unique(behav['target'].values):
+    '''for target in np.unique(behav['target'].values):
         behav[f'stay_value_{target}'] = behav['stay_value'].copy()
-        behav[f'stay_value_{target}'] = behav[f'stay_value_{target}'].where(behav['target'] == target, np.nan)  # keep only the values for the current target
+        behav[f'stay_value_{target}'] = behav[f'stay_value_{target}'].where(behav['target'] == target, np.nan)  # keep only the values for the current target'''
     
     # 2. Neural data
 
@@ -302,8 +302,8 @@ def load_data_for_decoder(monkey, session, n_extra_trials=(-1, 1)):
     n_units_all = len(neural_data['unit'].values)
 
     # remove some units
-    neural_data = remove_low_fr_neurons(neural_data, 1, print_usr_msg=True)
-    neural_data = remove_trunctuated_neurons(neural_data, mode='remove', delay_limit=10, print_usr_msg=True)
+    neural_data = remove_low_fr_neurons(neural_data, 1, print_usr_msg=False)
+    neural_data = remove_trunctuated_neurons(neural_data, mode='remove', delay_limit=10, print_usr_msg=False)
     n_units_kept = len(neural_data['unit'].values)
     if len(neural_data['unit'].values) == 0:
         raise ValueError(f"No neurons left for {monkey}_{session}")
@@ -318,8 +318,7 @@ def load_data_for_decoder(monkey, session, n_extra_trials=(-1, 1)):
     neural_dataset = build_trial_dataset(neural_data, mode='full_trial', n_extra_trials=n_extra_trials)
     neural_dataset = merge_behavior(neural_dataset, behav)
 
-    '''print(f"Monkey: {monkey}, Session: {session}\n",
-          f"Removed {n_units_all - n_units_kept} / {n_units_all} neurons\n")'''
+    print(f"Monkey: {monkey}, Session: {session} - Removed {n_units_all - n_units_kept} / {n_units_all} neurons")
 
     return neural_dataset
 
@@ -376,33 +375,33 @@ def run_decoder(monkey, session, PARAMS, n_jobs=1, load_data=False, save_data=Fa
 
             for area in np.unique(neural_data.area.values):
                 print(f"Decoding {target} in {area}")
-                #try:
-                neural_data_temp = neural_data.where(neural_data.area == area, drop=True)
+                try:
+                    neural_data_temp = neural_data.where(neural_data.area == area, drop=True)
 
-                '''if monkey == 'po' and group_target.split('_')[0] == 'target':
-                    # remove trials with target 2 (po_2) for po monkey
-                    neural_data_temp = neural_data_temp.where(neural_data_temp.target != 2, drop=True)'''
+                    '''if monkey == 'po' and group_target.split('_')[0] == 'target':
+                        # remove trials with target 2 (po_2) for po monkey
+                        neural_data_temp = neural_data_temp.where(neural_data_temp.target != 2, drop=True)'''
 
-                if len(neural_data_temp.unit) == 0:
-                    continue
+                    if len(neural_data_temp.unit) == 0:
+                        continue
 
-                # 1. preprocess data -> create a matrix of regressors (X) and a vector of labels (y)
+                    # 1. preprocess data -> create a matrix of regressors (X) and a vector of labels (y)
 
-                X, y, groups = _preproc_data(neural_data_temp.firing_rates, target, group_target)
+                    X, y, groups = _preproc_data(neural_data_temp.firing_rates, target, group_target)
 
-                # 2. run decoder on the labelled dataset
-                scores, pvals, perm_mean, perm_std = linear_decoding(X, y, groups, K_fold=PARAMS['K_fold'], n_perm=PARAMS['n_perm'], n_jobs=n_jobs)
+                    # 2. run decoder on the labelled dataset
+                    scores, pvals, perm_mean, perm_std = linear_decoding(X, y, groups, K_fold=PARAMS['K_fold'], n_perm=PARAMS['n_perm'], n_jobs=n_jobs)
 
-                # create xarray dataset, dimension is time, vars are scores
-                xr_scores.scores.loc[target, str(group_target), :, area] = scores
-                xr_scores.pvals.loc[target, str(str(group_target)), :, area] = pvals
-                xr_scores.perm_mean.loc[target, str(group_target), :, area] = perm_mean
-                xr_scores.perm_std.loc[target, str(group_target), :, area] = perm_std
-                #xr_scores.cv_mean.loc[target, :, area] = cv_mean
-                #xr_scores.cv_std.loc[target, :, area] = cv_std
+                    # create xarray dataset, dimension is time, vars are scores
+                    xr_scores.scores.loc[target, str(group_target), :, area] = scores
+                    xr_scores.pvals.loc[target, str(str(group_target)), :, area] = pvals
+                    xr_scores.perm_mean.loc[target, str(group_target), :, area] = perm_mean
+                    xr_scores.perm_std.loc[target, str(group_target), :, area] = perm_std
+                    #xr_scores.cv_mean.loc[target, :, area] = cv_mean
+                    #xr_scores.cv_std.loc[target, :, area] = cv_std
 
-                """except Exception as e:
-                    print(f"Error decoding {target} in {area}: {e}")"""
+                except Exception as e:
+                    print(f"Error decoding {target} in {area}: {e}")
 
     # add monkey and session information
     xr_scores = xr_scores.assign_coords(session=f'{monkey}_{session}')
@@ -413,4 +412,3 @@ def run_decoder(monkey, session, PARAMS, n_jobs=1, load_data=False, save_data=Fa
 
     session_log=[]  # Log messages of the internal run, not implemented yet
     return xr_scores, session_log     
-

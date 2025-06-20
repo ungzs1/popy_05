@@ -10,6 +10,8 @@ path = config.PROJECT_PATH
 
 import os
 import xarray as xr
+import numpy as np
+
 
 ### PATHS ###
 pathes = {'OFFICE_windows': 'C:\\ZSOMBI\\OneDrive\\PoPy',
@@ -37,14 +39,16 @@ else:
     PROJECT_PATH_DRIVE = None
     #print('Inserm drive is not accessible')
 
+### PROCESSING NEUIRAL DATA ###
 
-### PREPROCESSING UNTILS ###
 # sampling rate of spikes and behav during preprocessing
 PREPROCESSING_SAMPLING_RATE = 1000
 
-### PLOTTING ###
-import numpy as np
+# for time normalization, we use the following epoch lengths
+EPOCH_LENS = np.array([1., 1., 0.5, 0.5, 0.5, 4.])
 
+
+### PLOTTING ###
 COLORS = {
     'LPFC': 'tab:blue',
     'MCC': 'grey',
@@ -56,6 +60,8 @@ COLORS = {
     'po_simulation': 'tab:red',
     'yu_DCZ': 'tab:blue',
     'yu_sham': 'tab:orange',
+    1: '#238823', 0: '#D2222D',
+    1.0: '#238823', 0.0: '#D2222D',
     }
 
 

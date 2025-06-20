@@ -178,7 +178,7 @@ def add_double_feedback(behav):
     behav['double_feedback'] = new_col
     return behav
 
-def add_history_of_feedback(behav_original, num_trials=8, one_column=True, coding=(0, 1), binary=False):
+def add_history_of_feedback(behav_original, num_trials=8, one_column=True, coding=(0, 1), binary=False, add_history_of_targets=True):
     """
     Add history of feedback to behav.
 
@@ -220,11 +220,13 @@ def add_history_of_feedback(behav_original, num_trials=8, one_column=True, codin
 
     subdfs = []
     for _, subdf in behav.groupby(['monkey', 'session']):
-        # iterate row by row in behav
+        # add the history of feedback
         for j in range(1, num_trials+1):
-            subdf[f'R_{j}'] = subdf['feedback'].shift(j)          
-        for j in range(1, num_trials+1): 
-            subdf[f'T_{j}'] = subdf['target'].shift(j)  # shift the target column by i trials
+            subdf[f'R_{j}'] = subdf['feedback'].shift(j)  
+        # add the target history
+        if add_history_of_targets:        
+            for j in range(1, num_trials+1): 
+                subdf[f'T_{j}'] = subdf['target'].shift(j)  # shift the target column by i trials
 
         subdfs.append(subdf)
 
@@ -232,6 +234,7 @@ def add_history_of_feedback(behav_original, num_trials=8, one_column=True, codin
 
     # add to dataframe
     if one_column:
+        raise NotImplementedError("One column history of feedback is not implemented yet. Use one_column=False for now.")
         column_data = []
         for i in range(len(behav)):
             trial_data = []
@@ -472,7 +475,7 @@ def add_value_function(behav_original, digitize=False, n_classes=4):
 def add_shift_value(*args, **kwargs):
     raise NotImplementedError("Use 'add_stay_value(...)' instead, and change 'shift_value' to 'stay_value'")
 
-def add_stay_value(behav_original, digitize=False, n_classes=4, reset_on_switch=True):
+def add_stay_value(behav_original, alpha=None, digitize=False, n_classes=4, reset_on_switch=True):
     """
     VALUE CORRESPONDING TO TRIAL t IS THE ONE KNOWN BEFORE THE FEEDBACK OF TRIAL t IS RECEIVED!
 
@@ -489,6 +492,8 @@ def add_stay_value(behav_original, digitize=False, n_classes=4, reset_on_switch=
         agent_class = ShiftValueAgent
         fixed_params = {'reset_on_switch': reset_on_switch}
         params = cfg.MODEL_PARAMS[monkey]  # get the parameters for the monkey
+        if alpha is not None:
+            params['alpha'] = alpha
 
         agent = agent_class(**params, **fixed_params)
 
