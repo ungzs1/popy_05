@@ -1,5 +1,6 @@
 import numpy as np
-from sklearn.linear_model import LogisticRegression, LinearRegression
+from sklearn.linear_model import LogisticRegression, LinearRegression, Ridge, Lasso
+from sklearn.linear_model import RidgeCV, LassoCV
 from sklearn.model_selection import cross_val_score
 from sklearn.model_selection import StratifiedKFold, permutation_test_score, KFold
 import xarray as xr
@@ -197,8 +198,9 @@ def linear_decoding(X, y, groups=None, K_fold=None, n_perm=1000, n_jobs=1):
             kf = KFold(n_splits=K_fold, shuffle=True)
         else:
             kf = LeaveOneGroupOut()  # use LeaveOneGroupOut decode the value across targets (trained on one target, tested on the other) 
-        decoder = LinearRegression()
-        #decoder = Lasso(alpha=.05)
+        #decoder = LinearRegression()
+        decoder = LassoCV(alphas=np.logspace(-3, 2, 100))  # Lasso regression with cross-validation
+        #decoder = RidgeCV(alphas=np.logspace(-3, 2, 100), cv=kf)
         scoring_function = 'r2'
         # Create a scorer object
         #scoring_function = make_scorer(pearson_scorer)  # TODO this is custom for the across target CV, change this when finished
@@ -226,15 +228,32 @@ def linear_decoding(X, y, groups=None, K_fold=None, n_perm=1000, n_jobs=1):
     for i_train, t_train in enumerate(np.arange(X.shape[2])):
         X_temp = X[:, :, t_train]  # select (trial, unit) data at time t_train
         if groups is None:
-            res = permutation_test_score(decoder, X_temp, y, cv=kf, 
+            cv_scores = cross_val_score(decoder, X_temp, y, cv=kf, scoring=scoring_function, n_jobs=n_jobs)
+            score = cv_scores.mean()  # take the mean of the cross-validation scores
+
+            if n_perm is not None:
+                # Permutation test
+                permuted_scores = []
+                for _ in range(n_perm):
+                    y_permuted = np.random.permutation(y)
+                    perm_scores = cross_val_score(decoder, X_temp, y_permuted, cv=kf, scoring=scoring_function, n_jobs=n_jobs)
+                    permuted_scores.append(perm_scores.mean())
+                
+                # Calculate p-value
+                pvalue = (np.array(permuted_scores) >= score).mean()
+                perm_scores_mean_temp = np.array(permuted_scores).mean()  # convert to numpy array
+                perm_scores_std_temp = np.array(permuted_scores).std()  # compute
+            else:
+                pvalue = np.nan  # if no permutation test is requested, set pvalue to nan
+                perm_scores_mean_temp = np.nan
+                perm_scores_std_temp = np.nan
+
+            '''res = permutation_test_score(decoder, X_temp, y, cv=kf, 
                                          scoring=scoring_function, n_permutations=n_perm, n_jobs=n_jobs)
             # unpack results and store them
-            score, perm_scores, pvalue = res
-            # perm_scores is a list of scores for each permutation
-            perm_scores_mean_temp = np.mean(perm_scores)  # convert to numpy array
-            perm_scores_std_temp = np.std(perm_scores)  # compute the std of the permutation scores
+            score, perm_scores, pvalue = res'''
 
-        else:
+        elif groups is not None and n_perm is not None:
             score = target_cv_score(decoder, X_temp, y, groups)  # compute the score for the current time point
 
             # compute the permutation test
@@ -278,10 +297,9 @@ def load_data_for_decoder(monkey, session, n_extra_trials=(-1, 1)):
     # behav = add_switch_info(behav)  # add switch information for its decoding
     behav = add_history_of_feedback(behav, num_trials=8, one_column=False, add_history_of_targets=False)  # add history of feedback for its decoding
 
-    for alpha in np.arange(0.05, 1, 0.05):
+    '''for alpha in np.arange(0.05, 1, 0.05):
         behav = add_stay_value(behav, alpha=alpha)
-        behav = behav.rename(columns={'stay_value': f'stay_value_{alpha:.2f}'})
-    #behav = add_shift_value(behav)  # add shift value for its decoding
+        behav = behav.rename(columns={'stay_value': f'stay_value_{alpha:.2f}'})'''
 
     # set target == 2 to nan
     #behav['target'] = behav['target'].where(behav['target'] != 2, np.nan)  # set target == 2 to nan
@@ -375,33 +393,33 @@ def run_decoder(monkey, session, PARAMS, n_jobs=1, load_data=False, save_data=Fa
 
             for area in np.unique(neural_data.area.values):
                 print(f"Decoding {target} in {area}")
-                try:
-                    neural_data_temp = neural_data.where(neural_data.area == area, drop=True)
+                #try:
+                neural_data_temp = neural_data.where(neural_data.area == area, drop=True)
 
-                    '''if monkey == 'po' and group_target.split('_')[0] == 'target':
-                        # remove trials with target 2 (po_2) for po monkey
-                        neural_data_temp = neural_data_temp.where(neural_data_temp.target != 2, drop=True)'''
+                '''if monkey == 'po' and group_target.split('_')[0] == 'target':
+                    # remove trials with target 2 (po_2) for po monkey
+                    neural_data_temp = neural_data_temp.where(neural_data_temp.target != 2, drop=True)'''
 
-                    if len(neural_data_temp.unit) == 0:
-                        continue
+                if len(neural_data_temp.unit) == 0:
+                    continue
 
-                    # 1. preprocess data -> create a matrix of regressors (X) and a vector of labels (y)
+                # 1. preprocess data -> create a matrix of regressors (X) and a vector of labels (y)
 
-                    X, y, groups = _preproc_data(neural_data_temp.firing_rates, target, group_target)
+                X, y, groups = _preproc_data(neural_data_temp.firing_rates, target, group_target)
 
-                    # 2. run decoder on the labelled dataset
-                    scores, pvals, perm_mean, perm_std = linear_decoding(X, y, groups, K_fold=PARAMS['K_fold'], n_perm=PARAMS['n_perm'], n_jobs=n_jobs)
+                # 2. run decoder on the labelled dataset
+                scores, pvals, perm_mean, perm_std = linear_decoding(X, y, groups, K_fold=PARAMS['K_fold'], n_perm=PARAMS['n_perm'], n_jobs=n_jobs)
 
-                    # create xarray dataset, dimension is time, vars are scores
-                    xr_scores.scores.loc[target, str(group_target), :, area] = scores
-                    xr_scores.pvals.loc[target, str(str(group_target)), :, area] = pvals
-                    xr_scores.perm_mean.loc[target, str(group_target), :, area] = perm_mean
-                    xr_scores.perm_std.loc[target, str(group_target), :, area] = perm_std
-                    #xr_scores.cv_mean.loc[target, :, area] = cv_mean
-                    #xr_scores.cv_std.loc[target, :, area] = cv_std
+                # create xarray dataset, dimension is time, vars are scores
+                xr_scores.scores.loc[target, str(group_target), :, area] = scores
+                xr_scores.pvals.loc[target, str(str(group_target)), :, area] = pvals
+                xr_scores.perm_mean.loc[target, str(group_target), :, area] = perm_mean
+                xr_scores.perm_std.loc[target, str(group_target), :, area] = perm_std
+                #xr_scores.cv_mean.loc[target, :, area] = cv_mean
+                #xr_scores.cv_std.loc[target, :, area] = cv_std
 
-                except Exception as e:
-                    print(f"Error decoding {target} in {area}: {e}")
+                #except Exception as e:
+                    #print(f"Error decoding {target} in {area}: {e}")
 
     # add monkey and session information
     xr_scores = xr_scores.assign_coords(session=f'{monkey}_{session}')

@@ -750,7 +750,7 @@ def _get_ticks(n_extra_trials):
     return xticks, xticklabels
     
     
-def plot_keypoints(ax=None, n_extra_trials=(0, 0), n_trials=None, fontsize=None, axis='x', rotation=90, xlabels='both'):
+def plot_keypoints(ax=None, n_extra_trials=(0, 0), n_trials=None, mark_event='none', fontsize=None, axis='x', rotation=90, xlabels='both'):
     '''
     Plot the key points of the task on the x-axis of the plot.
     
@@ -804,6 +804,13 @@ def plot_keypoints(ax=None, n_extra_trials=(0, 0), n_trials=None, fontsize=None,
             ax.set_yticklabels(y_ticks_combined, fontsize=fontsize, rotation=90-rotation)
             ax.set_ylabel('time (s)')
 
+    if mark_event != 'none':
+        for xtick_temp, xtick_label_temp in zip(xticks, xticklabels):
+            if xtick_label_temp.replace("$", "").split(' ')[0] == mark_event:
+                if axis == 'x' or axis == 'both':
+                    ax.axvline(xtick_temp, color='black')
+                if axis == 'y' or axis == 'both':
+                    ax.axhline(xtick_temp, color='black')
     return ax
 
 

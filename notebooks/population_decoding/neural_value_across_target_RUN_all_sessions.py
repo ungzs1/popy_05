@@ -65,38 +65,54 @@ def project_across_targets(neural_dataset):
     # create train and test splits
     clf = LinearRegression()
 
-    projections = np.empty((3, len(neural_dataset.trial_id), len(neural_dataset.time)))
+    projections = np.full((3, len(neural_dataset.trial_id), len(neural_dataset.time)), np.nan)
+    trial_ids = neural_dataset.trial_id.values
+    time_bins = neural_dataset.time.values
+
+    ## Part 1: project within target
+    for t_id, t in enumerate(neural_dataset.time):
+        #if t % 1 == 0:print(t_id)
+        # first project within target with leave one out method
+        for fold, target_temp in enumerate(np.unique(target_vector)):
+            neural_dataset_within = neural_dataset.firing_rates.sel(trial_id=neural_dataset.target == target_temp, time=t)
+
+            for test_trial in np.unique(neural_dataset_within.trial_id.values):
+                train_trials = neural_dataset_within.trial_id.values != test_trial
+                X_train = neural_dataset_within.sel(trial_id=train_trials).values
+                y_train = neural_dataset_within.sel(trial_id=train_trials)['stay_value'].values
+
+                X_project = neural_dataset_within.sel(trial_id=test_trial).values
+
+                # fit the model
+                clf.fit(X_train, y_train)
+
+                # project the dataset (at this point) to this subspace
+                weights = clf.coef_.reshape(-1, 1)
+                trial_projected = np.dot(X_project, weights)
+
+                trial_idx = np.where(trial_ids == test_trial)[0][0]
+                projections[fold, trial_idx, t_id] = trial_projected.squeeze()
+
+    ## Part 2: project alternative targets
     #scores = np.empty((2, len(neural_dataset.time)))
     for t_id, t in enumerate(neural_dataset.time):
         for fold, target_temp in enumerate(np.unique(target_vector)):
+            neural_dataset_within = neural_dataset.firing_rates.sel(trial_id=neural_dataset.target == target_temp, time=t)
+            neural_dataset_across = neural_dataset.firing_rates.sel(trial_id=neural_dataset.target != target_temp, time=t)
+
             # get the firing rates for the current time point
-            X_train = neural_dataset.firing_rates.sel(trial_id=neural_dataset.target == target_temp, time=t).values
-            #X_test = ...
-            y_train = neural_dataset.sel(trial_id=neural_dataset.target == target_temp)['stay_value'].values
+            X_train = neural_dataset_within.values
+            y_train = neural_dataset_within['stay_value'].values
 
             # fit the model
             clf.fit(X_train, y_train)
 
-            # save model accuracy on same and alternate trials
-            '''
-            #X_test = data_test.firing_rates.sel(time=t).values
-            #y_test = data_test['stay_value'].values
-            pred_same = clf.predict(X_train)
-            pred_alter = clf.predict(X_test)
-            pearson_r_same, p_same = stats.pearsonr(pred_same, y_train)
-            pearson_r_alter, p_alter = stats.pearsonr(pred_alter, y_test)
-            scores[:, t_id] = np.array([pearson_r_same, pearson_r_alter])
-            
-            print(f"Fold {target_temp} -> same: pearson r: {pearson_r_same:.2f}")
-            print(f"Fold {target_temp} -> alter: pearson r: {pearson_r_alter:.2f}")
-            '''
-
             # project the dataset (at this point) to this subspace
             weights = clf.coef_.reshape(-1, 1)  # reshape to ensure correct dimensions
-            neural_dataset_time = neural_dataset.sel(time=t).firing_rates.data
-            data_projected = np.dot(neural_dataset_time, weights)
+            trials_projected = np.dot(neural_dataset_across, weights)
 
-            projections[fold, :, t_id] = data_projected.squeeze()
+            trial_idxs = [np.where(trial_ids == trial_id)[0][0] for trial_id in neural_dataset_across.trial_id.values]
+            projections[fold, trial_idxs, t_id] = trials_projected.squeeze()
 
     # Create a DataArray with the projected data
     data_projected_da = xr.DataArray(projections, dims=('subspace', 'trial_id', 'time'),
@@ -110,6 +126,7 @@ def project_across_targets(neural_dataset):
         data_projected_da = data_projected_da.assign_coords({name: coord})
 
     return data_projected_da
+
 
 def extract_neural_data(neural_values, data_projected):
     results = []

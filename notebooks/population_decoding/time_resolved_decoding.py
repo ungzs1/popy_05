@@ -55,9 +55,9 @@ PARAMS = {
     'group_targets': None, #['target', 'target_shuffled'],
     'K_fold': 10,
     'step_len': .1,
-    'n_perm': 100, 
+    'n_perm': None, 
     'n_extra_trials': (0, 0),
-    'floc': os.path.join(cfg.PROJECT_PATH_LOCAL, 'notebooks', 'population_decoding', 'results', 'multiple_alphas'),
+    'floc': os.path.join(cfg.PROJECT_PATH_LOCAL, 'notebooks', 'population_decoding', 'results', 'multiple_alphas_lasso'),
     'msg': 'Compute the stay value with different alpha parameters and try to see which is the best regressor',
 }
 

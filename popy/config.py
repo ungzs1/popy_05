@@ -62,6 +62,11 @@ COLORS = {
     'yu_sham': 'tab:orange',
     1: '#238823', 0: '#D2222D',
     1.0: '#238823', 0.0: '#D2222D',
+    'Foraging': '#3769a9ff',
+    'RL simple': '#87ad20ff',
+    'RL counterfactual': '#87ad20ff',
+    'none': '#cccccc',
+    'PROBLEM': '#cccccc'
     }
 
 
