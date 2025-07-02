@@ -11,7 +11,10 @@ from notebooks.population_decoding.neural_value_helpers import *
 from popy.io_tools import load_metadata
 from popy.decoding.population_decoders import run_decoder
 import popy.config as cfg
-
+import matplotlib.pyplot as plt
+import io
+import xml.etree.ElementTree as ET
+import math
 
 ### Load metadata
 
@@ -52,6 +55,99 @@ def init_io(PARAMS):
 def save_results(dfs_all, floc, fname):
     dfs_all.to_pickle(os.path.join(floc, fname))
 
+
+
+
+def fig_to_svg_string(fig):
+    buf = io.StringIO()
+    fig.savefig(buf, format='svg')
+    plt.close(fig)
+    return buf.getvalue()
+
+def extract_svg_body(svg_str):
+    tree = ET.ElementTree(ET.fromstring(svg_str))
+    root = tree.getroot()
+
+    width = float(root.attrib.get('width').replace('pt', ''))
+    height = float(root.attrib.get('height').replace('pt', ''))
+
+    for elem in root.iter():
+        if '}' in elem.tag:
+            elem.tag = elem.tag.split('}', 1)[1]
+
+    body = list(root)
+    return width, height, body
+
+def merge_svgs_custom_layout(figs):
+    if len(figs) < 1:
+        raise ValueError("At least one figure is required")
+
+    # Process first figure (row 1)
+    width1, height1, body1 = extract_svg_body(fig_to_svg_string(figs[0]))
+    merged_elements = []
+
+    # Wrap first fig in a group
+    g1 = ET.Element("g", attrib={"transform": f"translate(0,0)"})
+    g1.extend(body1)
+    merged_elements.append(g1)
+
+    # Remaining figures
+    remaining_figs = figs[1:]
+    n = len(remaining_figs)
+    half = math.ceil(n / 2)
+    left_figs = remaining_figs[:half]
+    right_figs = remaining_figs[half:]
+
+    # Determine x offset for left and right columns
+    max_left_width = 0
+    total_left_height = 0
+    left_groups = []
+    y_offset = height1  # start from row 2
+
+    for fig in left_figs:
+        w, h, body = extract_svg_body(fig_to_svg_string(fig))
+        g = ET.Element("g", attrib={"transform": f"translate(0,{y_offset})"})
+        g.extend(body)
+        left_groups.append(g)
+        y_offset += h
+        max_left_width = max(max_left_width, w)
+        total_left_height += h
+
+    max_right_width = 0
+    total_right_height = 0
+    right_groups = []
+    y_offset = height1
+
+    for fig in right_figs:
+        w, h, body = extract_svg_body(fig_to_svg_string(fig))
+        g = ET.Element("g", attrib={"transform": f"translate({max_left_width},{y_offset})"})
+        g.extend(body)
+        right_groups.append(g)
+        y_offset += h
+        max_right_width = max(max_right_width, w)
+        total_right_height += h
+
+    # Merge all groups
+    merged_elements.extend(left_groups)
+    merged_elements.extend(right_groups)
+
+    # Calculate total dimensions
+    total_width = max_left_width + max_right_width
+    total_height = height1 + max(total_left_height, total_right_height)
+
+    # Build final SVG root
+    svg_root = ET.Element(
+        "svg",
+        attrib={
+            "xmlns": "http://www.w3.org/2000/svg",
+            "width": f"{total_width}pt",
+            "height": f"{total_height}pt",
+            "viewBox": f"0 0 {total_width} {total_height}"
+        }
+    )
+    svg_root.extend(merged_elements)
+    return ET.ElementTree(svg_root)
+
 ### Set parameters
 
 def convert_trajectory_format(data_projected):
@@ -82,56 +178,56 @@ def run_all_session_plotting(monkey, session, PARAMS):
         all_figs = []
         neural_dataset_temp = neural_dataset.sel(unit=neural_dataset.subregion==subregion)
         #project neural data to the neural value space, get across-time decodability matrix
-        across_time_matrix, data_projected = time_resolved_decoder_all_time(neural_dataset_temp, target='R_1', across_time=True)
+        decodability_matrix, data_projected = time_resolved_decoder_all_time(neural_dataset_temp, target='R_1', across_time=True)
+
+        # Plot the results
+        fig, axes = plot_across_time_decodability(projected_data=data_projected, decodability_matrix=decodability_matrix, vmin=0.1, vmax=.9)
+        plt.suptitle('{} {} {}'.format(monkey, session, subregion), fontsize=10)
+        all_figs.append(fig)
 
         # make plots
         for t_interest_value in ([-4, -2], [2, 3.5]):
             # get neural value for the current trial and the previous one
             data_projected = add_neural_value_coord(data_projected, t_interest=t_interest_value)
 
-            behav_new = data_projected.mean('time').coords.to_dataset().to_dataframe().reset_index()
-            behav_new['monkey'] = monkey
-            behav_new['session'] = session
-            #behav_new['area'] = neural_dataset.area
-            behav_new['subregion'] = subregion
-            behav_new = behav_new[['monkey', 'session', 'subregion'] + [c for c in behav_new.columns if c not in ['monkey', 'session', 'subregion']]]
-            behav_new = behav_new.dropna()
-
-            # Plot the results
-            fig, axes = plot_across_time_decodability(projected_data=data_projected, decodability_matrix=across_time_matrix)
-            plt.suptitle('{} {} {}'.format(monkey, session, subregion), fontsize=10)
-            all_figs.append(fig)
-
-            fig, ax = plot_projected_data(data_projected, t_interest_value, n_extra_trials=(-1, 0), xlim=[-5, 5], paper_format=False)
-            ax.legend_.remove()  # remove legend
+            fig, ax = plot_projected_data(data_projected, t_interest_value, n_extra_trials=(-1, 0), xlim=[-5, 5], paper_format=True)
             plt.suptitle(f'{monkey} {session} {subregion}, t_eval = {t_interest_value}s', fontsize=10)
             all_figs.append(fig)
 
+            behav_new = data_projected.mean('time').coords.to_dataset().to_dataframe().reset_index()
+            behav_new['monkey'] = monkey
+            behav_new['session'] = session
+            behav_new['subregion'] = subregion
+            # put monkey, session, subregion in the front
+            behav_new = behav_new[['monkey', 'session', 'subregion'] +
+                                [c for c in behav_new.columns if c not in ['monkey', 'session', 'subregion']]]
+            behav_new = behav_new.dropna()
 
-            fig, ax = plot_projection_timepoint(behav_new, paper_format=False, ylim=None, show_datapoints=True)
-            plt.suptitle(f'{monkey} {session} {subregion}, t_fit = {t_interest_value} s', fontsize=10)
+            fig, ax = plot_Vt_per_sequence(behav_new, paper_format=True, ylim=None, show_datapoints=True, showfliers=False)
+            ax.set_title(f'{monkey} {session} {subregion} - t_eval = {t_interest_value}s', fontsize=10)
             all_figs.append(fig)
 
-            # Plot the weights
-            weights_all = simple_glm_weights(behav_new)
-            fig, axs = plot_simple_glm_weights(weights_all)
-            plt.suptitle(f'{monkey} {session} {subregion}, t_fit = {t_interest_value} s - Simple GLM weights', fontsize=10)
+            fig, ax = create_r_style_plot(None, behav_new, 'feedback', 'dV', paper_format=True)
+            ax.set_title(f'{monkey} {session} {subregion} - t_eval = {t_interest_value}s', fontsize=10)
             all_figs.append(fig)
 
-            n_perms = 100
-            cpds_all = process_single_session(behav_new)
-            cpds_all = add_corrected_pvals(cpds_all)
-            null = create_permutation_null(behav_new, n_perms=100)
-            fig, axs = plot_cpds_history_neural_value(cpds_all, null)
-            plt.suptitle(f'{monkey} {session} {subregion}, t_fit = {t_interest_value} s - CPDs', fontsize=10)
+            fig, ax = green_red_plot(behav_new, paper_format=True)
+            ax.set_title(f'{monkey} {session} {subregion} - t_eval = {t_interest_value}s', fontsize=10)
             all_figs.append(fig)
 
-        # save fig
-        fname = os.path.join(PATH, 'notebooks', 'population_decoding', 'figs', 'pdfs', f'{monkey}_{session}_{subregion}_neural_value.pdf')
-        save_figures_split_layout(all_figs, filename=fname, figsize=(16, 6), title=f'{monkey} {session} {subregion}')
-        # close all figures
+            n_perms = 1000
+            cpds_all = process_single_session(behav_new, n_perms=n_perms)
+            cpds_all = pd.DataFrame([cpds_all])
+
+            fig, axs = plot_cpds_history_neural_value(cpds_all)
+            axs.set_title(f'{monkey} {session} {subregion} - CPDs', fontsize=10)
+            all_figs.append(fig)
+
+        #save_figures_split_layout(all_figs, filename="combined_figures_row.png", figsize=(20, 5), title=f'{monkey} {session} {subregion}')
+        floc = os.path.join(PATH, 'notebooks', 'population_decoding', 'figs', 'neural_value', 'single_sessions', f'{monkey}_{session}_{subregion}_combined_figures_row.svg')
+        merged_tree = merge_svgs_custom_layout(all_figs)
+        merged_tree.write(floc)
         plt.close('all')
-
 
     session_log = []
     behav_new = pd.DataFrame([])
@@ -263,86 +359,86 @@ if False:
 
 
 ### RUN THIS FOR ACROSS TIME DECODING
-PARAMS = {
-    'floc': os.path.join(cfg.PROJECT_PATH_LOCAL, 'notebooks', 'population_decoding', 'results', 'neural_values_across_time'),
-    'msg': 'generating 2 datasets: one for the across-time decodability matrix, one for the trajectories (for all sessions)',
-}
+if False:
+    PARAMS = {
+        'floc': os.path.join(cfg.PROJECT_PATH_LOCAL, 'notebooks', 'population_decoding', 'results', 'neural_values_across_time'),
+        'msg': 'generating 2 datasets: one for the across-time decodability matrix, one for the trajectories (for all sessions)',
+    }
 
 
-if __name__ == '__main__':
-    init_io(PARAMS)  # Initialize logging and create results folder
+    if __name__ == '__main__':
+        init_io(PARAMS)  # Initialize logging and create results folder
 
-    monkeys, sessions = get_all_sessions()  # Get a pandas df containing all sessions' meta information
+        monkeys, sessions = get_all_sessions()  # Get a pandas df containing all sessions' meta information
 
-    n_cores = np.min([111, os.cpu_count()-1])  # get number of cores in the machine
-    with concurrent.futures.ProcessPoolExecutor(max_workers=n_cores) as executor:
-        # submit jobs
-        futures, future_proxy_mapping = [], {}
-        for monkey, session in zip(monkeys, sessions):
-            future = executor.submit(run_across_time_decoding, monkey, session, PARAMS)  # Run decoder for each session
-            futures.append(future)
-            future_proxy_mapping[future] = (monkey, session)
+        n_cores = np.min([111, os.cpu_count()-1])  # get number of cores in the machine
+        with concurrent.futures.ProcessPoolExecutor(max_workers=n_cores) as executor:
+            # submit jobs
+            futures, future_proxy_mapping = [], {}
+            for monkey, session in zip(monkeys, sessions):
+                future = executor.submit(run_across_time_decoding, monkey, session, PARAMS)  # Run decoder for each session
+                futures.append(future)
+                future_proxy_mapping[future] = (monkey, session)
 
-        # wait for results, save them
-        count_good = 0
-        count_bad = 0
+            # wait for results, save them
+            count_good = 0
+            count_bad = 0
 
-        matrices_all = []
-        projections_all = []
-        for future in concurrent.futures.as_completed(futures):
-            try:
-                across_time_matrices, projections = future.result()
-                monkey_fut, session_fut = future_proxy_mapping[future]
+            matrices_all = []
+            projections_all = []
+            for future in concurrent.futures.as_completed(futures):
+                try:
+                    across_time_matrices, projections = future.result()
+                    monkey_fut, session_fut = future_proxy_mapping[future]
 
-                # Append results to existing results and save after each session
-                if len(across_time_matrices) == 0:
-                    logging.warning(f"No across-time matrices found for monkey {monkey_fut} and session {session_fut}. Skipping.")
-                else:
-                    if len(matrices_all) == 0:
-                        matrices_all = across_time_matrices
+                    # Append results to existing results and save after each session
+                    if len(across_time_matrices) == 0:
+                        logging.warning(f"No across-time matrices found for monkey {monkey_fut} and session {session_fut}. Skipping.")
                     else:
-                        matrices_all += across_time_matrices
+                        if len(matrices_all) == 0:
+                            matrices_all = across_time_matrices
+                        else:
+                            matrices_all += across_time_matrices
 
-                if len(projections) == 0:
-                    logging.warning(f"No projections found for monkey {monkey_fut} and session {session_fut}. Skipping.")
-                else:
-                    if len(projections_all) == 0:
-                        projections_all = projections
+                    if len(projections) == 0:
+                        logging.warning(f"No projections found for monkey {monkey_fut} and session {session_fut}. Skipping.")
                     else:
-                        projections_all += projections
+                        if len(projections_all) == 0:
+                            projections_all = projections
+                        else:
+                            projections_all += projections
 
-                # Save results after each session (to avoid losing data in case of an error)
-                # concatenate matrices and projections
-                matrices_all_xr = xr.concat(matrices_all, dim='session')
-                projections_all_xr = xr.concat(projections_all, dim='session')
+                    # Save results after each session (to avoid losing data in case of an error)
+                    # concatenate matrices and projections
+                    matrices_all_xr = xr.concat(matrices_all, dim='session')
+                    projections_all_xr = xr.concat(projections_all, dim='session')
 
-                matrices_all_xr.to_netcdf(os.path.join(PARAMS['floc'], 'across_time_decodability_matrix.nc'))  # Save across-time decodability matrix
-                projections_all_xr.to_netcdf(os.path.join(PARAMS['floc'], 'trajectories.nc'))  # Save trajectories
+                    matrices_all_xr.to_netcdf(os.path.join(PARAMS['floc'], 'across_time_decodability_matrix.nc'))  # Save across-time decodability matrix
+                    projections_all_xr.to_netcdf(os.path.join(PARAMS['floc'], 'trajectories.nc'))  # Save trajectories
 
-                # Log progress
-                logging.info(f"Finished for monkey {monkey_fut} and session {session_fut}")
+                    # Log progress
+                    logging.info(f"Finished for monkey {monkey_fut} and session {session_fut}")
 
-                count_good += 1
+                    count_good += 1
 
-            except Exception as e:  # Catch exceptions and log them
-                logging.error(f"Error occurred for arguments {future_proxy_mapping[future]}: {e}")
-                print(f"Error occurred for arguments {future_proxy_mapping[future]}: {e}\n")
-                traceback.print_exc()  # Print traceback (?)
+                except Exception as e:  # Catch exceptions and log them
+                    logging.error(f"Error occurred for arguments {future_proxy_mapping[future]}: {e}")
+                    print(f"Error occurred for arguments {future_proxy_mapping[future]}: {e}\n")
+                    traceback.print_exc()  # Print traceback (?)
 
-                count_bad += 1
+                    count_bad += 1
 
-            print(f'Progress: {count_good + count_bad}/{len(monkeys)} failed: {count_bad}')
+                print(f'Progress: {count_good + count_bad}/{len(monkeys)} failed: {count_bad}')
 
-    end_log()
-    print(f'Finished all on {datetime.datetime.now()}')
+        end_log()
+        print(f'Finished all on {datetime.datetime.now()}')
 
 
 ### RUN THIS FOR PLOTTING
 
-if False:
+if True:
     PARAMS = {
-        't_interest_value': [2, 3.5],
-        'floc': os.path.join(cfg.PROJECT_PATH_LOCAL, 'notebooks', 'population_decoding', 'results', 'behav_neural_value'),
+        'floc': os.path.join(cfg.PROJECT_PATH_LOCAL, 'notebooks', 'population_decoding', 'results', 'plots'),
         'msg': 'extracting plots',
     }
 

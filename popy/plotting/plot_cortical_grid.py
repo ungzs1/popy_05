@@ -8,6 +8,7 @@ from popy.neural_data_tools import *
 from popy.behavior_data_tools import *
 from popy.io_tools import load_metadata
 import popy.config as cfg
+from popy.config import COLORS
 
 import os
 
@@ -234,6 +235,8 @@ def _plot_matrix_value_fb_custom(
         grid: xr.DataArray,
         monkey: str,
         not_signif_value: int,
+        palette=None,
+        size=8,
         ax=None, fig=None, title=None, save=False, show=True, label=None, vmin=None, vmax=None, cmap=None):
     """
     Helper function for plot_on_cortical_grid().
@@ -289,37 +292,44 @@ def _plot_matrix_value_fb_custom(
     cbar = plt.colorbar(im, ax=ax, fraction=.03, pad=0.04, label=label)
 
     # plot balls for feedback
-    color = 'tab:green'
+    if palette is None:
+        color = 'tab:green'
+    else:
+        color = palette['Fb only']
     matrix_fb = grid.n_signif_feedback
-    max_value = 1.00
-    multiplier = 7.5/max_value
+    max_value_fb = 1
+    multiplier = size/max_value_fb
     for x in matrix_fb.coords['x']:
         for y in matrix_fb.coords['y']:
             n_signif = matrix_fb.sel(x=x, y=y).values
-            size_temp = np.min([n_signif*multiplier, max_value*multiplier])
+            size_temp = np.min([n_signif*multiplier, max_value_fb*multiplier])
             ax.plot(-x-.2, y, 'o', color=color, markersize=size_temp, alpha=.7, markeredgewidth=.5, zorder=6, markeredgecolor='white')
 
     # create legend (plot the balls for feedback and value, for max_value, half and 1/4)
-    ax.plot(-100, -100, 'o', color=color, markersize=max_value*multiplier, alpha=.7, label=f'Feedback, {round(max_value*100)}%', markeredgewidth=.5)
-    ax.plot(-100, -100, 'o', color=color, markersize=max_value*multiplier/2, alpha=.7, label=f'Feedback, {round(max_value*50)}%', markeredgewidth=.5)
-    ax.plot(-100, -100, 'o', color=color, markersize=max_value*multiplier/4, alpha=.7, label=f'Feedback, {round(max_value*25)}%', markeredgewidth=.5)
+    ax.plot(-100, -100, 'o', color=color, markersize=max_value_fb*multiplier, alpha=.7, label=f'Feedback, {round(max_value_fb*100)}%', markeredgewidth=.5)
+    ax.plot(-100, -100, 'o', color=color, markersize=max_value_fb*multiplier/2, alpha=.7, label=f'Feedback, {round(max_value_fb*50)}%', markeredgewidth=.5)
+    ax.plot(-100, -100, 'o', color=color, markersize=max_value_fb*multiplier/4, alpha=.7, label=f'Feedback, {round(max_value_fb*25)}%', markeredgewidth=.5)
 
-
-    color = 'tab:orange'
+    # plot balls for value
+    if palette is None:
+        color = 'tab:orange'
+    else:
+        color = palette['Value only']
     matrix_fb = grid.n_signif_value
-    max_value = .75
-    multiplier = 8/max_value
+    max_value_value = .8
+    multiplier = size/max_value_value
+
     for x in matrix_fb.coords['x']:
         for y in matrix_fb.coords['y']:
             n_signif = matrix_fb.sel(x=x, y=y).values
-            size_temp = np.min([n_signif*multiplier, max_value*multiplier])
+            size_temp = np.min([n_signif*multiplier, max_value_value*multiplier])
             ax.plot(-x+.2, y, 'o', color=color, markersize=size_temp, alpha=.5, markeredgewidth=.5, zorder=6, markeredgecolor='white')
 
     
     # create legend (plot the balls for feedback and value, for max_value, half and 1/4)
-    ax.plot(-100, -100, 'o', color=color, markersize=max_value*multiplier, alpha=.7, label=f'Value, {round(max_value*100)}%', markeredgewidth=.5)
-    ax.plot(-100, -100, 'o', color=color, markersize=max_value*multiplier/2, alpha=.7, label=f'Value, {round(max_value*50)}%', markeredgewidth=.5)
-    ax.plot(-100, -100, 'o', color=color, markersize=max_value*multiplier/4, alpha=.7, label=f'Value, {round(max_value*25)}%', markeredgewidth=.5)
+    ax.plot(-100, -100, 'o', color=color, markersize=max_value_value*multiplier, alpha=.7, label=f'Value, {round(max_value_value*100)}%', markeredgewidth=.5)
+    ax.plot(-100, -100, 'o', color=color, markersize=max_value_value*multiplier/2, alpha=.7, label=f'Value, {round(max_value_value*50)}%', markeredgewidth=.5)
+    ax.plot(-100, -100, 'o', color=color, markersize=max_value_value*multiplier/4, alpha=.7, label=f'Value, {round(max_value_value*25)}%', markeredgewidth=.5)
 
   
     # change the values of 'not_signif_value' to 1, the nans are nans, and the rest is zero
@@ -347,9 +357,9 @@ def _plot_matrix_value_fb_custom(
     pos_mcc = [7, 8]
     pos_dlpfc = [7, 2]
     pos_vlpfc = [7, -5]
-    ax.text(pos_mcc[0], pos_mcc[1], 'MCC', ha="center", va="center", color="black", fontsize=10)
-    ax.text(pos_dlpfc[0], pos_dlpfc[1], 'dLPFC', ha="center", va="center", color="black", fontsize=10)
-    ax.text(pos_vlpfc[0], pos_vlpfc[1], 'vLPFC', ha="center", va="center", color="black", fontsize=10)
+    ax.text(pos_mcc[0], pos_mcc[1], 'MCC', ha="center", va="center", color=COLORS['MCC'], fontsize=10, fontweight='bold')
+    ax.text(pos_dlpfc[0], pos_dlpfc[1], 'dLPFC', ha="center", va="center", color=COLORS['dLPFC'], fontsize=10, fontweight='bold')
+    ax.text(pos_vlpfc[0], pos_vlpfc[1], 'vLPFC', ha="center", va="center", color=COLORS['vLPFC'], fontsize=10, fontweight='bold')
 
 
     # text on 'lateral, medial, anterior, posterior'
@@ -380,7 +390,7 @@ def _plot_matrix_value_fb_custom(
 
     # set title
     if title is not None:
-        ax.set_title(title)
+        ax.set_title(title, fontsize=10)
 
     return fig, ax
 
@@ -391,7 +401,9 @@ def plot_on_cortical_grid_value_fb_custom(
         vmin=None, 
         vmax=None, 
         title=None, 
-        bar_title=None
+        palette=None,
+        bar_title=None,
+        paper_format=False
         ):
     """
     CUSTOM version of the plot_on_cortical_grid function to plot the number of units coding for feedback and value.
@@ -418,8 +430,16 @@ def plot_on_cortical_grid_value_fb_custom(
     bar_title : str
         The title of the colorbar.
     """
-    cm_to_in = 1/2.54
-    fig, axs = plt.subplots(1, 2, figsize=(19*cm_to_in, 12*cm_to_in))
+    if paper_format:
+        h = 3.5
+        w = h * 19/12  # 19 cm in inches, 12 cm is the height of the grid
+        size = 6
+    else:
+        h = 12*2.54  # 12 cm in inches
+        w = 19*2.54  # 19 cm in inches
+        size = 8
+
+    fig, axs = plt.subplots(1, 2, figsize=(w, h))
 
     # get the data for the current monkey
     for i, monkey in enumerate(["ka", "po"]):
@@ -463,12 +483,14 @@ def plot_on_cortical_grid_value_fb_custom(
                         grid_ds.n_units.loc[dict(x=grid_loc[0], y=grid_loc[1])] = n_units
 
         # plot the grid on the subplot
-        _plot_matrix_value_fb_custom(grid_ds, monkey, ax=ax, title=f"Monkey {monkey.upper()}", label=bar_title, not_signif_value=-100)
+        _plot_matrix_value_fb_custom(grid_ds, monkey, ax=ax, title=f"Monkey {monkey.upper()}", label=bar_title, not_signif_value=-100, 
+                                     palette=palette, size=size, vmax=40)
 
         if title is not None:
             ax.set_title(title)
 
-    plt.tight_layout()
+    if paper_format:
+        plt.tight_layout()
 
     return fig, axs
 

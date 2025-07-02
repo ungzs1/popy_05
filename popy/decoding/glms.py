@@ -44,10 +44,15 @@ def fit_eval_glm(y_true, X):
     # (Pseudo R2, whatever it means) get the explained variance: 1 - (D / total devience), where D is the devience of the model, and total devience is the devience of the mean model
     D_true = mean_poisson_deviance(y_true, y_pred)
     D_mean = mean_poisson_deviance(y_true, np.asarray(y_true).mean() * np.ones_like(y_true))
-    ED = (1 - D_true / D_mean) * 100 # get the coefficient of determination?
+    ED = (1 - D_true / D_mean) * 100 # get the coefficient of determination (pseudo r2)?
 
-    '''model = PoissonRegressor()
-    cv_score = cross_val_score(model, X, y_true, cv=10, scoring='accuracy')'''
+    """
+    Same as (more proper according to claude):
+    null_deviance = model.null_deviance
+    residual_deviance = model.deviance
+    pseudo_r2 = (1 - residual_deviance / null_deviance) * 100
+    """
+
 
     return ED, coeffs, tvals, pvals
 
@@ -60,14 +65,22 @@ def get_CPD(y_true, X_full, X_reduced):
     y_pred_full = model_full.predict(X_full)
     y_pred_reduced = model_reduced.predict(X_reduced)
 
-    """
-    Maybe we want to return the coefficient of the target predictor, in that case we can do the following:
-    coeffs = model_full.params
-    coeff = ...  # get the coefficient of the target predictor"""
+    # Calculate the mean Poisson deviance for both models (extension of the SSE=mean(yi - yi_pred) for poisson)
     D_reduced = mean_poisson_deviance(y_true, y_pred_reduced)
     D_full = mean_poisson_deviance(y_true, y_pred_full)
-    D_mean = mean_poisson_deviance(y_true, np.asarray(y_true).mean() * np.ones_like(y_true))
+
+    # Avoid division by zero
+    if D_reduced == 0:
+        return 0.0
+    
     CPD = (1 - D_full / D_reduced) * 100
+
+    """    
+    Same as (more proper according to claude):
+    null_deviance = model_full.null_deviance
+    residual_deviance = model_full.deviance
+    pseudo_r2 = (1 - residual_deviance / null_deviance) * 100
+    """
 
     return CPD
 
@@ -198,17 +211,34 @@ class SingleUnitAnalysis:
             
             # Fit the true model, i.e. get cpd for the target predictor
             CPD_true = get_CPD(y_true, X_full, X_reduced)
+
+            # If the CPD is NaN, skip this predictor
+            if np.isnan(CPD_true):
+                CPDs_true.append(np.nan)
+                CPDs_pvals.append(np.nan)
+                continue
             
             # Permutation test - fit shuffled models N times
             n_perm = self.n_permutations
             CPD_perm = np.zeros(n_perm)
+
             for i in range(n_perm):
-                y_perm = np.random.permutation(y_true)
-                CPD_perm[i] = get_CPD(y_perm, X_full, X_reduced)
+                # Create permuted version of the full predictor matrix
+                X_full_perm = X_full.copy()
+
+                # Permute only the target predictor while preserving index alignment (??)
+                X_full_perm[target_predictor] = np.random.permutation(X_full[target_predictor].values)
+                ###X_full_perm[target_predictor] = np.random.permutation(X_full[target_predictor])
+
+                CPD_perm[i] = get_CPD(y_true, X_full_perm, X_reduced)
                 
-            # save results
+
+            # Calculate p-value (one-tailed test - CPD should be positive)
+            # Count how many permuted CPDs are >= true CPD
+            p_val = np.mean(CPD_perm >= CPD_true)
+            
             CPDs_true.append(CPD_true)
-            CPDs_pvals.append(np.mean(CPD_perm >= CPD_true))
+            CPDs_pvals.append(p_val)
         
         return CPDs_true, CPDs_pvals
     
@@ -308,11 +338,11 @@ class SingleUnitAnalysis:
                 # get predictors for the given unit and time bin
                 # TODO: maybe it is the same in each time bin, so we can do this step outside the loop once
                 predictors = neural_dataset_temp.trial_id.to_dataframe() 
-                predictors = predictors[self.glm_predictors]  # select predictors of interest
+                predictors = predictors[self.glm_predictors].copy()  # select predictors of interest
                 predictors = sm.add_constant(predictors)  # add constant to the full model
 
-                # skip if theres data neural dta for less than 50 trials or if all the values are the same in the neural data TODO: here it should rather be a check fo poisson distribution!!!
-                if len(y) < 50 or len(np.unique(y)) < 2:
+                # skip if all the values are the same in the neural data TODO: here it should rather be a check fo poisson distribution!!!
+                if len(np.unique(y)) < 2:
                     continue
 
                 # Measure 1: fit glm to get the explained deviance, coefficients, t-values, and p-values                    
@@ -320,9 +350,9 @@ class SingleUnitAnalysis:
                     # Measure 3: fit glm and run permutation test
                     try:
                         #ED, coeffs_temp, tvals, pvals_temp = self.permutation_glm(y, predictors)  # run permutation test
-                        ED, coeffs_temp, tvals_temp, pvals_temp = fit_eval_glm(y, predictors)
+                        pseudo_r2, coeffs_temp, tvals_temp, pvals_temp = fit_eval_glm(y, predictors)
 
-                        scoring[unit_id, t] = ED
+                        scoring[unit_id, t] = pseudo_r2
                         #p_vals[unit_id, t] = ED_pval
                         coeffs[unit_id, t, :] = coeffs_temp.values
                         tvals[unit_id, t, :] = tvals_temp.values

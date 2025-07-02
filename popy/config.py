@@ -11,6 +11,10 @@ path = config.PROJECT_PATH
 import os
 import xarray as xr
 import numpy as np
+import matplotlib.cm as cm
+import matplotlib.colors as mcolors
+# interpolate_color
+
 
 
 ### PATHS ###
@@ -62,12 +66,68 @@ COLORS = {
     'yu_sham': 'tab:orange',
     1: '#238823', 0: '#D2222D',
     1.0: '#238823', 0.0: '#D2222D',
+    '1': '#238823', '0': '#D2222D',
     'Foraging': '#3769a9ff',
     'RL simple': '#87ad20ff',
-    'RL counterfactual': '#87ad20ff',
+    'RL counterfactual': 'tab:orange',
     'none': '#cccccc',
     'PROBLEM': '#cccccc'
     }
+
+'''def hex_to_rgb(hex_color):
+    """Convert hex color to RGB tuple."""
+    hex_color = hex_color.lstrip('#')
+    return tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4))
+
+def rgb_to_hex(rgb_color):
+    """Convert RGB tuple to hex color."""
+    return '#{:02X}{:02X}{:02X}'.format(*rgb_color)
+
+
+
+def interpolate_color(c1, c2, factor):
+    return tuple(
+        int(c1[i] + (c2[i] - c1[i]) * factor)
+        for i in range(3)
+    )
+
+
+def value_gradient(num_steps):
+    if num_steps < 2:   
+        return ['#D2222D'] if num_steps == 1 else []
+
+    red = hex_to_rgb('#E8642A')
+    white = hex_to_rgb("#F2C894")  # Soft off-white
+    green = hex_to_rgb('#4A6B9A')
+
+    half = num_steps // 2
+    remainder = num_steps - half * 2
+
+    left = [
+        rgb_to_hex(interpolate_color(red, white, i / (half if half else 1)))
+        for i in range(half)
+    ]
+    right = [
+        rgb_to_hex(interpolate_color(white, green, i / (half + remainder if half + remainder else 1)))
+        for i in range(half + remainder + 1)
+    ]
+
+    return left + right[1:]'''
+
+def value_gradient(n=256):
+    extended_colors = [
+        '#4A6B9A',  # Deeper blue (12.5% position)
+        '#779ECC',  # Your original dark pastel blue (25% position)
+        '#9FC0DE',  # Pale Cerulean (37.5% position)
+        '#F2C894',  # Peach-Orange (50% position)
+        '#FFB347',  # Pastel Orange (62.5% position)
+        '#FF985A',  # Atomic Tangerine (75% position)
+        '#E8642A'   # Deeper orange-red (87.5% position)
+    ][::-1]
+
+    # Create continuous colormap
+    cmap = mcolors.LinearSegmentedColormap.from_list("extended_custom", extended_colors, N=n)
+    return [cmap(i / (n - 1)) for i in range(n)]
 
 
 # Optimal parameters for the models

@@ -792,6 +792,9 @@ def plot_keypoints(ax=None, n_extra_trials=(0, 0), n_trials=None, mark_event='no
             x_ticks_combined = [f"{label_} | {tick_}s" for label_, tick_ in zip(xticklabels, xticks)]
             ax.set_xticklabels(x_ticks_combined, fontsize=fontsize, rotation=rotation)
             ax.set_xlabel('time (s)')
+        elif xlabels == 'short':
+            ax.set_xticklabels([label.split('$')[1].split('(')[0] for label in xticklabels], fontsize=fontsize, rotation=rotation)
+
     if axis == 'y' or axis == 'both':
         ax.set_yticks(xticks)
         if xlabels == 'events':
@@ -803,6 +806,8 @@ def plot_keypoints(ax=None, n_extra_trials=(0, 0), n_trials=None, mark_event='no
             y_ticks_combined = [f"{label_} | {tick_}s" for label_, tick_ in zip(xticklabels, xticks)]
             ax.set_yticklabels(y_ticks_combined, fontsize=fontsize, rotation=90-rotation)
             ax.set_ylabel('time (s)')
+        elif xlabels == 'short':
+            ax.set_yticklabels([label_.split('$')[1].split('(')[0] for label_ in xticklabels], fontsize=fontsize, rotation=rotation)
 
     if mark_event != 'none':
         for xtick_temp, xtick_label_temp in zip(xticks, xticklabels):

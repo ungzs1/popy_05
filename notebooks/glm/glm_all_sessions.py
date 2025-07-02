@@ -75,7 +75,7 @@ PARAMS = {
     'n_permutations': 500,
 
     'floc': os.path.join(cfg.PROJECT_PATH_LOCAL, 'notebooks', 'glm', 'results', 'fb_stayvalue_cpd'),  # Folder to save results
-    'msg': 'Fitting a GLM with feedback only, it is for matteo to have an idea of each unit (if feedback sensitive and the sign)'
+    'msg': 'This is the main GLM CPD for feedback and stay value analysis.',  # Message to log
     }
 
 ### Run

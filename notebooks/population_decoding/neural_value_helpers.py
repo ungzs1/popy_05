@@ -20,6 +20,7 @@ from popy.decoding.decoder_tools import *
 from popy.plotting.plotting_tools import *
 #from popy.plotting.plot_behavior import show_target_selection 
 import popy.config as cfg
+from popy.config import value_gradient
 from popy.plotting.plot_cortical_grid import plot_on_cortical_grid
 from imblearn.under_sampling import RandomUnderSampler
 from matplotlib import axes
@@ -39,6 +40,7 @@ def load_data_custom(monkey, session, area=None, subregion=None, n_extra_trials=
     behav = add_stay_value(behav)
     behav = add_history_of_feedback(behav, num_trials=8, one_column=False, add_history_of_targets=False)
     behav['fb_sequence'] = [r3 + 2*r2 + 4*r1 for (r1, r2, r3) in zip(behav['R_1'], behav['R_2'], behav['R_3'])]
+    behav['target_1'] = behav['target'] == 1
     behav = behav.dropna()
     
     neural_data = load_neural_data(monkey, session, hz=1000)
@@ -54,24 +56,6 @@ def load_data_custom(monkey, session, area=None, subregion=None, n_extra_trials=
     neural_dataset = merge_behavior(neural_dataset, behav)
 
     return neural_dataset
-
-
-# Sample any number of colors
-def sample_colors(n_colors):
-    extended_colors = [
-        '#4A6B9A',  # Deeper blue (12.5% position)
-        '#779ECC',  # Your original dark pastel blue (25% position)
-        '#9FC0DE',  # Pale Cerulean (37.5% position)
-        '#F2C894',  # Peach-Orange (50% position)
-        '#FFB347',  # Pastel Orange (62.5% position)
-        '#FF985A',  # Atomic Tangerine (75% position)
-        '#E8642A'   # Deeper orange-red (87.5% position)
-    ][::-1]
-
-    # Create continuous colormap
-    cmap = mcolors.LinearSegmentedColormap.from_list("extended_custom", extended_colors, N=256)
-    return [cmap(i / (n_colors - 1)) for i in range(n_colors)]
-
 
 
 # @title Helper Functions
@@ -323,30 +307,57 @@ def add_neural_value_coord(data_projected, t_interest=[2.5, 3.5]):
     V_ts = []
     V_t_p1s = []
     dVs = []
+
+    V_ts_behav = []
+    V_t_p1s_behav = []
+    dVs_behav = []
     for trial_id in trial_ids:
         V_t = data_projected.sel(trial_id=trial_id, time=slice(t_interest[0], t_interest[1])).mean('time').values
+        V_t_behav = data_projected.sel(trial_id=trial_id).stay_value.values
+
         # if next trial is part of the same session, get the next time point
         if trial_id + 1 in data_projected.trial_id.values:
             V_t_p1 = data_projected.sel(trial_id=trial_id + 1, time=slice(t_interest[0], t_interest[1])).mean('time').values
             dV = V_t_p1 - V_t
+
+            V_t_p1_behav = data_projected.sel(trial_id=trial_id + 1).stay_value.values
+            dV_behav = V_t_p1_behav - V_t_behav
         else:
             # if next trial is not part of the same session, set dV to NaN
             V_t_p1 = np.nan
             dV = np.nan
 
+            V_t_p1_behav = np.nan
+            dV_behav = np.nan
+
+
         V_ts.append(V_t)
         V_t_p1s.append(V_t_p1)
         dVs.append(dV)
+
+        V_ts_behav.append(V_t_behav)
+        V_t_p1s_behav.append(V_t_p1_behav)
+        dVs_behav.append(dV_behav)
+
     # convert to numpy arrays
     V_ts = np.array(V_ts)   
     V_t_p1s = np.array(V_t_p1s)
     dVs = np.array(dVs)
 
+    V_ts_behav = np.array(V_ts_behav)
+    V_t_p1s_behav = np.array(V_t_p1s_behav)
+    dVs_behav = np.array(dVs_behav)
+
     data_projected = data_projected.assign_coords(V_t=('trial_id', V_ts))
     data_projected = data_projected.assign_coords(V_t_p1=('trial_id', V_t_p1s))
     data_projected = data_projected.assign_coords(dV=('trial_id', dVs))
+    
+    data_projected = data_projected.assign_coords(V_t_behav=('trial_id', V_ts_behav))
+    data_projected = data_projected.assign_coords(V_t_p1_behav=('trial_id', V_t_p1s_behav))
+    data_projected = data_projected.assign_coords(dV_behav=('trial_id', dVs_behav))
 
     return data_projected
+
 
 
 def simple_glm_weights(behav_new):
@@ -621,20 +632,22 @@ def plot_decoder_results(results, weights, n_extra_trials):
     return fig, axs
 
 
-def plot_projected_data(data_projected, t_interest_value, normalize=False, n_extra_trials=(0, 1), xlim=None, paper_format=False, ax=None):
+def plot_projected_data(data_projected, t_interest_value=None, normalize=False, n_extra_trials=(0, 1), xlim=None, paper_format=False, ax=None):
     # project to axis
     if paper_format:
         plt.rcParams.update({'font.size': 8})
-        h = 1.2  # in cm
-        w = 1.5
-        linewidth = 0.7
+        h = 2  # in cm
+        w = 2.5
+        linewidth = 2
     else:
         plt.rcParams.update({'font.size': 12})
-        h = 3  # in cm
-        w = 4.5  # in cm
+        h = 6  # in cm
+        w = 8  # in cm
         linewidth = 1.5
 
-    colors = sample_colors(8)
+    unique_fb_sequences = np.sort(np.unique(data_projected.fb_sequence.data))
+
+    colors = value_gradient(len(unique_fb_sequences))
 
     if ax is None:
         fig, ax = plt.subplots(figsize=(w, h))
@@ -646,7 +659,6 @@ def plot_projected_data(data_projected, t_interest_value, normalize=False, n_ext
 
     time_vector = data_projected.time.values
 
-    unique_fb_sequences = np.sort(np.unique(data_projected.fb_sequence.data))
 
     # bwr colormap, n=8 sampples RdYlGn
     alphas = [1-i for i in np.linspace(0, 1, len(unique_fb_sequences))]
@@ -655,24 +667,26 @@ def plot_projected_data(data_projected, t_interest_value, normalize=False, n_ext
     for i, label in enumerate(unique_fb_sequences):
         class_mean = np.mean(data_projected.where(data_projected.fb_sequence == label), axis=0)
         class_mean_smoothed = ndimage.convolve(class_mean, window, mode='nearest')
-        ax.plot(time_vector, class_mean_smoothed, color=colors[i], label=labels[i], alpha=.7, linewidth=linewidth)
+        ax.plot(time_vector, class_mean_smoothed, color=colors[i], label=labels[i], linewidth=linewidth, zorder=10)
 
-    ax.axvspan(t_interest_value[0], t_interest_value[1], color='grey', alpha=0.2, label='eval window')
+    if t_interest_value is not None:
+        ax.axvspan(t_interest_value[0], t_interest_value[1], color='grey', alpha=0.2, label='eval window')
 
     # add behav keyboints
-    plot_keypoints(ax, n_extra_trials, mark_event='Fb')
+    plot_keypoints(ax, n_extra_trials, mark_event='Fb', xlabels='events')
     # y grid only
-    ax.grid(axis='x', alpha=.5, linewidth=linewidth*.75, linestyle='--')
+    ax.grid(axis='x', alpha=.5, linewidth=1, linestyle='--')
     ax.axhline(0, color='k', linestyle='-', linewidth=linewidth*.75, zorder=0)
 
     # remove left and top spines
-    ax.spines['left'].set_visible(False)
+    ax.spines['right'].set_visible(False)
     ax.spines['top'].set_visible(False)
+
     # move legend outside
     if not paper_format:
         ax.legend(bbox_to_anchor=(1.05, 1), loc='upper left', borderaxespad=0.)
     # save as svg
-    ax.set_ylabel('$V_t$')
+    ax.set_ylabel('$V_t$', fontsize=10)
     '''if title is not None:
         ax.set_title(title)
     else:
@@ -682,6 +696,80 @@ def plot_projected_data(data_projected, t_interest_value, normalize=False, n_ext
         ax.set_xlim(xlim)
 
     return fig, ax
+
+
+def plot_projected_data_switch(data_projected, t_interest_value=None, normalize=False, n_extra_trials=(0, 1), xlim=None, paper_format=False, ax=None):
+    # project to axis
+    if paper_format:
+        plt.rcParams.update({'font.size': 8})
+        h = 2  # in cm
+        w = 2.5
+        linewidth = 2
+    else:
+        plt.rcParams.update({'font.size': 12})
+        h = 6  # in cm
+        w = 8  # in cm
+        linewidth = 1.5
+
+    r1s = [0, 1]
+    r2s = [0, 1]
+    shifts = [0, 1]  # 0: no switch, 1: switch
+
+    colors = value_gradient(4)
+    linestyles = {1: '--', 0: '-'}
+    labels = {1: 'switch', 0: 'stay'}
+
+    if ax is None:
+        fig, ax = plt.subplots(figsize=(w, h))
+
+    # 500 ms for convolution
+    dt = data_projected.time.values[1] - data_projected.time.values[0]
+    n_convolution_bins = int(0.5 / dt)
+    window = np.ones(n_convolution_bins) / n_convolution_bins
+
+    time_vector = data_projected.time.values
+
+    # bwr colormap, n=8 sampples RdYlGn
+        
+    for i_s, shift in enumerate(shifts):
+        for i_past, (r1, r2) in enumerate(itertools.product(r1s, r2s)):
+            data_temp = data_projected.sel(
+                trial_id=(data_projected.switch == shift) & (data_projected.R_1 == r1) & (data_projected.R_2 == r2)
+                )
+
+            class_mean = data_temp.mean(dim='trial_id').values
+            class_mean_smoothed = ndimage.convolve(class_mean, window, mode='nearest')
+
+            ax.plot(time_vector, class_mean_smoothed, color=colors[i_past], label=f'{labels[shift]}: t-1: {r1}, t-2: {r2}', linewidth=linewidth, zorder=10, linestyle=linestyles[shift])
+
+    if t_interest_value is not None:
+        ax.axvspan(t_interest_value[0], t_interest_value[1], color='grey', alpha=0.2, label='eval window')
+
+    # add behav keyboints
+    plot_keypoints(ax, n_extra_trials, mark_event='Fb', xlabels='events')
+    # y grid only
+    ax.grid(axis='x', alpha=.5, linewidth=1, linestyle='--')
+    ax.axhline(0, color='k', linestyle='-', linewidth=linewidth*.75, zorder=0)
+
+    # remove left and top spines
+    ax.spines['right'].set_visible(False)
+    ax.spines['top'].set_visible(False)
+
+    # move legend outside
+    if not paper_format:
+        ax.legend(bbox_to_anchor=(1.05, 1), loc='upper left', borderaxespad=0.)
+    # save as svg
+    ax.set_ylabel('$V_t$', fontsize=10)
+    '''if title is not None:
+        ax.set_title(title)
+    else:
+        ax.set_title('Neural value')'''
+    
+    if xlim is not None:    
+        ax.set_xlim(xlim)
+
+    return fig, ax
+
 
 
 def projection_timepoint(behav_new, paper_format=False, ylim=None, show_datapoints=True):
@@ -698,7 +786,7 @@ def projection_timepoint(behav_new, paper_format=False, ylim=None, show_datapoin
         s = 10
 
     # Example: get 10 colors from your scale
-    colors = sample_colors(8)
+    colors = value_gradient(8)
         
     df = pd.DataFrame({
         'trial_id': behav_new.trial_id.values,
@@ -761,142 +849,8 @@ def projection_timepoint(behav_new, paper_format=False, ylim=None, show_datapoin
     return fig, ax
 
 
-def green_red_plot(behav_new, paper_format=False, xlim=None, ylim=None):
-    from matplotlib.gridspec import GridSpec
 
-    # project to axis
-    if paper_format:
-        plt.rcParams.update({'font.size': 8})
-        h = 1.3  # in cm
-        w = 3.5
-        s = 5
-        linewidth = 0.7
-    else:
-        plt.rcParams.update({'font.size': 18})
-        h = 6  # in cm
-        w = 15  # in cm
-        s = 30
-        linewidth = 1.5
-
-    # Method 1: Use GridSpec directly (recommended)
-    fig = plt.figure(figsize=(w, h))
-    gs = GridSpec(1, 2, width_ratios=[3, 1], wspace=0.05, 
-                left=0.55, right=0.95, bottom=0.15, top=0.85)
-
-    ax_main = fig.add_subplot(gs[0])  # main plot
-    ax_hist = fig.add_subplot(gs[1], sharey=ax_main)  # Y-axis KDE (rotated)
-    
-    # extract datapoints
-    V_t = behav_new.V_t.values
-    V_t_p1 = behav_new.V_t_p1.values
-    fb_vector = behav_new.feedback.values
-
-    dV = V_t_p1 - V_t
-
-    V_t_behav = behav_new.V_t_behav.values
-    fb_sequence = behav_new.fb_sequence.values
-
-    dV_min, dV_max = np.min(dV), np.max(dV)
-    hist_bins = np.linspace(dV_min, dV_max, 20)
-    
-    # Scatter positive and negative feedback with fit lines
-    for fb_curr in [0, 1]:
-        # get pos/neg trial
-        V_t_curr = V_t[fb_vector == fb_curr]
-        dV_curr = dV[fb_vector == fb_curr]
-
-        # scatter trials
-        ax_main.scatter(V_t_curr, dV_curr, color=COLORS[fb_curr], alpha=.5, s=s, edgecolor='none')
-
-        # fit and plot slopes
-        slope, intercept, r_value, p_value, std_err = stats.linregress(V_t_curr, dV_curr)
-        fit_line = slope * V_t_curr + intercept
-        ax_main.plot(V_t_curr, fit_line, color=COLORS[fb_curr], alpha=.5)
-
-        # Create KDE plots for each group
-        '''sns.histplot(
-            y=dV_curr,
-            color=COLORS[fb_curr],
-            alpha=0.6,
-            bins=hist_bins,
-            kde=True,
-            stat='count',
-            label='fb positive',
-            fill=True,
-            edgecolor=None,  # This removes the line around the bars
-            ax=ax_hist
-        )'''
-
-        sns.boxplot(
-            x=fb_curr,
-            y=dV_curr,
-            color=COLORS[fb_curr],
-            #alpha=0.6,            
-            ax=ax_hist,
-            showfliers=False,
-        )
-
-        # mean line for each group
-        #mean_dV = np.mean(dV_curr)
-        #ax_hist.axhline(mean_dV, color=COLORS[fb_curr], linestyle='--', alpha=0.7, linewidth=.7, label=f'mean fb {["negative", "positive"][fb_curr]}')
-
-    # t-stat
-    t_stat, p_val = stats.ttest_ind(dV[fb_vector == 1], dV[fb_vector == 0])
-    print(f't-statistic: {t_stat}, p-value: {p_val}')
-    # print significance over boxplot (* if p < 0.05, ** if p < 0.01, *** if p < 0.001)
-    if p_val < 0.001:
-        significance = '***'
-    elif p_val < 0.01:
-        significance = '**'
-    elif p_val < 0.05:
-        significance = '*'
-    else:
-        significance = 'ns'
-    ymax = dV.max() * 1.1
-    ax_hist.text(0.5, ymax, f'{significance}', ha='center', va='bottom', color='k')
-    ax_hist.plot([0, 1], [ymax, ymax], color='black', linestyle='-', linewidth=linewidth)  # horizontal line for significance
-
-    # Reference lines
-    mean_val = 0
-    ax_main.axvline(mean_val, color='k', linestyle='--', alpha=0.7, linewidth=linewidth)
-    ax_main.axhline(0, color='k', linestyle='-', alpha=0.7, linewidth=linewidth)
-
-    # Add horizontal reference lines
-    #ax_hist.axhline(0, color='k', linestyle='-', alpha=0.7, linewidth=.7)
-
-    # Styling and labels
-    ax_main.scatter([], [], color=COLORS[1], label='Unrewarded')
-    ax_main.scatter([], [], color=COLORS[0], label='Rewarded')
-
-    ax_main.legend(loc='upper center')
-
-    ax_main.set_xlabel('$V_t$')
-    ax_main.set_ylabel('$\Delta V = V_{t+1} - V_t$')
-
-    ax_main.spines['top'].set_visible(False)
-    ax_main.spines['right'].set_visible(False)
-
-    if xlim is not None:
-        ax_main.set_xlim(xlim)    
-    if ylim is not None:
-        ax_main.set_ylim(ylim)
-
-    ax_hist.spines['top'].set_visible(False)
-    ax_hist.spines['right'].set_visible(False)
-    ax_hist.spines['left'].set_visible(False)
-
-    ax_hist.tick_params(left=False, labelleft=False)
-
-    ax_hist.set_xticks([0, 1])
-    ax_hist.set_xticklabels(['Unrewarded', 'Rewarded'], rotation=90)
-
-    #plt.tight_layout()
-
-
-    return fig, [ax_main, ax_hist]
-
-
-def create_r_style_plot(ax, data, x_col, y_col, title, session_col='session'):
+def create_r_style_plot(ax=None, data=None, x_col=None, y_col=None, title=None, session_col='session', paper_format=False):
     """Create R-style plot with violin, box, and jittered points
     
     Args:
@@ -908,6 +862,24 @@ def create_r_style_plot(ax, data, x_col, y_col, title, session_col='session'):
         session_col: column name for session identifier (optional, for connecting points)
     """
     palette = COLORS
+    axis = ax
+    if paper_format:
+        plt.rcParams.update({'font.size': 8})
+        h = 2 
+        w = 2
+        s = 3
+
+    else:
+        plt.rcParams.update({'font.size': 18})
+        h = 3  # in cm
+        w = 4  # in cm
+        s = 10
+
+    
+    # distribution of pos and neg feedback along neural value
+    if axis is None:
+        fig, ax = plt.subplots(1, 1, figsize=(w, h))
+
 
     # Get unique categories
     # sort by x_col
@@ -1053,19 +1025,24 @@ def create_r_style_plot(ax, data, x_col, y_col, title, session_col='session'):
         # Add the bar and text for p-value
         ax.plot([0, 1], [y_pos, y_pos], '-k', lw=2*lw)
         ax.text(0.5, y_pos + 0.02 * abs(y_max), f'{significance} (n={len(group1_data)})', 
-                ha='center', va='bottom')
+                ha='center', va='bottom', fontsize=8)
     
     # Formatting
     ax.axhline(0, linestyle='--', alpha=0.7, color='black', lw=2*lw, zorder=0)
     ax.set_xticks(x_positions)
     ax.set_xticklabels(['Unrewarded', 'Rewarded'], rotation=20)
-    ax.set_ylabel('Change in neural value \n$\Delta V = V_t - V_{t-1}$')
+    ax.set_ylabel('Change in neural value \n$\Delta V = V_t - V_{t-1}$', fontsize=8)
     ax.set_xlabel('')
-    ax.set_title(title)
+    ax.set_title(title, fontsize=8)
     ax.spines['top'].set_visible(False)
     ax.spines['right'].set_visible(False)
     
-    return ax
+
+    if axis is None:
+        return fig, ax
+    else:
+        return ax
+
 
 def plot_dV_per_fb(behav_new, paper_format=False, ylim=None, show_datapoints=False, ax=None):
     axis = ax
@@ -1082,7 +1059,11 @@ def plot_dV_per_fb(behav_new, paper_format=False, ylim=None, show_datapoints=Fal
         s = 10
 
     # Example: get 10 colors from your scale
-    colors = sample_colors(8)
+
+    # remove 1% outliers in dV
+    dV_threshold = np.percentile(np.abs(behav_new.dV.values), 99)
+    behav_new = behav_new[np.abs(behav_new.dV.values) < dV_threshold]
+
         
     df = pd.DataFrame({
         #'trial_id': behav_new.trial_id.values,
@@ -1091,6 +1072,7 @@ def plot_dV_per_fb(behav_new, paper_format=False, ylim=None, show_datapoints=Fal
         'session': behav_new.session.values,
         'dV': behav_new.dV.values,
         'feedback': behav_new.feedback.values,
+        'signif': behav_new.signif.values,
         #'fb_sequence': behav_new.fb_sequence.values,
         #'fb_sequence_last_2': behav_new.fb_sequence.values % 4,
     })
@@ -1100,7 +1082,7 @@ def plot_dV_per_fb(behav_new, paper_format=False, ylim=None, show_datapoints=Fal
     if axis is None:
         fig, ax = plt.subplots(1, 1, figsize=(w, h))
 
-    create_r_style_plot(ax, df, 'feedback', 'dV', COLORS)
+    create_r_style_plot(ax, df, 'feedback', 'dV')
 
     # Add the horizontal line at y=0
     ax.axhline(0, color='k', linestyle='--', alpha=0.7, linewidth=0.75, zorder=0)
@@ -1115,14 +1097,15 @@ def plot_dV_per_fb(behav_new, paper_format=False, ylim=None, show_datapoints=Fal
 
     if axis is None:
         return fig, ax
+    
 
 def plot_Vt_per_sequence(behav_new, paper_format=False, ylim=None, show_datapoints=True, ax=None, showfliers=True):
-    axis = ax
+    axis_original = ax
     # project to axis
     if paper_format:
         plt.rcParams.update({'font.size': 8})
-        h = 1.2  # in cm
-        w = 2
+        h = 2 
+        w = 2.5
         s = 3
     else:
         plt.rcParams.update({'font.size': 18})
@@ -1130,9 +1113,18 @@ def plot_Vt_per_sequence(behav_new, paper_format=False, ylim=None, show_datapoin
         w = 4  # in cm
         s = 10
 
+    
+    # distribution of pos and neg feedback along neural value
+    if ax is None:
+        fig, ax = plt.subplots(1, 1, figsize=(w, h))
+
     # Example: get 10 colors from your scale
-    colors = sample_colors(8)
-        
+    colors = value_gradient(8)
+
+    # remove 1% outliers in V_t
+    '''V_t_threshold = np.percentile(np.abs(behav_new.V_t.values), 99)
+    behav_new = behav_new[np.abs(behav_new.V_t.values) < V_t_threshold]'''
+
     df = pd.DataFrame({
         #'trial_id': behav_new.trial_id.values,
         'V_t': behav_new.V_t.values,
@@ -1157,11 +1149,6 @@ def plot_Vt_per_sequence(behav_new, paper_format=False, ylim=None, show_datapoin
             ha='center', va='top', transform=ax.transAxes,
             fontsize=6 if paper_format else 10)
 
-    
-    # distribution of pos and neg feedback along neural value
-    if axis is None:
-        fig, ax = plt.subplots(1, 1, figsize=(w, h))
-
     sns.boxplot(df.sort_values('fb_sequence_str'), x='fb_sequence_str', hue='fb_sequence_str', y='V_t', palette=colors, ax=ax, showfliers=showfliers, boxprops={'linewidth': 1}, legend=False, width=0.5)
     if show_datapoints:
         if show_datapoints:
@@ -1181,7 +1168,7 @@ def plot_Vt_per_sequence(behav_new, paper_format=False, ylim=None, show_datapoin
     # set ticks at every 1
     y_min = df['V_t'].min()
     y_max = df['V_t'].max()
-    ax.set_ylim(-np.abs(y_max) * 1.1, np.abs(y_max) * 1.1)
+    ax.set_ylim(-np.abs(y_max), np.abs(y_max))
     y_ticks = np.arange(np.floor(y_min), np.ceil(y_max) + 1, 1)
 
     ax.set_yticks(y_ticks)
@@ -1194,33 +1181,32 @@ def plot_Vt_per_sequence(behav_new, paper_format=False, ylim=None, show_datapoin
         ax.set_ylim(ylim)
 
     #plt.tight_layout()
-    if axis is None:
+    if axis_original is None:
         return fig, ax
 
 def plot_projection_timepoint(behav_new, paper_format=False, ylim=None, show_datapoints=False):
     if paper_format:
         plt.rcParams.update({'font.size': 8})
-        h = 1.2  # in cm
-        w = 2
+        h = 1.5  # in cm
+        w = 4
         s = 5
     else:
         plt.rcParams.update({'font.size': 18})
-        h = 3  # in cm
-        w = 4  # in cm
+        h = 6  # in cm
+        w = 8  # in cm
         s = 10
 
     # Example: get 10 colors from your scale
-    colors = sample_colors(8)
-    
+    #     
     # distribution of pos and neg feedback along neural value
-    fig, axs = plt.subplots(1, 2, figsize=(w*2, h), gridspec_kw={'width_ratios': [2, 1], 'wspace': 0.1})
+    fig, axs = plt.subplots(1, 2, figsize=(w, h), gridspec_kw={'width_ratios': [2, 1]})
 
     plot_dV_per_fb(behav_new, paper_format=paper_format, ylim=ylim, show_datapoints=show_datapoints, ax=axs[1])
     plot_Vt_per_sequence(behav_new, paper_format=paper_format, ylim=ylim, show_datapoints=show_datapoints, ax=axs[0])
 
     return fig, axs
 
-def plot_prop_signif_sessions(cpd_temp, ax):
+def plot_prop_signif_sessions(cpd_temp, ax=None):
     axis_original = ax
     # Initialize container
     plt.rcParams.update({'font.size': 8})
@@ -1239,7 +1225,7 @@ def plot_prop_signif_sessions(cpd_temp, ax):
 
     # small gap
     if axis_original is None:
-        fig, ax = plt.subplots(1, 1, figsize=(4, 3), sharex=True, sharey=True, gridspec_kw={'hspace': 0.5, 'wspace': 0.1})
+        fig, ax = plt.subplots(1, 1, figsize=(2, 1.5))
 
     n_sessions = len(cpd_temp)
 
@@ -1253,7 +1239,7 @@ def plot_prop_signif_sessions(cpd_temp, ax):
     #ax.set_ylim(0, session_n + 1)
     ax.set_ylabel('% Significant \nSessions')
     ax.set_title(f'{monkey} {subregion} \n(n={n_sessions})')
-    ax.axhline(y=5, color='black', linestyle='--', alpha=0.3)  # Optional threshold line
+    #ax.axhline(y=5, color='black', linestyle='--', alpha=0.3)  # Optional threshold line
 
     ax.spines['top'].set_visible(False)
     ax.spines['right'].set_visible(False)
@@ -1263,13 +1249,100 @@ def plot_prop_signif_sessions(cpd_temp, ax):
     if axis_original is None:
         return fig, ax
 
+def green_red_plot(behav_new, paper_format=False, ax=None):
+    from matplotlib.gridspec import GridSpec
+
+    axis_original = ax
+    
+    # project to axis
+    if paper_format:
+        plt.rcParams.update({'font.size': 8})
+        h = 2  # in cm
+        w = 2
+        s = 10
+        linewidth = 0.7
+    else:
+        plt.rcParams.update({'font.size': 12})
+        h = 6  # in cm
+        w = 6  # in cm
+        s = 10
+        linewidth = 1
+
+    if ax is None:
+        # Method 1: Use GridSpec directly (recommended)
+        fig, ax = plt.subplots(1, 1, figsize=(w, h))
+
+    # extract datapoints
+    V_t = behav_new.V_t.values
+    V_t_p1 = behav_new.V_t_p1.values
+    fb_vector = behav_new.feedback.values
+
+    V_min, V_max = np.min(V_t), np.max(V_t)
+    x_lines = np.arange(V_min, V_max, 0.01)
+
+    V_t_p1_min, V_t_p1_max = np.min(V_t_p1), np.max(V_t_p1)
+    # remove outliers (5%)
+
+    axis_extreme = np.max(np.abs([V_t.min(), V_t.max(), V_t_p1.min(), V_t_p1.max()]))
+
+    # Scatter positive and negative feedback with fit lines
+    for fb_curr in [0, 1]:
+        # get pos/neg trial
+        V_t_curr = V_t[fb_vector == fb_curr]
+        V_t_p1_curr = V_t_p1[fb_vector == fb_curr]
+
+        # scatter trials
+        ax.scatter(V_t_curr, V_t_p1_curr, color=COLORS[fb_curr], alpha=.5, s=s, edgecolor='none')
+
+        # fit and plot slopes
+        slope, intercept, r_value, p_value, std_err = stats.linregress(V_t_curr, V_t_p1_curr)
+        fit_line = slope * x_lines + intercept
+        ax.plot(x_lines, fit_line, color=COLORS[fb_curr], alpha=.7, lw=2, label=f'slope {slope:.2f} p={p_value:.2f}', zorder=10)
+
+        # mean line for each group
+        #mean_dV = np.mean(dV_curr)
+        #ax_hist.axhline(mean_dV, color=COLORS[fb_curr], linestyle='--', alpha=0.7, linewidth=.7, label=f'mean fb {["negative", "positive"][fb_curr]}')
+
+    # Diagonal line negative slope
+    ax.plot(x_lines, x_lines, color='k', alpha=0.7, lw=2, zorder=8)
+
+    # Reference lines
+    mean_V_t = 0
+    mean_V_t_p1 = 0
+    ax.axvline(mean_V_t, color='k', linestyle='--', alpha=0.7, linewidth=linewidth)
+    ax.axhline(mean_V_t_p1, color='k', linestyle='--', alpha=0.7, linewidth=linewidth)
+
+    # Add vertical reference lines
+    ax.legend(loc='upper left', fontsize=8 if paper_format else 10)
+
+    # Add horizontal reference lines
+    #ax_hist.axhline(0, color='k', linestyle='-', alpha=0.7, linewidth=.7)
+
+    # Styling and labels
+    ax.scatter([], [], color=COLORS[1], label='Unrewarded')
+    ax.scatter([], [], color=COLORS[0], label='Rewarded')
+
+    #ax.legend(loc='upper center')
+
+    ax.set_xlabel('$V_t$', fontsize=10 if paper_format else 12)
+    ax.set_ylabel('$V_{t+1}$', fontsize=10 if paper_format else 12)
+
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+
+    ax.set_xlim([-axis_extreme, axis_extreme])
+    ax.set_ylim([-axis_extreme, axis_extreme])
+
+    # Create a second axis for the histogram
+    if axis_original is None:
+        return fig, ax
 
 def plot_simple_glm_weights(weights_all, ax=None, show_data=True):
     axis_original = ax
     plt.rcParams.update({'font.size': 8})
 
     if ax is None:
-        fig, axs = plt.subplots(1, 1 , figsize=(4, 1.5))
+        fig, ax = plt.subplots(1, 1 , figsize=(2, 1.5))
 
     # font size
     weight_cols = [col for col in weights_all.columns if col.startswith('R_')]
@@ -1289,7 +1362,7 @@ def plot_simple_glm_weights(weights_all, ax=None, show_data=True):
     weights_err = weights_temp.std().values #/ np.sqrt(len(weights_temp))
 
     ax.errorbar(range(1, len(weights) + 1), weights, yerr=weights_err,
-           fmt='-', color=COLORS[subregion], 
+           fmt='o-', color=COLORS[subregion], 
            markeredgecolor='black', markeredgewidth=.5,
            label='session mean ± SEM', 
            markersize=6, capsize=2)
@@ -1339,12 +1412,12 @@ def plot_simple_glm_weights(weights_all, ax=None, show_data=True):
     ax.set_title(f'{monkey} {subregion}')
 
     if axis_original is None:
-        return fig, axs
+        return fig, ax
 
-def plot_cpds_history_neural_value(cpd_temp, null, ax=None, show_data=True):
+def plot_cpds_history_neural_value(cpd_temp, null=None, ax=None, show_data=False):
     axis_original = ax
     if ax is None:
-        fig, axs = plt.subplots(1, 1, figsize=(4, 3), sharex=True, sharey=True)
+        fig, ax = plt.subplots(1, 1, figsize=(2, 2))
 
     monkey, subregion = cpd_temp.monkey.unique()[0], cpd_temp.subregion.unique()[0]
 
@@ -1366,26 +1439,28 @@ def plot_cpds_history_neural_value(cpd_temp, null, ax=None, show_data=True):
     
     # Plot individual sessions
     # add stirplot
-    if not show_data:
-        for i, col in enumerate(cpd_vals.columns):
+    if show_data:
+        # show individual sessions with dots
+        '''for i, col in enumerate(cpd_vals.columns):
             xpos = i+1 -.2
             jitter = np.random.normal(0, 0.05, size=len(cpd_vals[col]))
-            ax.scatter(xpos + jitter, cpd_vals[col].values, color='black', alpha=.2, zorder=0, s=1)
-    else:
+            ax.scatter(xpos + jitter, cpd_vals[col].values, color='black', alpha=.2, zorder=0, s=1)'''
+        # show connected lines
         for _, row in cpd_vals.iterrows():
             ax.plot(range(1, len(cpd_cols)+1), row.values, color='grey', alpha=0.1)
 
     # Stars: compare each regressor to null
     
     for i, reg in enumerate(cpd_cols):
-        test_vals = cpd_vals[reg].values
-        pval = np.sum(null >= cpd_means[i]) / null.shape[0]
+        if null is None:  # if there is no null, we assume that there is only one session in the data: print pvalue of CPD
+            pcol = f'pval_{"_".join(reg.split("_")[1:])}'
+            pval = cpd_temp[pcol].values[0]
+        else:
+            pval = np.sum(null >= cpd_means[i]) / null.shape[0]
+
         if pval < 0.05:
-            ax.text(i+1, cpd_means[i] + cpd_sems[i] + .5, '*', color='black', fontsize=8, ha='center')
-        '''elif pval < 0.01:
-            ax.text(i+1, cpd_means[i] + 0.002, '**', color='red', fontsize=8, ha='center')
-        elif pval < 0.05:
-            ax.text(i+1, cpd_means[i] + 0.002, '*', color='red', fontsize=8, ha='center')'''
+            ypos = cpd_means[i] + cpd_sems[i] + .5 if not np.isnan(cpd_sems[i]) else cpd_means[i] + 3
+            ax.text(i+1, ypos, '*', color='black', fontsize=8, ha='center')
 
     ax.axhline(0, color='black', linestyle='dotted', alpha=0.3)
     ax.set_title(f'{monkey} {subregion}')
@@ -1398,10 +1473,9 @@ def plot_cpds_history_neural_value(cpd_temp, null, ax=None, show_data=True):
     #ax.legend(loc='upper right', fontsize=8)
 
     if axis_original is None:
-        return fig, axs
+        return fig, ax
 
-def plot_across_time_decodability(decodability_matrix, projected_data=None, 
-                                 figsize=(12, 3), cmap='viridis', vmin=None, vmax=None):
+def plot_across_time_decodability(decodability_matrix, projected_data=None, cmap='viridis', vmin=None, vmax=None):
     """
     Plot across-time decodability matrix, simple decodability in time, and optionally projected data.
     
@@ -1421,11 +1495,13 @@ def plot_across_time_decodability(decodability_matrix, projected_data=None,
     import matplotlib.pyplot as plt
     import numpy as np
     plt.rcParams['font.size'] = 8
-    
+
+    cmap = 'RdBu'
     # Determine number of subplots
-    n_plots = 3 if projected_data is not None else 2
+    n_plots = 2
     
-    fig, axes = plt.subplots(1, n_plots, figsize=figsize)
+    h, w = 2, 5  # height, width in cm
+    fig, axes = plt.subplots(1, n_plots, figsize=(w, h))
     if n_plots == 1:
         axes = [axes]
     
@@ -1433,22 +1509,25 @@ def plot_across_time_decodability(decodability_matrix, projected_data=None,
     
     # Plot 1: Decodability matrix
     ax = axes[plot_idx]
-    max_value = np.abs(decodability_matrix.values).max() - .5
+    #max_value = np.abs(decodability_matrix.values).max() - .5
+    #vmin, vmax = .5-max_value, .5+max_value
     data = decodability_matrix#.where((decodability_matrix > .55) | (decodability_matrix < .45), np.nan)
     im = ax.imshow(data, aspect='auto', origin='lower', interpolation='gaussian',
-                   cmap='RdBu', vmin=.5-max_value, vmax=.5+max_value,
+                   cmap=cmap, vmin=vmin, vmax=vmax,
                    extent=[decodability_matrix.test_time.min(),
                            decodability_matrix.test_time.max(),
                            decodability_matrix.train_time.min(),
                            decodability_matrix.train_time.max()])
+    
 
-    plot_keypoints(ax, (-1, 0), axis='both', mark_event='Fb')
+    plot_keypoints(ax, (-1, 0), axis='both', mark_event='Fb', xlabels='events')
     ax.grid(alpha=0.5, linestyle='--')
     ax.set_xlim([-5, 5])
     ax.set_ylim([-5, 5])
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
     ax.set_xlabel('Test Time (s)')
     ax.set_ylabel('Train Time (s)')
-    ax.set_title('Across-Time Decodability')
     
     # Add colorbar
     cbar = plt.colorbar(im, ax=ax, shrink=0.8)
@@ -1460,61 +1539,26 @@ def plot_across_time_decodability(decodability_matrix, projected_data=None,
     ax = axes[plot_idx]
     
     # Extract diagonal values
-    diagonal_values = np.diag(decodability_matrix.values)
-    times = decodability_matrix.train_time.values  # or test_time, they should be the same for diagonal
+    diagonal_values = projected_data.decodability.data
+    times = projected_data.time.values  # or test_time, they should be the same for diagonal
+
+    ax.plot(times, diagonal_values, linewidth=1, color='black')
+    ax.axhline(y=0.5, color='grey', linestyle='--', alpha=0.5, label='Chance level')
     
-    ax.plot(times, diagonal_values, linewidth=2, color='black')
-    ax.axhline(y=0.5, color='red', linestyle='--', alpha=0.7, label='Chance level')
-    
-    plot_keypoints(ax, (-1, 0), mark_event='Fb')
-    ax.grid(alpha=0.5, linestyle='--')
+    plot_keypoints(ax, (-1, 0), mark_event='Fb', xlabels='events')
+    ax.set_ylim([.45, 1.01])
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+    ax.grid(alpha=0.5, linestyle='--', axis='x')
     ax.set_xlim([-5, 5])
     ax.set_xlabel('Time (s)')
-    ax.set_ylabel('Accuracy')
-    ax.set_title('Simple Decodability in Time')
+    ax.set_ylabel('Accuracy', fontsize=10)
     ax.legend()
-    
-    plot_idx += 1
-    
-    # Plot 3: Projected data over time (if provided)
-    if projected_data is not None:
-        ax = axes[plot_idx]
-        
-        # Get unique labels for coloring
-        if hasattr(projected_data, 'R_1'):  # assuming target is in coords
-            labels = projected_data.R_1.values
-            fb_labels = {0.0: 'Unrewarded', 1.0: 'Rewarded'}
-            unique_labels = np.unique(labels)
-            colors = plt.cm.tab10(np.linspace(0, 1, len(unique_labels)))
-            
-            for i, label in enumerate(unique_labels):
-                mask = labels == label
-                data_subset = projected_data.values[mask]
-                times = projected_data.time.values
-                
-                # Plot mean and SEM
-                mean_proj = np.mean(data_subset, axis=0)
-                sem_proj = np.std(data_subset, axis=0) / np.sqrt(data_subset.shape[0])
 
-                ax.plot(times, mean_proj, color=COLORS[label], label=f'{fb_labels[label]}', linewidth=2)
-                ax.fill_between(times, mean_proj - sem_proj, mean_proj + sem_proj, 
-                               color=COLORS[label], alpha=0.3)
-        else:
-            # Just plot all trials if no labels available
-            for trial in range(min(10, projected_data.shape[0])):  # limit to 10 trials
-                ax.plot(projected_data.time.values, projected_data.values[trial], alpha=0.3)
-        
-        plot_keypoints(ax, (-1, 0), mark_event='Fb')
-        
-        ax.grid(axis='x', alpha=0.5, linestyle='--')
-        ax.set_xlim([-5, 5])
-        ax.set_ylabel('Projected Activity')
-        ax.set_title('Neural Projections')
-        if 'label' in locals():
-            ax.legend()
     
     #plt.tight_layout()
     return fig, axes
+
 
 ### Save figures
 from matplotlib.backends.backend_pdf import PdfPages
@@ -1543,7 +1587,7 @@ def save_figures_split_layout(figures, filename="figures_split_layout.pdf", figs
     if len(figures) < 2:
         raise ValueError("Need at least 2 figures for this layout.")
 
-    fig_combined, axs = plt.subplots(2, 5, figsize=figsize)
+    fig_combined, axs = plt.subplots(2, 6, figsize=figsize, gridspec_kw={'width_ratios': [3, 1, 2, 1, 1, 1], 'height_ratios': [1, 1]})
     axs = np.array(axs)
 
     # Turn off all axes
@@ -1565,12 +1609,12 @@ def save_figures_split_layout(figures, filename="figures_split_layout.pdf", figs
 
     for i, fig in enumerate(top_rest):
         col = i + 1
-        if col < 5:
+        if col < 6:
             _add_fig_to_ax(fig, axs[0, col])
 
     for i, fig in enumerate(bottom_rest):
         col = i + 1
-        if col < 5:
+        if col < 6:
             _add_fig_to_ax(fig, axs[1, col])
 
     fig_combined.tight_layout(rect=[0, 0, 1, 0.96])  # Adjust for title
