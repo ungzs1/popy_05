@@ -166,14 +166,25 @@ def process_neural_data(behav_data, sr=1000, *args, **kwargs):
 
 # LOADING FUNCTIONS FOR PROCESSED DATA #
 
-def load_simulation(monkey=None):
+def load_simulation(monkey=None, model=None):
     """
     Simply loads the simulation dataset so that its not necessary to load it every time from path.
     """
 
     base_path = config.PROJECT_PATH_LOCAL
-    data_path = os.path.join(base_path, 'data', 'processed', 'behavior', f'simulation_{monkey}.pkl')
-    return pd.read_pickle(data_path)
+    
+    #data_path = os.path.join(base_path, 'data', 'processed', 'behavior', f'simulation_{monkey}.pkl')
+       
+    data_path = os.path.join(base_path, 'notebooks', 'behav_modeling', 'results', f'simulation_behaviors_{monkey}.pkl')
+
+    df = pd.read_pickle(data_path)
+
+    print(f'models found: {df["model"].unique()}')
+
+    if model is not None:
+        df = df.loc[df['model'] == model]
+
+    return df
 
 
 def load_behavior(monkey=None, session=None):

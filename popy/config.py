@@ -54,22 +54,29 @@ EPOCH_LENS = np.array([1., 1., 0.5, 0.5, 0.5, 4.])
 
 ### PLOTTING ###
 COLORS = {
-    'LPFC': 'tab:blue',
-    'MCC': 'grey',
-    'dLPFC': 'tab:blue',
-    'vLPFC': 'tab:purple',
-    'ka': 'tab:purple',
-    'po': 'tab:green',
+    #'LPFC': 'tab:blue',
+    'MCC': '#868789fa',
+    'dLPFC': '#44b2e0ff',
+    'vLPFC': '#fc8e10ff',
+
+    'ka': '#885bb2ff',
+    'Monkey KA': '#885bb2ff',
+    'po': '#9aaf49ff',
+    'Monkey PO': '#9aaf49ff',
     'ka_simulation': 'tab:brown',
     'po_simulation': 'tab:red',
     'yu_DCZ': 'tab:blue',
     'yu_sham': 'tab:orange',
+
     1: '#238823', 0: '#D2222D',
     1.0: '#238823', 0.0: '#D2222D',
     '1': '#238823', '0': '#D2222D',
-    'Foraging': '#3769a9ff',
-    'RL simple': '#87ad20ff',
-    'RL counterfactual': 'tab:orange',
+    
+    'Foraging': '#3268b7ff',
+    'Standard RL': '#e8465aff',
+    'Inferential RL': '#edaf40ff',
+    'WSLS': "#9e9e9e",
+    'Bayesian': "#a86514ff",
     'none': '#cccccc',
     'PROBLEM': '#cccccc'
     }
@@ -116,13 +123,14 @@ def value_gradient(num_steps):
 
 def value_gradient(n=256):
     extended_colors = [
-        '#4A6B9A',  # Deeper blue (12.5% position)
-        '#779ECC',  # Your original dark pastel blue (25% position)
-        '#9FC0DE',  # Pale Cerulean (37.5% position)
-        '#F2C894',  # Peach-Orange (50% position)
-        '#FFB347',  # Pastel Orange (62.5% position)
-        '#FF985A',  # Atomic Tangerine (75% position)
-        '#E8642A'   # Deeper orange-red (87.5% position)
+        '#227835ff',  # Deeper blue (12.5% position)
+        '#3ca854ff',  # Your original dark pastel blue (25% position)
+        '#84d1a6ff',  # Pale Cerulean (37.5% position)
+        '#c2e8d4ff',  # Peach-Orange (50% position)
+        '#fad5d7ff',  # Pastel Orange (62.5% position)
+        '#ed8e91ff',  # Light Coral (75% position)
+        '#bd3a37ff',  # Atomic Tangerine (75% position)
+        '#831b1dff'   # Deeper orange-red (87.5% position)
     ][::-1]
 
     # Create continuous colormap

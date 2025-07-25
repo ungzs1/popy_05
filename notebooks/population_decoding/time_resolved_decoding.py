@@ -51,14 +51,14 @@ def save_results(xr, floc):
 ### Set parameters
 
 PARAMS = {
-    'conditions': [f"stay_value_{x:.2f}" for x in np.arange(0.05, 1, 0.05)],
+    'conditions': ['stay_value_0.05', 'stay_value_0.10', 'stay_value_0.15', 'stay_value_0.20', 'stay_value_0.25', 'stay_value_0.30', 'stay_value_0.35', 'stay_value_0.40', 'stay_value_0.45', 'stay_value_0.50', 'stay_value_0.55', 'stay_value_0.60', 'stay_value_0.65', 'stay_value_0.70', 'stay_value_0.75', 'stay_value_0.80', 'stay_value_0.85', 'stay_value_0.90', 'stay_value_0.95'],
     'group_targets': None, #['target', 'target_shuffled'],
     'K_fold': 10,
     'step_len': .1,
-    'n_perm': None, 
+    'n_perm': 500, 
     'n_extra_trials': (0, 0),
-    'floc': os.path.join(cfg.PROJECT_PATH_LOCAL, 'notebooks', 'population_decoding', 'results', 'multiple_alphas_lasso'),
-    'msg': 'Compute the stay value with different alpha parameters and try to see which is the best regressor',
+    'floc': os.path.join(cfg.PROJECT_PATH_LOCAL, 'notebooks', 'population_decoding', 'results', 'multiple_alphas_ridge'),
+    'msg': 'Compute the stay value with different alpha parameters and try to see which is the best regressor. alpha parameter is set to 100 (for the regularization)',
 }
 
 ### Run
@@ -68,7 +68,7 @@ if __name__ == '__main__':
 
     monkeys, sessions = get_all_sessions()  # Get a pandas df containing all sessions' meta information
     
-    n_cores = np.min([100, os.cpu_count()-1])  # get number of cores in the machine
+    n_cores = np.min([111, os.cpu_count()-1])  # get number of cores in the machine
     with concurrent.futures.ProcessPoolExecutor(max_workers=n_cores) as executor:
         # submit jobs
         futures, future_proxy_mapping = [], {}

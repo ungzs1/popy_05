@@ -380,14 +380,13 @@ class WSLSAgent_custom:
         # store the last action
         self.last_action = action
 
-
 class QLearner:
     def __init__(
         self,
         n_arms=3,
         alpha=.4,
         alpha_unchosen=None,
-        beta=.05,
+        beta=80,
         structure_aware=False
     ):
         """Initialize a Reinforcement Learning agent with an empty dictionary
@@ -453,7 +452,7 @@ class ShiftValueAgent:
     def __init__(self, 
                  n_arms=3,
                  alpha=0.4,
-                 beta=0.1,
+                 beta=100,
                  V0=(.7 + .25 + .25) / 3,
                  reset_on_switch=False,
                 ):

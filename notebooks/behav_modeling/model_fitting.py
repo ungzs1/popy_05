@@ -48,7 +48,7 @@ def get_data_custom(monkey):
 
 make_plots = False
 
-for monkey in ['yu_sham', 'yu_DCZ']:  # ['ka', 'po', 'yu_sham', 'yu_dcz']
+for monkey in ['ka', 'po']: #yu_sham', 'yu_DCZ']:  # ['ka', 'po', 'yu_sham', 'yu_dcz']
     print(f'--- {monkey} ---')
 
     behav_monkey = get_data_custom(monkey)
@@ -64,6 +64,9 @@ for monkey in ['yu_sham', 'yu_DCZ']:  # ['ka', 'po', 'yu_sham', 'yu_dcz']
     # Set container (to collect pandas series into a dataframe)
     results = {}
     behaviors_simulated = {f'MONKEY {monkey.upper()}': behav_monkey}
+
+
+
 
     # ---
     # # Fit models to the data
@@ -85,9 +88,12 @@ for monkey in ['yu_sham', 'yu_DCZ']:  # ['ka', 'po', 'yu_sham', 'yu_dcz']
     fixed_params = {}
 
     # fit agent, get best params and simulation
-    res_temp, behavior_temp = fit_simulate(agent_class, param_space,env, behav_monkey, fixed_params, CV_splits=3, make_plots=make_plots, n_calls=60, n_initial_points=10, n_jobs=1)
+    res_temp, behavior_temp = fit_simulate(agent_class, param_space, env, behav_monkey, fixed_params, CV_splits=3, make_plots=make_plots, n_calls=60, n_initial_points=10, n_jobs=1)
     results[model_name] = res_temp
     behaviors_simulated[model_name] = behavior_temp
+
+
+
 
     # ### Simple WSLS
 
@@ -128,6 +134,9 @@ for monkey in ['yu_sham', 'yu_DCZ']:  # ['ka', 'po', 'yu_sham', 'yu_dcz']
     results[model_name] = res_temp
     behaviors_simulated[model_name] = behavior_temp
 
+
+
+
     # ### Counterfactual
 
     # Define parameter space for ShiftValueAgent
@@ -146,6 +155,9 @@ for monkey in ['yu_sham', 'yu_DCZ']:  # ['ka', 'po', 'yu_sham', 'yu_dcz']
     res_temp, behavior_temp = fit_simulate(agent_class, param_space, env, behav_monkey, fixed_params, CV_splits=3, make_plots=make_plots, n_calls=150, n_initial_points=100)
     results[model_name] = res_temp
     behaviors_simulated[model_name] = behavior_temp
+
+
+
 
     # ### Multiple learning rates
 
@@ -169,6 +181,9 @@ for monkey in ['yu_sham', 'yu_DCZ']:  # ['ka', 'po', 'yu_sham', 'yu_dcz']
     results_list.append(res_temp)
     behaviors_simulated[model_name] = behav_q_learn_multiple'''
 
+
+
+
     # ## 2. Shift value
 
     # ### No reset
@@ -190,6 +205,9 @@ for monkey in ['yu_sham', 'yu_DCZ']:  # ['ka', 'po', 'yu_sham', 'yu_dcz']
     res_temp, behavior_temp = fit_simulate(agent_class, param_space, env, behav_monkey, fixed_params, CV_splits=3, make_plots=make_plots, n_calls=150, n_initial_points=100)
     results[model_name] = res_temp
     behaviors_simulated[model_name] = behavior_temp
+
+
+
 
     # ### Reset
 
@@ -214,12 +232,18 @@ for monkey in ['yu_sham', 'yu_DCZ']:  # ['ka', 'po', 'yu_sham', 'yu_dcz']
     # ---
     # ### Save Shift-value simulation
 
+
+
+
     # ## 3. HMM
     # 
     # The bayes has the best parameters in principle. Also we dont go with this model, and it has a lot of parameters.
 
     # ---
     # # Save 
+
+
+
 
     # Generate simulation data
 
@@ -247,7 +271,6 @@ for monkey in ['yu_sham', 'yu_DCZ']:  # ['ka', 'po', 'yu_sham', 'yu_dcz']
     floc = os.path.join(PROJECT_PATH_LOCAL, 'data', 'processed', 'behavior', f'{monkey}_simulation.pkl')
     simulation.to_pickle(floc)
     print(f'Behavior simulation saved to {floc}')
-
 
     # save fitting results
 

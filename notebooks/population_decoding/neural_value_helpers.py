@@ -636,7 +636,7 @@ def plot_projected_data(data_projected, t_interest_value=None, normalize=False, 
     # project to axis
     if paper_format:
         plt.rcParams.update({'font.size': 8})
-        h = 2  # in cm
+        h = 1.7  # in cm
         w = 2.5
         linewidth = 2
     else:
@@ -1005,22 +1005,22 @@ def create_r_style_plot(ax=None, data=None, x_col=None, y_col=None, title=None, 
         group1_data = data.loc[data[x_col] == categories[0], y_col]
         group2_data = data.loc[data[x_col] == categories[1], y_col]
         #_, p_value = stats.ttest_ind(group1_data, group2_data)
-        _, p_value = stats.mannwhitneyu(group1_data, group2_data, alternative='two-sided')
+        U, p_value = stats.mannwhitneyu(group1_data, group2_data, alternative='two-sided')
 
-        
+
         # Position for significance bar
         y_max = data[y_col].max()
         y_pos = y_max + 0.1 * abs(y_max)
         
         # Add significance annotation
         if p_value < 0.001:
-            significance = '***'
+            significance = '***, U={:.2f}, p={}'.format(U, p_value)
         elif p_value < 0.01:
-            significance = '**'
+            significance = '**, U={:.2f}, p={}'.format(U, p_value)
         elif p_value < 0.05:
-            significance = '*'
+            significance = '*, U={:.2f}, p={}'.format(U, p_value)
         else:
-            significance = 'n.s.'
+            significance = 'n.s., U={:.2f}, p={}'.format(U, p_value)
         
         # Add the bar and text for p-value
         ax.plot([0, 1], [y_pos, y_pos], '-k', lw=2*lw)
@@ -1037,7 +1037,6 @@ def create_r_style_plot(ax=None, data=None, x_col=None, y_col=None, title=None, 
     ax.spines['top'].set_visible(False)
     ax.spines['right'].set_visible(False)
     
-
     if axis is None:
         return fig, ax
     else:
@@ -1142,10 +1141,10 @@ def plot_Vt_per_sequence(behav_new, paper_format=False, ylim=None, show_datapoin
     # Compute Spearman correlation between numeric sequence order and V_t
     rho, pval = stats.spearmanr(df['fb_sequence'], df['V_t'])  # The Spearman rank-order correlation coefficient is a nonparametric measure of the monotonicity of the relationship between two datasets. 
 
-    print(f"Spearman correlation (rho): {rho:.3f}, p-value: {pval:.3g}")
+    print(f"Spearman correlation (rho): {rho:.3f}, p-value: {pval:.1e}")
 
     # Optional: annotate plot with significance result
-    ax.text(0.5, 0.95, f"rho = {rho:.2f}, p = {pval:.3f}",
+    ax.text(0.5, 0.95, f"rho = {rho:.2f}, p = {pval:.1e}",
             ha='center', va='top', transform=ax.transAxes,
             fontsize=6 if paper_format else 10)
 
@@ -1164,7 +1163,7 @@ def plot_Vt_per_sequence(behav_new, paper_format=False, ylim=None, show_datapoin
 
     #ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.3), ncol=1)
     #ax.set_xlabel('Feedback sequence')
-    ax.set_ylabel('$V_t$')
+    ax.set_ylabel('Mean projections\nfrom $Lt(t+1)$ to $Fb(t+1)$')
     # set ticks at every 1
     y_min = df['V_t'].min()
     y_max = df['V_t'].max()
@@ -1417,7 +1416,9 @@ def plot_simple_glm_weights(weights_all, ax=None, show_data=True):
 def plot_cpds_history_neural_value(cpd_temp, null=None, ax=None, show_data=False):
     axis_original = ax
     if ax is None:
-        fig, ax = plt.subplots(1, 1, figsize=(2, 2))
+        h = 2
+        w = 2.5
+        fig, ax = plt.subplots(1, 1, figsize=(w, h))
 
     monkey, subregion = cpd_temp.monkey.unique()[0], cpd_temp.subregion.unique()[0]
 
@@ -1441,13 +1442,13 @@ def plot_cpds_history_neural_value(cpd_temp, null=None, ax=None, show_data=False
     # add stirplot
     if show_data:
         # show individual sessions with dots
-        '''for i, col in enumerate(cpd_vals.columns):
-            xpos = i+1 -.2
+        for i, col in enumerate(cpd_vals.columns):
+            xpos = i+1 -.3
             jitter = np.random.normal(0, 0.05, size=len(cpd_vals[col]))
-            ax.scatter(xpos + jitter, cpd_vals[col].values, color='black', alpha=.2, zorder=0, s=1)'''
-        # show connected lines
+            ax.scatter(xpos + jitter, cpd_vals[col].values, color='black', alpha=.2, zorder=0, s=2)
+        '''# show connected lines
         for _, row in cpd_vals.iterrows():
-            ax.plot(range(1, len(cpd_cols)+1), row.values, color='grey', alpha=0.1)
+            ax.plot(range(1, len(cpd_cols)+1), row.values, color='grey', alpha=0.1)'''
 
     # Stars: compare each regressor to null
     
@@ -1475,7 +1476,7 @@ def plot_cpds_history_neural_value(cpd_temp, null=None, ax=None, show_data=False
     if axis_original is None:
         return fig, ax
 
-def plot_across_time_decodability(decodability_matrix, projected_data=None, cmap='viridis', vmin=None, vmax=None):
+def plot_across_time_decodability(decodability_matrix, projected_data=None, cmap='RdBu', vmin=None, vmax=None):
     """
     Plot across-time decodability matrix, simple decodability in time, and optionally projected data.
     
@@ -1496,11 +1497,11 @@ def plot_across_time_decodability(decodability_matrix, projected_data=None, cmap
     import numpy as np
     plt.rcParams['font.size'] = 8
 
-    cmap = 'RdBu'
+    #cmap = 'RdBu'
     # Determine number of subplots
     n_plots = 2
     
-    h, w = 2, 5  # height, width in cm
+    h, w = 1.7, 5 * 1.7/2  # height, width in cm
     fig, axes = plt.subplots(1, n_plots, figsize=(w, h))
     if n_plots == 1:
         axes = [axes]

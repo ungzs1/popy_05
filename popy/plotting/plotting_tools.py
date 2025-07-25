@@ -27,6 +27,18 @@ from matplotlib.colors import to_rgba
 def get_prop_event(behav_all_pd_original, column='switch'):
     """
     Calculates the proportion of events for each monkey and session, across blocks.
+
+    Parameters
+    ----------
+    behav_all_pd_original : pd.DataFrame
+        The original behavior DataFrame containing all trials.
+    column : str
+        The column name to calculate the proportion of events for.
+
+    Returns
+    -------
+    dict
+        A dictionary containing the proportion of events for each monkey. For each monkey, it contains a list of arrays, where each array corresponds to a block and contains the events in the block (interpolated to a fixed length).
     """
     behav_all_pd = behav_all_pd_original.copy()
 
@@ -63,76 +75,106 @@ def get_prop_event(behav_all_pd_original, column='switch'):
     return percent_selection# percent_shift
 
 
-def plot_strategy(behav, ax=None, saveas=None, paper_format=False, title=None, show_error=True):
+def plot_strategy(behav, ax=None, saveas=None, paper_format=False, title=None, show_error=True, verbose=False):
+    # init fig
+    if ax is None:
+        if paper_format:
+            # fontsize = 18
+            plt.rcParams.update({'font.size': 8})
+            fig, axs = plt.subplots(2, 1, figsize=(2, 2), sharex=True, gridspec_kw={'hspace': 0.05})  # paper format
+            lw = 1.5
+        else:
+            plt.rcParams.update({'font.size': 12})
+            fig, axs = plt.subplots(2, 1, figsize=(6, 6), sharex=True, gridspec_kw={'hspace': 0.05})
+            lw = 2
+    else:
+        # split the provided axis into two subplots
+        # Split the provided axis into 2 subplots
+        fig = ax.get_figure()
+        
+        # Get the position of the original axis
+        pos = ax.get_position()
+        ax.remove()  # Remove the original axis
+        
+        # Create two new axes in the same space
+        ax1 = fig.add_axes([pos.x0, pos.y0 + pos.height/2, pos.width, pos.height/2])  # Top
+        ax2 = fig.add_axes([pos.x0, pos.y0, pos.width, pos.height/2])  # Bottom
+
+        axs = [ax1, ax2]
+
+        lw = 2
+
+    if title is not None:
+        fig.suptitle(title)
+
 
     # get best target selection and shift vectors
     behav = add_switch_info(behav)
     behav['if_best_target'] = behav['target'] == behav['best_target']
 
-    percent_selection = get_prop_event(behav, 'if_best_target')
-    percent_shift = get_prop_event(behav, 'switch')
-
-    monkeys = percent_selection.keys()
-
-    ### Print stats
-    # percent correct for each monkey and together
-    for monkey in monkeys:
-        print(f'{monkey} - percent correct: {np.mean(percent_selection[monkey]):.2f}')
-        print(f'{monkey} - percent shift: {np.mean(percent_shift[monkey]):.2f}')
-    print(f'Both monkeys - percent correct: {np.mean(np.concatenate(list(percent_selection.values()), axis=0)):.2f}')
-    print(f'Both monkeys - percent shift: {np.mean(np.concatenate(list(percent_shift.values()), axis=0)):.2f}')
+    # get percent selection and percent shift per monkey and model
+    for monkey, df_monkey in behav.groupby('monkey'):
+        for model, df_model in df_monkey.groupby('model'):
+            ...
+            # get percent correct and percent shift
+            percent_selection = get_prop_event(df_model, 'if_best_target')
+            percent_shift = get_prop_event(df_model, 'switch')
     
+            LEN_BLOCK = percent_selection[list(percent_selection.keys())[0]].shape[1]
 
-    LEN_BLOCK = percent_selection[list(percent_selection.keys())[0]].shape[1]
-    if ax is None:
-        # plotting, figsize is 130mm x 9 mm
-        cm = 1/2.54  # centimeters in inches
-        if paper_format:
-            # fontsize = 18
-            plt.rcParams.update({'font.size': 18})
-            fig, axs = plt.subplots(1, 2, figsize=(12, 4))
-        else:
-            fig, axs = plt.subplots(1, 2, figsize=(20*cm, 8*cm))   
+            # get mean and std for best target selection and shift
+            mean_best_selection = np.mean(percent_selection[monkey] * 100, axis=0)
+            std_best_selection = np.std(percent_selection[monkey] * 100, axis=0)
+            sem_best_selection = std_best_selection / np.sqrt(len(percent_selection[monkey]))
 
-    if title is not None:
-        fig.suptitle(title)
-             
-    for monkey in monkeys:
-        # get mean and std for best target selection and shift
-        mean_best_selection = np.mean(percent_selection[monkey], axis=0)
-        std_best_selection = np.std(percent_selection[monkey], axis=0)
-        sem_best_selection = std_best_selection / np.sqrt(len(percent_selection[monkey]))
+            mean_shift = np.mean(percent_shift[monkey], axis=0)
+            std_shift = np.std(percent_shift[monkey], axis=0)
+            sem_shift = std_shift / np.sqrt(len(percent_shift[monkey]))
 
-        mean_shift = np.mean(percent_shift[monkey], axis=0)
-        std_shift = np.std(percent_shift[monkey], axis=0)
-        sem_shift = std_shift / np.sqrt(len(percent_shift[monkey]))
-
-        linestyle = 'dashed' if monkey.split('_')[-1] == 'simulation' else 'solid'
-        if linestyle == 'solid':
-            if monkey in COLORS.keys():
-                color = COLORS[monkey]
+            linestyle = 'solid'#'dashed' if not model == 'recording' else 'solid'
+            if linestyle == 'solid':
+                if monkey in COLORS.keys():
+                    color = COLORS[monkey]
+                else:
+                    color = None
+                if show_error and monkey in ['ka', 'po', 'yu_sham', 'yu_DCZ']:
+                    axs[0].fill_between(np.arange(LEN_BLOCK), mean_best_selection-sem_best_selection, mean_best_selection+sem_best_selection, color=color, alpha=0.5)
             else:
-                color = None
-            if show_error:
-                axs[0].fill_between(np.arange(LEN_BLOCK), mean_best_selection-sem_best_selection, mean_best_selection+sem_best_selection, color=color, alpha=0.5)
-        else:
-            color = COLORS['_'.join(monkey.split('_')[:-1])]
-        axs[0].plot(mean_best_selection, color=color, label=monkey.upper(), linestyle=linestyle, linewidth=2)
+                color = COLORS[monkey]
+            axs[0].plot(mean_best_selection, color=color, label=monkey.upper(), linestyle=linestyle, linewidth=lw, alpha=0.8)
 
-        axs[1].plot(mean_shift, color=color , label=monkey.upper(), linestyle=linestyle, linewidth=2)
-        if linestyle == 'solid' and show_error:
-            axs[1].fill_between(np.arange(LEN_BLOCK), mean_shift-sem_shift, mean_shift+sem_shift, color=color, alpha=0.5)
+            axs[1].plot(mean_shift, color=color , label=monkey.upper(), linestyle=linestyle, linewidth=lw, alpha=0.8)
+            if linestyle == 'solid' and show_error and monkey in ['ka', 'po', 'yu_sham', 'yu_DCZ']:
+                axs[1].fill_between(np.arange(LEN_BLOCK), mean_shift-sem_shift, mean_shift+sem_shift, color=color, alpha=0.4)
+
+    # print stats 
+    for monkey, df_monkey in behav.groupby('monkey'):
+        for model, df_model in df_monkey.groupby('model'):
+                
+            mean_best_all = []
+            for session, df_session in df_model.groupby('session'):
+                percent_selection = get_prop_event(df_session, 'if_best_target')
+                percent_shift = get_prop_event(df_session, 'switch')
+
+                mean_best_temp = np.mean(percent_selection[monkey])
+                mean_best_all.append(mean_best_temp)
+            mean_best_all = np.array(mean_best_all)
+
+            mean_best = np.mean(mean_best_all)
+            std_best = np.std(mean_best_all)
+            if verbose:
+                print(f"{monkey} {model} - Best target selection: {mean_best:.2f} ± {std_best:.6f}")
 
     # plot settings
     ax = axs[0]
-    ax.axvline(LEN_BLOCK-5, color='k', linestyle='--', alpha=0.5)
+    ax.axvline(LEN_BLOCK-5, color='k', linestyle='--', alpha=0.5, zorder=-1)
     #ax.set_title('Best target selection')
-    ax.set_xlabel('Trials in block')
-    ax.set_ylabel('Proportion of best\ntarget selection')
+    ax.set_ylabel('% optimal\ntarget selection')
     #ax.set_ylim([0.2, 1])
     # set ticks every .2
     #ax.set_yticks(np.arange(0.2, 1.1, 0.2))
-    ax.legend(loc='lower right', frameon=True)
+    if not paper_format:
+        ax.legend(loc='lower right', frameon=True)
 
     # hide the spines between ax and ax2
     ax.spines['right'].set_visible(False)
@@ -142,7 +184,7 @@ def plot_strategy(behav, ax=None, saveas=None, paper_format=False, title=None, s
     ax.axvline(LEN_BLOCK-5, color='k', linestyle='--', alpha=0.5)
     #ax.set_title('Shift')
     ax.set_xlabel('Trials in block')
-    ax.set_ylabel('Probability of shift')
+    ax.set_ylabel('Proba. switch')
     #ax.set_yticks(np.arange(0, 1.1, 0.1))
     #ax.set_ylim([-0.02, .45])
     ax.legend(loc='upper right', frameon=True)
@@ -258,10 +300,22 @@ def plot_performances(behavs):
     ax.spines["right"].set_visible(False)
     plt.show()
 
-def plot_hist_thingy(behav_original, title=None):
+def plot_hist_thingy(behav_original, title=None, paper_format=False):
     labels = [ f"+ + +", f"o + +" , f"+ o +", f"o o +", f"+ + o", f"o + o", f"+ o o", f"o o o"]
 
-    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(6, 4), gridspec_kw={'height_ratios': [2, 1], 'hspace': 0})
+    if paper_format:
+        fontsize = 8
+        plt.rcParams.update({'font.size': fontsize})
+        h, w = 2, 2  # height and width in cm 
+        s = 4
+        lw = 1.2
+    else:
+        plt.rcParams.update({'font.size': 12})
+        h, w = 4, 6
+        s = 10
+        lw = 2
+
+    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(w, h), gridspec_kw={'height_ratios': [2, 1], 'hspace': 0})
 
     if title is not None:
         fig.suptitle(title)
@@ -289,13 +343,19 @@ def plot_hist_thingy(behav_original, title=None):
         for (R_1, R_2, R_3), behav_temp in behav.groupby(['R_1', 'R_2', 'R_3']):
             all_trials_vector.append(behav_temp['switch'].mean())
 
-        ax.plot(all_trials_vector, label=f'{monkey}', marker='o', color=COLORS[monkey])
+        color = COLORS[monkey] if monkey in COLORS else 'grey'
+        ax.plot(all_trials_vector, label=f'{monkey}', marker='o', 
+                color=color, 
+                alpha=.8,
+                markerfacecolor=color if monkey in ['ka', 'po', 'yu_DCZ', 'yu_sham'] else 'white',
+                markersize=s,# if not monkey in ['ka', 'po', 'yu_DCZ', 'yu_sham'] else s*1.5,
+                linewidth=lw)# if not monkey in ['ka', 'po', 'yu_DCZ', 'yu_sham'] else lw*2, alpha=0.8)
 
-    ax.set_xticks([])
+    #ax.set_xticks([])
     #ax.set_xticklabels(labels, rotation=90)
 
     ax.set_xlabel('')
-    ax.set_ylabel('p(switch)')
+    ax.set_ylabel('Proba. switch')
 
     ax.spines["right"].set_visible(False)
     ax.spines["top"].set_visible(False)
@@ -309,7 +369,7 @@ def plot_hist_thingy(behav_original, title=None):
         for j, marker in enumerate(label.split(' ')):        
             ax.scatter(i, j, marker='o' if marker == 'o' else 'x', c='tab:green' if marker == 'o' else 'tab:red')
 
-    ax.set_xticks([])
+    #ax.set_xticks([])
 
     ax.set_yticks([0,1,2])
     ax.set_yticklabels(['t-3', 't-2', 't-1'])
@@ -326,7 +386,8 @@ def plot_hist_thingy(behav_original, title=None):
     #ax.spines["top"].set_visible(False)
     ax.spines["bottom"].set_visible(False)
 
-    plt.tight_layout()
+    if not paper_format:
+        plt.tight_layout()
 
     return fig, (ax1, ax2)
     
@@ -491,6 +552,26 @@ def show_target_selection(session_data_original, title=None, background_value=No
     else:
         plt.close()
 
+def make_color_lighter(color, amount=0.1):
+    """
+    Makes a color lighter by a given amount.
+    
+    Parameters
+    ----------
+    color : str
+        The color to make lighter, in hex format (e.g., '#90c6f2').
+    amount : float, optional
+        The amount to lighten the color by. Default is 0.5.
+    
+    Returns
+    -------
+    str
+        The lighter color in hex format.
+    """
+    rgba = to_rgba(color)
+    rgba = [min(1, c + amount) for c in rgba[:3]] + [rgba[3]]  # Keep alpha channel unchanged
+    return to_rgba(rgba)[:3]  # Return RGB only
+
 def show_target_selection_compact(
         session_data_original, 
         title=None, 
@@ -542,9 +623,9 @@ def show_target_selection_compact(
     n_rows = len(session_data['block_id'].unique())
     if format == 'paper':
         h = 2.5  # height of each block in cm
-        w = 10  # width of each block in cm
-        s_marker = 12
-        linewidth_marker = .6
+        w = 8.5  # width of each block in cm
+        s_marker = 16  # size of the marker
+        linewidth_marker = 1.2
         height_ratios = [1, 3]  # for the inner grid
     elif format == 'poster':
         h = 3.5
@@ -602,20 +683,20 @@ def show_target_selection_compact(
             ax_markers.scatter(
                 rewarded_trials_of_high_target,
                 np.ones_like(rewarded_trials_of_high_target),
-                color=target_colors[target_id], marker='o', facecolors=target_colors[target_id], s=s_marker, linewidth=linewidth_marker)  # plot rewarded trials
+                color=target_colors[target_id], marker='o', facecolors=make_color_lighter(target_colors[target_id]), s=s_marker, linewidth=linewidth_marker)  # plot rewarded trials
             ax_markers.scatter(
                 rewarded_trials_of_low_target,
                 np.ones_like(rewarded_trials_of_low_target),
-                color=target_colors[target_id], marker='o', facecolors=target_colors[target_id], s=s_marker, linewidth=linewidth_marker)  # plot rewarded trials
+                color=target_colors[target_id], marker='o', facecolors=make_color_lighter(target_colors[target_id]), s=s_marker, linewidth=linewidth_marker)  # plot rewarded trials
             ax_markers.scatter(
                 unrewarded_trials_of_high_target,
                 np.ones_like(unrewarded_trials_of_high_target),
-                color=target_colors[target_id], marker='o', facecolors='none', s=s_marker, linewidths=linewidth_marker)
+                color=target_colors[target_id], marker='o', facecolors='white', s=s_marker, linewidths=linewidth_marker)
             ax_markers.scatter(
                 unrewarded_trials_of_low_target,
                 np.ones_like(unrewarded_trials_of_low_target),
-                color=target_colors[target_id], marker='o', facecolors='none', s=s_marker, linewidths=linewidth_marker)
-            
+                color=target_colors[target_id], marker='o', facecolors='white', s=s_marker, linewidths=linewidth_marker)
+
         # plot interrupted trials
         interrupted_trials_id = session_data.loc[
             (session_data['block_id'] == i) & (session_data['feedback'].isnull())
@@ -633,9 +714,9 @@ def show_target_selection_compact(
                 label='best target', color='green', alpha=.3, linewidth=20)'''
 
         # plot MEASURE (i.e. value)
-        bg_val_colors = {'stay_value': 'grey', 'V0': 'grey', 
+        bg_val_colors = {'stay_value': '#a02c2cff', 'V0': '#a08a2cff', 
                          'Q_1': target_colors[1], 'Q_2': target_colors[2], 'Q_3': target_colors[3]}
-        alphas = {'V0': 0.4}
+        alphas = {'V0': 0.5}
         if background_values is not None:
             for background_value in background_values:
                 measure = session_data.loc[(session_data['block_id'] == i), background_value].to_numpy()

@@ -13,6 +13,9 @@ from skopt.space import Real
 from skopt.utils import use_named_args
 from skopt.plots import plot_convergence, plot_objective, plot_evaluations
 
+from joblib import Parallel, delayed
+from scipy.optimize import minimize
+
 from popy.simulation_tools import *
 
 
@@ -202,7 +205,7 @@ def simulate_agent(
 ### Functions for fitting agents and cross-validation ###
 
 
-def fit_agent(agent_class, param_space, env, behav_data=None, fixed_params=None, fit_on='ll', n_calls=50, n_initial_points=10, n_jobs=1, verbose=False, make_plots=True):
+def fit_agent(agent_class, param_space, env, behav_data=None, fixed_params=None, fit_on='ll', n_calls=50, n_initial_points=10, n_jobs=-1, verbose=False, make_plots=True):
     """
     Fit an agent model to behavioral data using Bayesian optimization.
     """
@@ -277,6 +280,75 @@ def fit_agent(agent_class, param_space, env, behav_data=None, fixed_params=None,
         }
     else:
         raise ValueError(f"Invalid value for 'fit_on': {fit_on}")
+    
+
+
+def fit_agent_strict(agent_class, param_space, env, behav_data=None, fixed_params=None, fit_on='ll',
+                     method='L-BFGS-B', n_restarts=10, verbose=False):
+    """
+    Fit an agent model to behavioral data using strict local optimization (scipy.optimize.minimize).
+    """
+    if fixed_params is None:
+        fixed_params = {}
+
+    # Extract bounds and parameter names
+    bounds = []
+    param_names = []
+    for p in param_space:
+        if isinstance(p, (Real)):
+            bounds.append((p.low, p.high))
+        else:
+            raise ValueError("Only Real dimensions are supported with scipy.optimize.minimize.")
+        param_names.append(p.name)
+
+    def objective(x):
+        params = dict(zip(param_names, x))
+        if fit_on == 'll':
+            ll = estimate_ll(agent_class, params, behav_data, fixed_params)
+            return -ll
+        elif fit_on == 'rr':
+            rr = estimate_rr(agent_class, params, env, fixed_params)
+            return -rr
+        else:
+            raise ValueError(f"Invalid value for 'fit_on': {fit_on}")
+
+    def run_restart(x0, bounds, objective, method='L-BFGS-B', verbose=False):
+        result = minimize(objective, x0, method=method, bounds=bounds, options={'disp': verbose, 'ftol': 0.1})
+        return result
+
+    # Create N random initializations
+    x0_list = [
+        [np.random.uniform(low, high) for (low, high) in bounds]
+        for _ in range(n_restarts)
+    ]
+
+    # Run them in parallel
+    results = Parallel(n_jobs=-1)(delayed(run_restart)(x0, bounds, objective, verbose=verbose) for x0 in x0_list)
+
+    # Pick the best
+    best_result = min(results, key=lambda r: r.fun)
+
+    # Extract best parameters
+    best_params = dict(zip(param_names, best_result.x))
+
+    if fit_on == 'll':
+        best_ll = -best_result.fun
+        n_params = len(param_space)
+        bic = -2 * best_ll + n_params * np.log(len(behav_data))
+        lpt = np.exp(best_ll / len(behav_data))
+
+        return {
+            'best_params': best_params,
+            'best_ll': best_ll,
+            'bic': bic,
+            'lpt': lpt
+        }
+    elif fit_on == 'rr':
+        return {
+            'best_params': best_params,
+            'best_reward_rate': -best_result.fun
+        }
+
 
 
 def cross_val_fit(agent_class, param_space, env, behav_data, fixed_params=None, CV_splits=5, n_calls=50, n_initial_points=10):
@@ -322,7 +394,7 @@ def cross_val_fit(agent_class, param_space, env, behav_data, fixed_params=None, 
 
 def fit_simulate(agent_class, param_space, env, behav, fixed_params=None,
                 CV_splits=None,
-                n_calls=50, n_initial_points=10, n_jobs=1, verbose=False, make_plots=False):
+                n_calls=50, n_initial_points=10, n_jobs=-1, verbose=False, make_plots=False):
     """
     Fit an agent model to behavioral data and simulate the agent to get reward rate and probability of choosing best arm.
     """

@@ -6,6 +6,7 @@ from sklearn.model_selection import StratifiedKFold, permutation_test_score, KFo
 import xarray as xr
 from sklearn.preprocessing import LabelEncoder
 from sklearn.model_selection import LeaveOneGroupOut
+from sklearn.pipeline import Pipeline
 from sklearn.metrics import make_scorer
 from scipy.stats import pearsonr
 
@@ -143,6 +144,7 @@ def _preproc_data(neural_dataset_original,
 
     return X, y, y_groups
 
+
 def _shuffle_preserve_nan(arr):
     arr = np.array(arr)
     mask = ~np.isnan(arr)
@@ -157,6 +159,7 @@ def _shuffle_preserve_nan(arr):
 # Create a custom scorer that returns the Pearson correlation coefficient
 def pearson_scorer(y_true, y_pred):
     return pearsonr(y_true, y_pred)[0]  # Returns the correlation value, not the p-value
+
 # train on one target, test on the others
 def target_cv_score(decoder, X_temp, y, groups):
     scores_all = []
@@ -178,7 +181,8 @@ def target_cv_score(decoder, X_temp, y, groups):
     score = np.mean(scores_all)  # take the mean of the correlations
     return score
 
-def linear_decoding(X, y, groups=None, K_fold=None, n_perm=1000, n_jobs=1):
+
+def linear_decoding(X, y, groups=None, K_fold=None, n_perm=1000, n_jobs=-1):
     """
     Decoding the target variable 'y' from the neural data matrix 'X'.
 
@@ -198,8 +202,12 @@ def linear_decoding(X, y, groups=None, K_fold=None, n_perm=1000, n_jobs=1):
             kf = KFold(n_splits=K_fold, shuffle=True)
         else:
             kf = LeaveOneGroupOut()  # use LeaveOneGroupOut decode the value across targets (trained on one target, tested on the other) 
-        #decoder = LinearRegression()
-        decoder = LassoCV(alphas=np.logspace(-3, 2, 100))  # Lasso regression with cross-validation
+        #decoder = LinearRegression() 
+        alphas = np.logspace(-1, 4, 20)  # alphas for the RidgeCV decoder, 
+        decoder = Pipeline([
+            ('scaler', StandardScaler()),
+            ('decoder', Ridge(alpha=100))
+        ])
         #decoder = RidgeCV(alphas=np.logspace(-3, 2, 100), cv=kf)
         scoring_function = 'r2'
         # Create a scorer object
@@ -225,33 +233,28 @@ def linear_decoding(X, y, groups=None, K_fold=None, n_perm=1000, n_jobs=1):
     #cv_std_scores = np.empty(X.shape[2])
 
     # loop through time points
-    for i_train, t_train in enumerate(np.arange(X.shape[2])):
-        X_temp = X[:, :, t_train]  # select (trial, unit) data at time t_train
-        if groups is None:
-            cv_scores = cross_val_score(decoder, X_temp, y, cv=kf, scoring=scoring_function, n_jobs=n_jobs)
-            score = cv_scores.mean()  # take the mean of the cross-validation scores
+    for t_idx in np.arange(X.shape[2]):
+        # print progress
 
-            if n_perm is not None:
-                # Permutation test
-                permuted_scores = []
-                for _ in range(n_perm):
-                    y_permuted = np.random.permutation(y)
-                    perm_scores = cross_val_score(decoder, X_temp, y_permuted, cv=kf, scoring=scoring_function, n_jobs=n_jobs)
-                    permuted_scores.append(perm_scores.mean())
-                
-                # Calculate p-value
-                pvalue = (np.array(permuted_scores) >= score).mean()
-                perm_scores_mean_temp = np.array(permuted_scores).mean()  # convert to numpy array
-                perm_scores_std_temp = np.array(permuted_scores).std()  # compute
-            else:
+        X_temp = X[:, :, t_idx]  # select (trial, unit) data at time t_idx
+        if groups is None:
+            if n_perm is None:
+                cv_scores = cross_val_score(decoder, X_temp, y, cv=kf, scoring=scoring_function, n_jobs=n_jobs)
+                score = cv_scores.mean()  # take the mean of the cross-validation scores
                 pvalue = np.nan  # if no permutation test is requested, set pvalue to nan
                 perm_scores_mean_temp = np.nan
                 perm_scores_std_temp = np.nan
 
-            '''res = permutation_test_score(decoder, X_temp, y, cv=kf, 
-                                         scoring=scoring_function, n_permutations=n_perm, n_jobs=n_jobs)
-            # unpack results and store them
-            score, perm_scores, pvalue = res'''
+            elif n_perm is not None:
+                score, perm_scores, p_value = permutation_test_score(
+                    decoder, X_temp, y, cv=kf, scoring=scoring_function,
+                    n_permutations=n_perm, n_jobs=n_jobs,
+                )
+                
+                # Calculate p-value
+                pvalue = p_value  # p-value from the permutation test
+                perm_scores_mean_temp = perm_scores.mean()  #
+                perm_scores_std_temp = perm_scores.std()  # compute                
 
         elif groups is not None and n_perm is not None:
             score = target_cv_score(decoder, X_temp, y, groups)  # compute the score for the current time point
@@ -272,15 +275,15 @@ def linear_decoding(X, y, groups=None, K_fold=None, n_perm=1000, n_jobs=1):
             pvalue = np.sum(np.abs(perm_scores_all) >= np.abs(score)) / n_perm  # compute the pvalue
 
         # store the results
-        scores[i_train] = score
-        pvals[i_train] = pvalue
-        perm_scores_mean[i_train] = perm_scores_mean_temp
-        perm_scores_std[i_train] = perm_scores_std_temp
+        scores[t_idx] = score
+        pvals[t_idx] = pvalue
+        perm_scores_mean[t_idx] = perm_scores_mean_temp
+        perm_scores_std[t_idx] = perm_scores_std_temp
 
         # cross-validation scores without permutation (sanity check)
         '''score = cross_val_score(decoder, X_temp, y, groups=groups, cv=kf, scoring=scoring_function)
-        cv_mean_scores[i_train] = np.mean(score)
-        cv_std_scores[i_train] = np.std(score)'''
+        cv_mean_scores[t_idx] = np.mean(score)
+        cv_std_scores[t_idx] = np.std(score)'''
 
     return scores, pvals, perm_scores_mean, perm_scores_std#, cv_mean_scores, cv_std_scores
 
@@ -297,9 +300,9 @@ def load_data_for_decoder(monkey, session, n_extra_trials=(-1, 1)):
     # behav = add_switch_info(behav)  # add switch information for its decoding
     behav = add_history_of_feedback(behav, num_trials=8, one_column=False, add_history_of_targets=False)  # add history of feedback for its decoding
 
-    '''for alpha in np.arange(0.05, 1, 0.05):
+    for alpha in np.arange(0.05, 1, 0.05):
         behav = add_stay_value(behav, alpha=alpha)
-        behav = behav.rename(columns={'stay_value': f'stay_value_{alpha:.2f}'})'''
+        behav = behav.rename(columns={'stay_value': f'stay_value_{alpha:.2f}'})
 
     # set target == 2 to nan
     #behav['target'] = behav['target'].where(behav['target'] != 2, np.nan)  # set target == 2 to nan
