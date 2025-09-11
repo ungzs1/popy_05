@@ -15,6 +15,7 @@ from popy.io_tools import *
 from popy.behavior_data_tools import *
 from popy.neural_data_tools import *
 from popy.config import PROJECT_PATH_LOCAL
+from concurrent.futures import ProcessPoolExecutor, as_completed
 
 # %%
 ##% data loading
@@ -47,7 +48,7 @@ def load_data_custom(monkey, session, n_extra_trials=(-1, 0)):
     behav = drop_time_fields(behav)
     #behav = add_history_of_feedback(behav, num_trials=3, binary=True)  # add history of feedback
     behav = add_stay_value(behav, digitize=True, n_classes=4)  # add value function for its decoding
-    #behav = add_switch_info(behav)  # add last target
+    behav = add_switch_info(behav, relative_to='next')  # add last target
     behav = behav.dropna()
     behav['feedback'] = behav['feedback'].astype('int')  # convert feedback to int
     '''behav['target'] = behav['target'].astype('int')  # convert target to int
@@ -76,41 +77,10 @@ def load_data_custom(monkey, session, n_extra_trials=(-1, 0)):
 
     return neural_dataset
 
-# %%
-PARAMS = {
-    'floc': os.path.join(PROJECT_PATH_LOCAL, 'data', 'processed', 'neural_data', 'meta_rates_value_target'),
-    'label': 'stay_value * target',
-    'n_extra_trials': (-1, 0),  # (-1, 0) means no extra trials
-    'm': 12
-}
-
-floc_xr = os.path.join(PARAMS['floc'], 'meta_rates.nc')
-
-# get all sessions info
-session_metadata = load_metadata()
-session_metadata = session_metadata[session_metadata['block_len_valid']]
-
-init_log(PARAMS)
-
-# loop over sessions, get unit data
-info_df = []
-empty_file = True
-for s, ((monkey, session), _) in enumerate(session_metadata.groupby(['monkey', 'session'])):
-    print(f"{s}/{len(session_metadata)}, Processing monkey {monkey}, session {session}")
-    # create labelled dataset for session
-    try:
-        neural_dataset = load_data_custom(monkey, session, n_extra_trials=PARAMS['n_extra_trials'])
-        # add monkey and session as coordinates along dimension unitx
-
-        if monkey == 'po' and 'target' in PARAMS['label'].split(' * '):
-            # remove trials with target == 2
-            neural_dataset = neural_dataset.where(neural_dataset['target'] != 2, drop=True)
-
-    except Exception as e:
-        logging.info(f"Error loading data for monkey {monkey}, session {session}: {e}")
-        continue
-
-    session_ds = []
+def process_session(neural_dataset, PARAMS, monkey, session):
+    # process each unit separately
+    session_ls = []
+    switch_info = []  ## TODO: generalize to any coords to keep
     for unit in neural_dataset.unit.values:
         try:
             ## 1. get unit data
@@ -138,15 +108,6 @@ for s, ((monkey, session), _) in enumerate(session_metadata.groupby(['monkey', '
             # get number of trials for each label
             n_trials_per_label = pandas.Series(class_labels).value_counts()
             n_trials_per_label = n_trials_per_label.sort_index()
-            if len(PARAMS['label'].split(' * ')) == 1:
-                renamed_counts = {f"{PARAMS['label']}_{k}": v for k, v in n_trials_per_label.to_dict().items()}
-            elif len(PARAMS['label'].split(' * ')) == 2:
-                label_1 = PARAMS['label'].split(' * ')[0]
-                label_2 = PARAMS['label'].split(' * ')[1]
-                renamed_counts = {f"{label_1}_{k.split(' * ')[0]} * {label_2}_{k.split(' * ')[1]}": v for k, v in n_trials_per_label.to_dict().items()}
-            info_df_temp = {'monkey': monkey, 'session': session, 'unit': unit}
-            info_df_temp.update(renamed_counts)
-            info_df.append(info_df_temp.copy())
 
             ## 3. process neural data
 
@@ -172,42 +133,114 @@ for s, ((monkey, session), _) in enumerate(session_metadata.groupby(['monkey', '
             new_trial_ids = np.arange(len(unit_data_selected.trial_id.values))
             unit_data_selected = unit_data_selected.assign_coords(trial_id=new_trial_ids)
 
+            # coords to add
+            ###keep switch or stay - we want statistics about that!
+            switch_info.append(unit_data_selected['switch'].values)  ## TODO: generalize to any coords to keep
+
             # drop all coordinates along the trial axis (except for 'label')
             coords_to_drop = [coord for coord in unit_data_selected.trial_id.coords if coord not in ['trial_id']+[label for label in PARAMS['label'].split(' * ')]]
             unit_data_selected = unit_data_selected.drop(coords_to_drop)
 
-            session_ds.append(unit_data_selected)
+            session_ls.append(unit_data_selected)
 
         except Exception as e:
             logging.info(f"Error processing unit {unit} in monkey {monkey}, session {session}: {e}")
             continue
 
     # concatenate all units data
+    session_ds = xarray.concat(session_ls, dim='unit')
+    # add switch_info as coordinate (along units x trial)
+    session_ds = session_ds.assign_coords(switch_info=(('unit', 'trial_id'), numpy.array(switch_info)))
+
+    return session_ds
+
+# save session data to file
+def save_session_data(monkey, session, session_ds, floc_xr):
+    if not os.path.exists(floc_xr):
+        # save the first unit data
+        session_ds.to_netcdf(floc_xr)
+    else:
+        # append the unit data
+        with xr.open_dataset(floc_xr) as meta_ds:
+            combined_ds = xr.concat([meta_ds, session_ds], dim='unit')
+
+        combined_ds.to_netcdf(floc_xr)
+
+    logging.info(f"Saved data for monkey {monkey}, session {session} to {floc_xr}")
+
+
+def process_one_session(monkey, session, PARAMS, floc_xr):
+    print(f"Processing monkey {monkey}, session {session}")
+    # create labelled dataset for session
     try:
-        session_ds = xarray.concat(session_ds, dim='unit')
+        neural_dataset = load_data_custom(monkey, session, n_extra_trials=PARAMS['n_extra_trials'])
+        # add monkey and session as coordinates along dimension unitx
+
+        if monkey == 'po' and 'target' in PARAMS['label'].split(' * '):
+            # remove trials with target == 2
+            neural_dataset = neural_dataset.where(neural_dataset['target'] != 2, drop=True)
+
+    except Exception as e:
+        logging.info(f"Error loading data for monkey {monkey}, session {session}: {e}")
+        return None
+    
+    # process session data
+    try:
+        session_ds = process_session(neural_dataset, PARAMS, monkey, session)
     except Exception as e:
         logging.info(f"Error concatenating data for session {session} - maybe no units left: {e}")
-        continue
+        return None
 
-    # save session data to file
     try:
-        if empty_file:
-            # save the first unit data
-            session_ds.to_netcdf(floc_xr)
-            empty_file = False
-        else:
-            # append the unit data
-            with xr.open_dataset(floc_xr) as meta_ds:
-                combined_ds = xr.concat([meta_ds, session_ds], dim='unit')
-
-            combined_ds.to_netcdf(floc_xr)
-
-        logging.info(f"Saved data for monkey {monkey}, session {session} to {floc_xr}")
+        save_session_data(monkey, session, session_ds, floc_xr)
+        logging.info(f"Successfully processed session {session}")
     except Exception as e:
-        logging.info(f"Error saving data for monkey {monkey}, session {session}: {e}")
-        continue
+        logging.info(f"Error saving data for session {session}: {e}")
+        return False
+    
+    return True
 
-# save info dataframe to file
-info_df = pandas.DataFrame(info_df)
-info_df.to_csv(os.path.join(PARAMS['floc'], 'info_df.csv'), index=False)
+
+# %%
+PARAMS = {
+    'floc': os.path.join(PROJECT_PATH_LOCAL, 'data', 'processed', 'neural_data', 'meta_rates_value_4x20_switch_proba'),
+    'label': 'stay_value * feedback',
+    'n_extra_trials': (0, 1),  # (0, 1) given trial (where the value is measured) and the feedback of this trial, plus the next trial
+    'm': 20
+}
+
+floc_xr = os.path.join(PARAMS['floc'], 'meta_rates.nc')
+# remove existing file
+if os.path.exists(floc_xr):
+    os.remove(floc_xr)
+
+# get all sessions info
+session_metadata = load_metadata()
+session_metadata = session_metadata[session_metadata['block_len_valid']]
+
+init_log(PARAMS)
+
+if __name__ == "__main__":
+    # Build the list of unique (monkey, session) pairs
+    pairs = [(monkey, session) for (monkey, session), _ in session_metadata.groupby(['monkey', 'session'])]
+    total = len(pairs)
+    print(f"Found {total} sessions. Using up to {os.cpu_count()} processes.")
+
+    # Run one session per CPU (tasks will queue as cores free up)
+    successes, failures = 0, 0
+    with ProcessPoolExecutor(max_workers=os.cpu_count()) as ex:
+        futures = [ex.submit(process_one_session, m, s, PARAMS, floc_xr) for m, s in pairs]
+        for i, fut in enumerate(as_completed(futures), 1):
+            try:
+                ok = fut.result()
+                successes += int(ok)
+            except Exception as e:
+                ok = False
+                logging.info(f"A worker crashed unexpectedly: {e}")
+                failures += 1
+
+            print(f"finished {i}/{total} sessions, {successes} succeeded, {failures} failed", end='\r') 
+
+    print(f"Finished: {successes}/{total} sessions succeeded.")
+
 end_log()

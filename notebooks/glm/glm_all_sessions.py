@@ -74,8 +74,8 @@ PARAMS = {
     'step_time': .05,
     'n_permutations': 500,
 
-    'floc': os.path.join(cfg.PROJECT_PATH_LOCAL, 'notebooks', 'glm', 'results', 'fb_stayvalue_cpd'),  # Folder to save results
-    'msg': 'This is the main GLM CPD for feedback and stay value analysis.',  # Message to log
+    'floc': os.path.join(cfg.PROJECT_PATH_LOCAL, 'notebooks', 'glm', 'results', 'fb_stayvalue_cpd_inclusion'),  # Folder to save results
+    'msg': 'Decoding the target, and we use the trial_id as a predictor as well to account for time-dependence (this can reduce the effect of drifting)',  # Message to log
     }
 
 ### Run

@@ -623,10 +623,10 @@ def show_target_selection_compact(
     n_rows = len(session_data['block_id'].unique())
     if format == 'paper':
         h = 2.5  # height of each block in cm
-        w = 8.5  # width of each block in cm
+        w = 9  # width of each block in cm
         s_marker = 16  # size of the marker
         linewidth_marker = 1.2
-        height_ratios = [1, 3]  # for the inner grid
+        height_ratios = [1.5, 3]  # for the inner grid
     elif format == 'poster':
         h = 3.5
         w = 10
@@ -682,19 +682,19 @@ def show_target_selection_compact(
             
             ax_markers.scatter(
                 rewarded_trials_of_high_target,
-                np.ones_like(rewarded_trials_of_high_target),
+                np.ones_like(rewarded_trials_of_high_target) * target_id,
                 color=target_colors[target_id], marker='o', facecolors=make_color_lighter(target_colors[target_id]), s=s_marker, linewidth=linewidth_marker)  # plot rewarded trials
             ax_markers.scatter(
                 rewarded_trials_of_low_target,
-                np.ones_like(rewarded_trials_of_low_target),
+                np.ones_like(rewarded_trials_of_low_target) * target_id,
                 color=target_colors[target_id], marker='o', facecolors=make_color_lighter(target_colors[target_id]), s=s_marker, linewidth=linewidth_marker)  # plot rewarded trials
             ax_markers.scatter(
                 unrewarded_trials_of_high_target,
-                np.ones_like(unrewarded_trials_of_high_target),
+                np.ones_like(unrewarded_trials_of_high_target) * target_id,
                 color=target_colors[target_id], marker='o', facecolors='white', s=s_marker, linewidths=linewidth_marker)
             ax_markers.scatter(
                 unrewarded_trials_of_low_target,
-                np.ones_like(unrewarded_trials_of_low_target),
+                np.ones_like(unrewarded_trials_of_low_target) * target_id,
                 color=target_colors[target_id], marker='o', facecolors='white', s=s_marker, linewidths=linewidth_marker)
 
         # plot interrupted trials
@@ -734,7 +734,7 @@ def show_target_selection_compact(
         #ax_markers.title.set_text('block id: ' + str(i))
 
         ax_markers.set_xlim(-0.5, 45)
-        ax_markers.set_ylim(0.8, 1.2)
+        ax_markers.set_ylim(0., 4)
         ax_markers.set_xticks(range(0, 45, 10))
         ax_markers.set_xticklabels([])
         ax_markers.set_yticks([])

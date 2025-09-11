@@ -610,24 +610,19 @@ def add_RL_values(behav_original, digitize=False, n_classes=4, structure_aware=T
         behavior.loc[behav.index, 'stay_proba'] = behav.loc[behav.index, 'stay_proba'].values
 
     if digitize:
-        raise NotImplementedError("Digitization is not implemented for RL values yet.")
         # Create bin edges (from min to max value, or 0-1 if specified)
-        min_V, max_V = 0, 1
-        bin_edges = np.linspace(min_V, max_V, n_classes+1)
-                
-        # Perform the binning
-        behavior['stay_value'] = np.digitize(
-            behavior['stay_value'], 
-            bins=bin_edges, 
-            right=False) - 1
-        
-        min_proba_stay, max_proba_stay = agent._get_min_max_stay_proba()
-        bins_edges = np.linspace(min_proba_stay, max_proba_stay, n_classes+1)
-        behavior['stay_proba'] = np.digitize(
-            behavior['stay_proba'], 
-            bins=bin_edges, 
-            right=False) - 1
+        all_qs = behavior[['Q_1', 'Q_2', 'Q_3']].values.flatten()
+        all_qs = all_qs[~np.isnan(all_qs)]
+        min_Q, max_Q = np.min(all_qs), np.max(all_qs)
+        bin_edges = np.linspace(min_Q, max_Q+1e-5, n_classes+1)
 
+        # Perform the binning
+        for j in range(3):
+            behavior[f'Q_{j+1}'] = np.digitize(
+                behavior[f'Q_{j+1}'], 
+                bins=bin_edges, 
+                right=False) - 1
+        
     return behavior
 
 
@@ -722,12 +717,14 @@ def add_phase_info(behav_original, exploration_limit=5, transition_limit=0, nume
 
     return behav
 
-def add_switch_info(behav_full, add_trials_since_switch=False, flip_coding=False):
+def add_switch_info(behav_full, add_trials_since_switch=False, flip_coding=False, relative_to='previous'):
     """
     Is the decision during this trial means a Switch from the previous trial.
 
-    Add switch info to behav. A trial is assigned with a True value if the current target is the same as the previous,
-    while a False value is assigned if the current target is different from the previous.
+    Add switch info to behav.
+
+    If relative to='previous', a trial is assigned with a True value if the current target is the same as the previous.
+    If relative to='next', a trial is assigned with a True value if the current target is the same as the next one.
     """
     # sort by monkey, session, block_id, trial_id
     #behav_full = behav_full.sort_values(['monkey', 'session', 'trial_id'])
@@ -735,7 +732,7 @@ def add_switch_info(behav_full, add_trials_since_switch=False, flip_coding=False
     behavs = []
     for (monkey, session), behav in behav_full.groupby(['monkey', 'session']):
         # reset index of behav
-        switches = [np.nan]
+        switches = [np.nan]  # first trial has no previous trial
         trials_since_switch = [0]
         targets = behav.target.values
 
@@ -753,8 +750,13 @@ def add_switch_info(behav_full, add_trials_since_switch=False, flip_coding=False
 
             trials_since_switch.append(n_since_switch)
 
+        switches.append(np.nan)  # last trial has no next trial
+        
         # add to the behav dataframe
-        behav['switch'] = switches
+        if relative_to == 'previous':
+            behav['switch'] = switches[:-1]
+        elif relative_to == 'next':
+            behav['switch'] = switches[1:]
         if add_trials_since_switch:
             behav['trials_since_switch'] = trials_since_switch
 

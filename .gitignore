@@ -52,3 +52,5 @@ notebooks/preprocessing_sessions/preproc_behavioral_data/*.pkl
 notebooks/behav_modeling/results/*
 notebooks/population_decoding/results/*
 notebooks/population_decoding/po_210622_MCC_neural_data.npz
+notebooks/thesis_material/figs/*
+notebooks/pca/results/*

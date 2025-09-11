@@ -343,6 +343,7 @@ class SingleUnitAnalysis:
 
                 # skip if all the values are the same in the neural data TODO: here it should rather be a check fo poisson distribution!!!
                 if len(np.unique(y)) < 2:
+                    self.log.append(f'Skipping {unit_name} at time {time}, all values are the same.')
                     continue
 
                 # Measure 1: fit glm to get the explained deviance, coefficients, t-values, and p-values                    

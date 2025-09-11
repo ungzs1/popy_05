@@ -7,7 +7,8 @@ import traceback
 import xarray as xr
 import logging
 
-from notebooks.population_decoding.neural_value_helpers import *
+from neural_value_helpers import *
+
 from popy.io_tools import load_metadata
 from popy.decoding.population_decoders import run_decoder
 import popy.config as cfg
@@ -186,7 +187,7 @@ def run_all_session_plotting(monkey, session, PARAMS):
         all_figs.append(fig)
 
         # make plots
-        for t_interest_value in ([-4, -2], [2, 3.5]):
+        for t_interest_value in ([-4, -2], [1.5, 3.5]):
             # get neural value for the current trial and the previous one
             data_projected = add_neural_value_coord(data_projected, t_interest=t_interest_value)
 
@@ -273,7 +274,7 @@ def run_neural_value_extraction(monkey, session, PARAMS):
         #project neural data to the neural value space, get across-time decodability matrix
         _, data_projected = time_resolved_decoder_all_time(neural_dataset_temp, target='R_1')
 
-        for t_interest_value in [(-4, -2), (2, 3.5)]:
+        for t_interest_value in [(-4, -2), (1.5, 3.5)]:
             # get neural value for the current trial and the previous one
             data_projected = add_neural_value_coord(data_projected, t_interest=t_interest_value)
             data_projected = data_projected.rename({'V_t': f'V_t_{t_interest_value[0]}_{t_interest_value[1]}'})
@@ -294,11 +295,9 @@ def run_neural_value_extraction(monkey, session, PARAMS):
     return behav_new, session_log
 
 
-
 ### RUN THIS FOR NEURAL VALUE EXTRACTION
 if False:
     PARAMS = {
-        't_interest_value': [2, 3.5],
         'floc': os.path.join(cfg.PROJECT_PATH_LOCAL, 'notebooks', 'population_decoding', 'results', 'behav_neural_value'),
         'msg': 'extracting plots',
     }

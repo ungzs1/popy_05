@@ -327,7 +327,7 @@ class WSLSAgent:
 
 class WSLSAgent_custom:
     """
-    An agent taht stays if there is a reward in the last 2 trials, and switches otherwise.
+    An agent taht stays if there is a reward in the last 3 trials, and switches otherwise.
     """
     def __init__(self, 
                  n_arms=3,
@@ -350,14 +350,13 @@ class WSLSAgent_custom:
         """
 
         # if there was a reward in the last 3 trials, stay, i.e. set the probability of the previously chosen action to 1-epsilon + epsilon/n, and the rest to epsilon/n
-        epsilon_per_n = self.epsilon / self.n_arms
         if sum(self.memory) > 0:  # stay
-            probas = np.ones(self.n_arms) * epsilon_per_n
-            probas[self.last_action] = 1 - self.epsilon + epsilon_per_n
+            probas = np.ones(self.n_arms) * ( self.epsilon / (self.n_arms - 1) )
+            probas[self.last_action] = 1 - self.epsilon
         # set the probability of the previously chosen action to epsilon/n, and the rest to 1-epsilon/(n-1) --> epsilon/n + 2*[(1-epsilon)/(n-1)] = 1
         else:  # switch
-            probas = np.ones(self.n_arms) * (((1 - self.epsilon)/(self.n_arms-1)) + epsilon_per_n)
-            probas[self.last_action] = epsilon_per_n
+            probas = np.ones(self.n_arms) * ((1 - self.epsilon)/(self.n_arms-1))
+            probas[self.last_action] = (self.epsilon / (self.n_arms - 1))
 
         return probas
 
@@ -619,5 +618,6 @@ class BayesianAgent:
 
         # update the transition matrix
         self.posterior = np.dot(self.posterior, self.transition_matrix)
+
 
 

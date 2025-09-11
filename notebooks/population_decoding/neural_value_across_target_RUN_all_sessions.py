@@ -88,7 +88,9 @@ def project_across_targets(neural_dataset):
 
                 # project the dataset (at this point) to this subspace
                 weights = clf.coef_.reshape(-1, 1)
-                trial_projected = np.dot(X_project, weights)
+                #trial_projected = np.dot(X_project, weights)
+                weights_norm = np.linalg.norm(weights)
+                trial_projected = (np.dot(X_project, weights) + clf.intercept_) / weights_norm
 
                 trial_idx = np.where(trial_ids == test_trial)[0][0]
                 projections[fold, trial_idx, t_id] = trial_projected.squeeze()
@@ -109,7 +111,9 @@ def project_across_targets(neural_dataset):
 
             # project the dataset (at this point) to this subspace
             weights = clf.coef_.reshape(-1, 1)  # reshape to ensure correct dimensions
-            trials_projected = np.dot(neural_dataset_across, weights)
+            #trials_projected = np.dot(neural_dataset_across, weights)
+            weights_norm = np.linalg.norm(weights)
+            trials_projected = (np.dot(neural_dataset_across, weights) + clf.intercept_) / weights_norm
 
             trial_idxs = [np.where(trial_ids == trial_id)[0][0] for trial_id in neural_dataset_across.trial_id.values]
             projections[fold, trial_idxs, t_id] = trials_projected.squeeze()
@@ -233,8 +237,8 @@ def save_results(dfs_all, floc):
 ### Set parameters
 
 PARAMS = {
-    'time_of_interest': [2, 3.5],
-    'floc': os.path.join(cfg.PROJECT_PATH_LOCAL, 'notebooks', 'population_decoding', 'results', 'behav_neural_value_across_target')
+    'time_of_interest': [1.5, 3.5],
+    'floc': os.path.join(cfg.PROJECT_PATH_LOCAL, 'notebooks', 'population_decoding', 'results', 'behav_neural_value_across_target_normalized')
 }
 
 ### Run
@@ -243,7 +247,7 @@ def run(monkey, session, PARAMS):
     print('running: ', monkey, session)
     #monkey, session, subregion = 'ka', '210322', 'vLPFC'
 
-    time_of_interest = PARAMS['time_of_interest'] 
+    time_of_interest = PARAMS['time_of_interest']
 
     neural_dataset = load_data_custom(monkey, session)
 
@@ -252,10 +256,10 @@ def run(monkey, session, PARAMS):
         neural_dataset_temp = neural_dataset.sel(unit=neural_dataset.subregion==subregion)
 
         # project the neural data across targets - from high dimensional space to 3 dimensional space
-        data_projected = project_across_targets(neural_dataset_temp)
+        data_projected = project_across_targets(neural_dataset_temp.sel(time=slice(*time_of_interest)))
 
         # Extract 'neural values' for the specified time range by averaging across time points
-        neural_values = data_projected.sel(time=slice(*time_of_interest)).mean(dim='time')
+        neural_values = data_projected.mean(dim='time')
 
         # Extract neural values and their change
         results_df = extract_neural_data(neural_values, data_projected)

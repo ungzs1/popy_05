@@ -1141,7 +1141,12 @@ def plot_Vt_per_sequence(behav_new, paper_format=False, ylim=None, show_datapoin
     # Compute Spearman correlation between numeric sequence order and V_t
     rho, pval = stats.spearmanr(df['fb_sequence'], df['V_t'])  # The Spearman rank-order correlation coefficient is a nonparametric measure of the monotonicity of the relationship between two datasets. 
 
+    rho_pos, pval_pos = stats.spearmanr(df[df['fb_sequence'] >= 4]['fb_sequence'], df[df['fb_sequence'] >= 4]['V_t'])
+    rho_neg, pval_neg = stats.spearmanr(df[df['fb_sequence'] < 4]['fb_sequence'], df[df['fb_sequence'] < 4]['V_t'])
+
     print(f"Spearman correlation (rho): {rho:.3f}, p-value: {pval:.1e}")
+    print(f"Spearman correlation positive sequences (rho): {rho_pos:.3f}, p-value: {pval_pos:.1e}")
+    print(f"Spearman correlation negative sequences (rho): {rho_neg:.3f}, p-value: {pval_neg:.1e}")
 
     # Optional: annotate plot with significance result
     ax.text(0.5, 0.95, f"rho = {rho:.2f}, p = {pval:.1e}",
