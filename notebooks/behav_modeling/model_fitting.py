@@ -24,11 +24,9 @@ from popy.simulation_tools import *
 from popy.io_tools import load_behavior, load_behavior_yuri
 from popy.behavior_data_tools import *
 from popy.plotting.plotting_tools import *
+from popy.config import PROJECT_PATH_LOCAL
 
 from simulation_helpers import simulate_agent, estimate_ll, fit_simulate
-
-
-# data loading
 
 def get_data_custom(monkey):
     if monkey in ['ka', 'po']:
@@ -46,277 +44,237 @@ def get_data_custom(monkey):
 
     return behav_monkey
 
-make_plots = False
-
-for monkey in ['ka', 'po']: #yu_sham', 'yu_DCZ']:  # ['ka', 'po', 'yu_sham', 'yu_dcz']
-    print(f'--- {monkey} ---')
-
-    behav_monkey = get_data_custom(monkey)
-    #behav_monkey = pd.read_pickle('results/behavior_strategic_reset.pkl')
-
-    behav_monkey
-
-    # ## Create environment
-
-    # Create the environment
-    env = gym.make("zsombi/monkey-bandit-task-v0", n_arms=3, max_episode_steps=100_000)
-
-    # Set container (to collect pandas series into a dataframe)
-    results = {}
-    behaviors_simulated = {f'MONKEY {monkey.upper()}': behav_monkey}
-
-
-
-
-    # ---
-    # # Fit models to the data
-
-    # ## 0. Baselines
-
-    # ### Repeating agent
-    # 
-    # An agent that repeats the previous action. Uses Softmax to choose the action.
-
-    # Define parameter space for ShiftValueAgent
-    model_name = 'Repeating agent'
-    agent_class = RepeatingAgent
-
-    param_space = [
-        Real(0.01, 0.5, name='epsilon'),
-    ]
-
-    fixed_params = {}
-
-    # fit agent, get best params and simulation
-    res_temp, behavior_temp = fit_simulate(agent_class, param_space, env, behav_monkey, fixed_params, CV_splits=3, make_plots=make_plots, n_calls=60, n_initial_points=10, n_jobs=1)
-    results[model_name] = res_temp
-    behaviors_simulated[model_name] = behavior_temp
-
-
-
-
-    # ### Simple WSLS
-
-    # ### Modified WSLS
-
-    # Define parameter space for ShiftValueAgent
-    model_name = 'WSLS agent (long history)'
-    agent_class = WSLSAgent_custom
-
-    param_space = [
-        Real(.01, .3, name='epsilon'),
-    ]
-
-    fixed_params = {}
-
-    res_temp, behavior_temp = fit_simulate(agent_class, param_space, env, behav_monkey, fixed_params, CV_splits=3, make_plots=make_plots, n_calls=60, n_initial_points=10)
-    results[model_name] = res_temp
-    behaviors_simulated[model_name] = behavior_temp
-
-    # ## 1. RL
-
-    # ### Simple RL agent
-
-    # Define parameter space for ShiftValueAgent
-    agent_class = QLearner
-    model_name = 'Q-Learner'
-
-    param_space = [
-        Real(0.3, .8, name='alpha'),
-        Real(2, 20.0, name='beta'),
-    ]
-
-    fixed_params = {
-        'structure_aware': False
-    }
-
-    res_temp, behavior_temp = fit_simulate(agent_class, param_space, env, behav_monkey, fixed_params, CV_splits=3, make_plots=make_plots, n_calls=150, n_initial_points=100)
-    results[model_name] = res_temp
-    behaviors_simulated[model_name] = behavior_temp
-
-
-
-
-    # ### Counterfactual
-
-    # Define parameter space for ShiftValueAgent
-    agent_class = QLearner
-    model_name = 'Q-Learner counterfactual'
-
-    param_space = [
-        Real(0.05, .5, name='alpha'),
-        Real(2, 20.0, name='beta'),
-    ]
-
-    fixed_params = {
-        'structure_aware': True
-    }
-
-    res_temp, behavior_temp = fit_simulate(agent_class, param_space, env, behav_monkey, fixed_params, CV_splits=3, make_plots=make_plots, n_calls=150, n_initial_points=100)
-    results[model_name] = res_temp
-    behaviors_simulated[model_name] = behavior_temp
-
-
-
-
-    # ### Multiple learning rates
-
-    '''# Define parameter space for ShiftValueAgent
-    agent_class = QLearner
-    model_name = 'Q-Learner multiple alphas'
-
-    param_space = [
-        Real(0.01, .6, name='alpha'),
-        Real(0.01, .3, name='alpha_unchosen'),
-        Real(3, 20.0, name='beta'),
-    ]
-
-    fixed_params = {
-        'structure_aware': True
-    }
-
-    res_temp, behav_q_learn_multiple = fit_simulate(agent_class, param_space, env, behav_monkey, fixed_params, 
-                                                    model_name, make_plots=True,  verbose=False,
-                                                n_calls=150, n_initial_points=100)
-    results_list.append(res_temp)
-    behaviors_simulated[model_name] = behav_q_learn_multiple'''
-
-
-
-
-    # ## 2. Shift value
-
-    # ### No reset
-
-    # Define parameter space for ShiftValueAgent
-    agent_class = ShiftValueAgent
-    model_name = 'Shift-value agent'
-
-    param_space = [
-        Real(0.2, 0.7, name='alpha'),
-        Real(2, 20.0, name='beta'),
-        Real(0.05, .4, name='V0')
-    ]
-
-    fixed_params = {
-        'reset_on_switch': False
-    }
-
-    res_temp, behavior_temp = fit_simulate(agent_class, param_space, env, behav_monkey, fixed_params, CV_splits=3, make_plots=make_plots, n_calls=150, n_initial_points=100)
-    results[model_name] = res_temp
-    behaviors_simulated[model_name] = behavior_temp
-
-
-
-
-    # ### Reset
-
-    # Define parameter space for ShiftValueAgent
-    agent_class = ShiftValueAgent
-    model_name = 'Shift-value agent with reset'
-
-    param_space = [
-        Real(0.1, 0.7, name='alpha'),
-        Real(1, 20.0, name='beta'),
-        Real(0.05, .4, name='V0')
-    ]
-
-    fixed_params = {
-        'reset_on_switch': True
-    }
-
-    res_shift_threshold, behavior_temp = fit_simulate(agent_class, param_space, env, behav_monkey, fixed_params, CV_splits=3, make_plots=make_plots, n_calls=150, n_initial_points=100)
-    results[model_name] = res_shift_threshold
-    behaviors_simulated[model_name] = behavior_temp
-
-    # ---
-    # ### Save Shift-value simulation
-
-
-
-
-    # ## 3. HMM
-    # 
-    # The bayes has the best parameters in principle. Also we dont go with this model, and it has a lot of parameters.
-
-    # ---
-    # # Save 
-
-
-
-
-    # Generate simulation data
-
-    params = {'alpha': res_shift_threshold['alpha'], 'beta': res_shift_threshold['beta'], 'V0': res_shift_threshold['V0']}
-
-    fixed_params = {'reset_on_switch': True}
-    simulation = simulate_agent(ShiftValueAgent,
-                                params=params,
-                                env=env,
-                                fixed_params={'reset_on_switch': True},
-                                behavioral_variables=['V'],
-                                n_trials=len(behav_monkey))
-                                
-    simulation = convert_column_format(simulation, original='simulation')
-
-    simulation['monkey'] = f'{monkey}_simulation'  # add change from 'simulation' to 'simulation_monkey' for plotting
-    simulation = simulation.rename(columns={'V': 'stay_value'})
-
-    # add metadata to the behav dataframe
-    simulation.attrs['model'] = 'Shift-value agent with reset'
-    simulation.attrs['parameters'] = params
-    simulation.attrs['fixed_parameters'] = fixed_params
-
-    from popy.config import PROJECT_PATH_LOCAL
-    floc = os.path.join(PROJECT_PATH_LOCAL, 'data', 'processed', 'behavior', f'{monkey}_simulation.pkl')
-    simulation.to_pickle(floc)
-    print(f'Behavior simulation saved to {floc}')
-
-    # save fitting results
-
-    res_all = pd.DataFrame.from_dict(results, orient='index').reset_index()
-    res_all = res_all.rename(columns={'index': 'Model'})
-
-    # reorder columns: [Model, epsilon, alpha, beta, V0, etc]
-    columns = res_all.columns
-    new_columns = ['Model', 'epsilon', 'alpha', 'beta', 'V0'] + [col for col in columns if col not in ['Model', 'epsilon', 'alpha', 'beta', 'V0']]
-    res_all = res_all[new_columns]
-
-    # remove Model=Q-Learner multiple alphas
-    #res_all = res_all.loc[res_all['Model'].isin(['WSLS agent (long history)', 'Q-Learner', 'Q-Learner counterfactual', 'Shift-value agent with reset'])]
-
-    # save results
-    from popy.config import PROJECT_PATH_LOCAL
-    floc = os.path.join(PROJECT_PATH_LOCAL, 'notebooks', 'behav_modeling', 'results', f'simulation_results_{monkey}.csv')
-    res_all.to_csv(floc)
-    print(f'Saved results to {floc}')
-
-    # save behaviors
-
+def res_to_dataframe(results):
+    res_all = pd.DataFrame.from_dict(results, orient='index').reset_index()  # convert to dataframe
+    res_all = res_all.rename(columns={'index': 'Model'})  # rename index column to Model
+
+    cols = list(res_all.columns)
+    first_columns = ['Model', 'epsilon', 'alpha', 'alpha_unchosen', 'beta', 'V0', 
+                     'forgetting_rate', 'forgetting_threshold', 
+                     'stickyness_bias', 
+                     'b1', 'b2', 'b3', 
+                     'abandoned_bias', 'abandoned_decay']
+    present = [c for c in first_columns if c in cols]
+    rest = [c for c in cols if c not in present]
+    new_columns = present + rest
+
+    return res_all[new_columns]
+
+def behavs_to_dataframe(behaviors_simulated, monkey):
+    # combine all behaviors into one dataframe
     behavs = []
-    bahv_monkey = behaviors_simulated[f'MONKEY {monkey.upper()}']
-    behav_monkey = bahv_monkey.drop(columns=['switch'])
+
+    # Process simulations: start with the real behavior
+    behav_monkey = behaviors_simulated[f'MONKEY {monkey.upper()}']
+    behav_monkey = behav_monkey.drop(columns=['switch'])
     behav_monkey['model'] = 'recording'
     behavs.append(behav_monkey)
 
-    for key, behav_temo in behaviors_simulated.items():
+    # then add the simulated behaviors
+    for key, behav_temp in behaviors_simulated.items():
         if key != f'MONKEY {monkey.upper()}':
-            behav_temo['monkey'] = monkey
-            behav_temo['session'] = 0
-            behav_temo['model'] = key
-            behavs.append(behav_temo)
+            behav_temp['monkey'] = monkey
+            behav_temp['session'] = 0
+            behav_temp['model'] = key
+            behavs.append(behav_temp)
 
     behaviors_simulated_all = pd.concat(behavs, axis=0)
+
+    # reorder columns
     cols = ['monkey', 'model', 'session'] + [col for col in behav_monkey.columns if col not in ['monkey', 'session', 'model']]
     behaviors_simulated_all = behaviors_simulated_all[cols]
 
     # reset index
     behaviors_simulated_all = behaviors_simulated_all.reset_index(drop=True)
 
-    # save
-    from popy.config import PROJECT_PATH_LOCAL
-    floc = os.path.join(PROJECT_PATH_LOCAL, 'notebooks', 'behav_modeling', 'results', f'simulation_behaviors_{monkey}.pkl')
-    behaviors_simulated_all.to_pickle(floc)
-    print(f'Behaviors saved to {floc}')
+    return behaviors_simulated_all
+
+def save_res_and_behav(results, behaviors_simulated, monkey, floc):
+    res_all = res_to_dataframe(results)
+    floc_res_temp = os.path.join(floc, f'simulation_results_{monkey}.csv')
+    res_all.to_csv(floc_res_temp, index=False)
+
+    # save behaviors
+    behaviors_simulated_all = behavs_to_dataframe(behaviors_simulated, monkey)
+    floc_simulations_temp = os.path.join(floc, f'simulation_behaviors_{monkey}.pkl')
+    behaviors_simulated_all.to_pickle(floc_simulations_temp)
 
 
+# Init parameters
+
+cv_splits = None
+n_initial_points = 200
+n_calls = 350
+n_jobs = -1
+verbose = False
+n_simulation_trials = 100_000
+make_plots = False
+
+epsilon_range = Real(.01, .3, name='epsilon')
+alpha_range = Real(0.01, 1, name='alpha')
+alpha_unchosen_range = Real(0, .5, name='alpha_unchosen')
+beta_range = Real(.5, 80.0, name='beta')
+stickyness_range = Real(0.0, 50.0, name='stickyness_bias')
+forgetting_rate_range = Real(0.0, 1.0, name='forgetting_rate')
+forgetting_threshold_range = Real(0.0, 1.0, name='forgetting_threshold')
+b1_range = Real(-50.0, 50.0, name='b1')
+b2_range = Real(-5.0, 5.0, name='b2')
+b3_range = Real(-50.0, 50.0, name='b3')
+V0_range = Real(0.05, .4, name='V0')
+abandoned_bias_range = Real(-50.0, 0.0, name='abandoned_bias')
+abandoned_decay_range = Real(0.0, 1.0, name='abandoned_decay')
+
+floc = os.path.join(PROJECT_PATH_LOCAL, 'notebooks', 'behav_modeling', 'results', 'model_fitting')
+
+# Run parameter fitting per monkey
+for monkey in ['ka', 'po']: #yu_sham', 'yu_DCZ']:  # ['ka', 'po', 'yu_sham', 'yu_dcz']
+    print(f'--- {monkey} ---')
+
+    ### Get data
+    behav_monkey = get_data_custom(monkey)  # get monkey data    
+    env = gym.make("zsombi/monkey-bandit-task-v0", n_arms=3, max_episode_steps=n_simulation_trials)  # Create the environment
+    results, behaviors_simulated = {}, {f'MONKEY {monkey.upper()}': behav_monkey}  # Set container (to collect pandas series into a dataframe)
+
+
+
+    ### Fit models to the data
+
+    # ### Repeating agent
+    model_name = 'Repeating agent'
+    agent_class = RepeatingAgent
+    fixed_params = {}
+    param_space = [epsilon_range]
+
+    results[model_name], behaviors_simulated[model_name] = fit_simulate(agent_class, param_space, env, behav_monkey, fixed_params, CV_splits=cv_splits, make_plots=make_plots, 
+                                                                        n_calls=n_calls, n_initial_points=n_initial_points, n_jobs=n_jobs)
+
+    print('Fitted Repeating agent')
+    save_res_and_behav(results, behaviors_simulated, monkey, floc)
+
+
+
+    # ### Modified WSLS
+    model_name = 'WSLS agent'
+    agent_class = WSLSAgent_custom
+    fixed_params = {}
+    param_space = [epsilon_range]
+
+    results[model_name], behaviors_simulated[model_name] = fit_simulate(agent_class, param_space, env, behav_monkey, fixed_params, CV_splits=cv_splits, make_plots=make_plots, 
+                                                                        n_calls=n_calls, n_initial_points=n_initial_points, n_jobs=n_jobs)
+    print('Fitted WSLS agent')
+    save_res_and_behav(results, behaviors_simulated, monkey, floc)
+
+
+
+    # ### Simple RL agent
+    model_name = 'Standard RL'
+    agent_class = QLearner
+    fixed_params = {'structure_aware': False}
+    param_space = [alpha_range, beta_range]
+
+    results[model_name], behaviors_simulated[model_name] = fit_simulate(agent_class, param_space, env, behav_monkey, fixed_params, CV_splits=cv_splits, make_plots=make_plots, 
+                                                                        n_calls=n_calls, n_initial_points=n_initial_points, n_jobs=n_jobs)
+    # ### Simple RL agent - stickyness
+    model_name = 'Standard RL - stickyness'
+    agent_class = QLearner
+    fixed_params = {'structure_aware': False}
+    param_space = [alpha_range, beta_range, stickyness_range]
+
+    results[model_name], behaviors_simulated[model_name] = fit_simulate(agent_class, param_space, env, behav_monkey, fixed_params, CV_splits=cv_splits, make_plots=make_plots, 
+                                                                        n_calls=n_calls, n_initial_points=n_initial_points, n_jobs=n_jobs)
+    # ### Simple RL agent - forgetting
+    model_name = 'Standard RL - forgetting'
+    agent_class = QLearner
+    fixed_params = {'structure_aware': False}
+    param_space = [alpha_range, beta_range, forgetting_rate_range, forgetting_threshold_range]
+
+    results[model_name], behaviors_simulated[model_name] = fit_simulate(agent_class, param_space, env, behav_monkey, fixed_params, CV_splits=cv_splits, make_plots=make_plots, 
+                                                                        n_calls=n_calls, n_initial_points=n_initial_points, n_jobs=n_jobs)
+    # ### Simple RL agent - forgetting + stickyness
+    model_name = 'Standard RL - forgetting + stickyness'
+    agent_class = QLearner
+    fixed_params = {'structure_aware': False}
+    param_space = [alpha_range, beta_range, forgetting_rate_range, forgetting_threshold_range, stickyness_range]
+
+    results[model_name], behaviors_simulated[model_name] = fit_simulate(agent_class, param_space, env, behav_monkey, fixed_params, CV_splits=cv_splits, make_plots=make_plots, 
+                                                                        n_calls=n_calls, n_initial_points=n_initial_points, n_jobs=n_jobs)
+    
+    print('Fitted Standard RL agents')
+    save_res_and_behav(results, behaviors_simulated, monkey, floc)
+
+
+
+    # ### Inferential RL
+    model_name = 'Inferential RL'
+    agent_class = QLearner
+    fixed_params = {'structure_aware': True}
+    param_space = [alpha_range, beta_range]
+
+    results[model_name], behaviors_simulated[model_name] = fit_simulate(agent_class, param_space, env, behav_monkey, fixed_params, CV_splits=cv_splits, make_plots=make_plots, 
+                                                                        n_calls=n_calls, n_initial_points=n_initial_points, n_jobs=n_jobs)
+    # ### Inferential RL - stickyness
+    model_name = 'Inferential RL - stickyness'
+    agent_class = QLearner
+    fixed_params = {'structure_aware': True}
+    param_space = [alpha_range, beta_range, stickyness_range]
+
+    results[model_name], behaviors_simulated[model_name] = fit_simulate(agent_class, param_space, env, behav_monkey, fixed_params, CV_splits=cv_splits, make_plots=make_plots, 
+                                                                        n_calls=n_calls, n_initial_points=n_initial_points, n_jobs=n_jobs)
+    # ### Inferential RL - stickyness + spatial bias
+    model_name = 'Inferential RL - stickyness + spatial bias'
+    agent_class = QLearner
+    fixed_params = {'structure_aware': True}
+    param_space = [alpha_range, beta_range, stickyness_range, b2_range]
+
+    results[model_name], behaviors_simulated[model_name] = fit_simulate(agent_class, param_space, env, behav_monkey, fixed_params, CV_splits=cv_splits, make_plots=make_plots, 
+                                                                        n_calls=n_calls, n_initial_points=n_initial_points, n_jobs=n_jobs)
+    # ### Inferential RL - multiple alphas + stickyness
+    model_name = 'Inferential RL - stickyness + multiple alphas'
+    agent_class = QLearner
+    fixed_params = {'structure_aware': True}
+    param_space = [alpha_range, beta_range, alpha_unchosen_range, stickyness_range]
+
+    results[model_name], behaviors_simulated[model_name] = fit_simulate(agent_class, param_space, env, behav_monkey, fixed_params, CV_splits=cv_splits, make_plots=make_plots, 
+                                                                        n_calls=n_calls, n_initial_points=n_initial_points, n_jobs=n_jobs)
+    
+    print('Fitted Inferential RL agents')
+    save_res_and_behav(results, behaviors_simulated, monkey, floc)
+
+
+
+    # ### Foraging - no reset
+    model_name = 'Foraging - no reset'
+    agent_class = ForagingAgent
+    fixed_params = {'reset_on_switch': False}
+    param_space = [alpha_range, beta_range, V0_range]
+
+    results[model_name], behaviors_simulated[model_name] = fit_simulate(agent_class, param_space, env, behav_monkey, fixed_params, CV_splits=cv_splits, make_plots=make_plots, 
+                                                                        n_calls=n_calls, n_initial_points=n_initial_points, n_jobs=n_jobs)
+    # ### Foraging 
+    model_name = 'Foraging'
+    agent_class = ForagingAgent
+    fixed_params = {'reset_on_switch': True}
+    param_space = [alpha_range, beta_range, V0_range]
+
+    results[model_name], behaviors_simulated[model_name] = fit_simulate(agent_class, param_space, env, behav_monkey, fixed_params, CV_splits=cv_splits, make_plots=make_plots, 
+                                                                        n_calls=n_calls, n_initial_points=n_initial_points, n_jobs=n_jobs)
+    # ### Foraging - abandoned bias
+    model_name = 'Foraging - abandoned bias'
+    agent_class = ForagingAgent
+    fixed_params = {'reset_on_switch': True}
+    param_space = [alpha_range, beta_range, V0_range, abandoned_bias_range, abandoned_decay_range]
+
+    results[model_name], behaviors_simulated[model_name] = fit_simulate(agent_class, param_space, env, behav_monkey, fixed_params, CV_splits=cv_splits, make_plots=make_plots, 
+                                                                        n_calls=n_calls, n_initial_points=n_initial_points, n_jobs=n_jobs)
+    # ### Foraging - abandoned bias + spatial bias
+    model_name = 'Foraging - abandoned bias + spatial bias'
+    agent_class = ForagingAgent
+    fixed_params = {'reset_on_switch': True}
+    param_space = [alpha_range, beta_range, V0_range, abandoned_bias_range, abandoned_decay_range, b2_range]
+
+    results[model_name], behaviors_simulated[model_name] = fit_simulate(agent_class, param_space, env, behav_monkey, fixed_params, CV_splits=cv_splits, make_plots=make_plots, 
+                                                                        n_calls=n_calls, n_initial_points=n_initial_points, n_jobs=n_jobs)
+    
+    print('Fitted Foraging agents')
+    save_res_and_behav(results, behaviors_simulated, monkey, floc)
+    print('saved all')

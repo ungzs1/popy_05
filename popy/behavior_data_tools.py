@@ -178,6 +178,7 @@ def add_double_feedback(behav):
     behav['double_feedback'] = new_col
     return behav
 
+'''
 def add_history_of_feedback(behav_original, num_trials=8, one_column=True, coding=(0, 1), binary=False, add_history_of_targets=True):
     """
     Add history of feedback to behav.
@@ -234,7 +235,6 @@ def add_history_of_feedback(behav_original, num_trials=8, one_column=True, codin
 
     # add to dataframe
     if one_column:
-        raise NotImplementedError("One column history of feedback is not implemented yet. Use one_column=False for now.")
         column_data = []
         for i in range(len(behav)):
             trial_data = []
@@ -260,6 +260,110 @@ def add_history_of_feedback(behav_original, num_trials=8, one_column=True, codin
         return behav_original
     else:
         return behav
+'''
+
+def add_history_of_feedback(
+    behav_original,
+    num_trials=8,
+    one_column=True,
+    coding=(0, 1),
+    add_history_of_targets=True
+):
+    """
+    Add feedback/target history to a dataframe grouped by ['monkey', 'session'].
+
+    If one_column is False:
+        - Adds separate columns R_1 ... R_num_trials using 'coding' for 0/1 feedback.
+
+    If one_column is True:
+        - Computes a single column 'history_of_feedback' that encodes the last
+          num_trials feedbacks as a binary number where R_1 has the highest weight,
+          then R_2, ..., e.g. [R_1, R_2, R_3] = [1, 0, 1] -> 5.
+
+    Parameters
+    ----------
+    behav_original : pandas.DataFrame
+        Must contain at least columns: 'feedback', 'target', 'monkey', 'session'.
+        'feedback' is expected to be 0/1 (non-rewarded/rewarded).
+
+    num_trials : int
+        Number of past trials to include.
+
+    one_column : bool
+        See above.
+
+    coding : tuple
+        (code_for_nonreward, code_for_reward) used only when one_column=False.
+
+    add_history_of_targets : bool
+        Whether to also add T_1 ... T_num_trials (shifted 'target').
+
+    Returns
+    -------
+    pandas.DataFrame
+        Input dataframe with added columns.
+    """
+    behav = behav_original.copy()
+
+    # Clean up any pre-existing columns we may recreate
+    if 'history_of_feedback' in behav.columns:
+        behav = behav.drop(columns=['history_of_feedback'])
+    for j in range(1, num_trials + 1):
+        behav = behav.drop(columns=[f'R_{j}'], errors='ignore')
+        behav = behav.drop(columns=[f'T_{j}'], errors='ignore')
+
+    subdfs = []
+    group_cols = ['monkey', 'session']
+    if not all(col in behav.columns for col in group_cols):
+        raise KeyError(f"Missing required grouping columns {group_cols}")
+
+    # We will use raw 0/1 feedback for binary encoding (one_column=True),
+    # and use 'coding' only when creating separate R_j columns (one_column=False).
+    for _, subdf in behav.groupby(group_cols, sort=False):
+        # Shift feedback/targets within each (monkey, session)
+        if one_column:
+            # For binary number, we need pure 0/1 history
+            fb_shift_cols = []
+            for j in range(1, num_trials + 1):
+                col = f'_Rbin_{j}'
+                subdf[col] = subdf['feedback'].shift(j).astype('float')  # 0/1 or NaN
+                fb_shift_cols.append(col)
+        else:
+            # Separate columns coded with 'coding'
+            for j in range(1, num_trials + 1):
+                subdf[f'R_{j}'] = subdf['feedback'].shift(j).replace({0: coding[0], 1: coding[1]})
+
+        if add_history_of_targets:
+            for j in range(1, num_trials + 1):
+                subdf[f'T_{j}'] = subdf['target'].shift(j)
+
+        subdfs.append(subdf)
+
+    behav = pd.concat(subdfs, ignore_index=True)
+
+    if one_column:
+        # Vectorized binary encoding: R_1 is MSB, then R_2, ..., R_num_trials
+        fb_shift_cols = [f'_Rbin_{j}' for j in range(1, num_trials + 1)]
+        # If any NaN in a row -> result NaN
+        fb_mat = behav[fb_shift_cols].to_numpy(dtype=float)
+        has_nan = np.isnan(fb_mat).any(axis=1)
+
+        # Weights: [2^(num_trials-1), ..., 2^0]
+        weights = 2 ** np.arange(num_trials - 1, -1, -1, dtype=float)
+
+        # For rows without NaN, compute the dot product; else NaN
+        binary_vals = np.where(
+            has_nan,
+            np.nan,
+            fb_mat.dot(weights)
+        )
+
+        behav['history_of_feedback'] = binary_vals.astype(float)
+
+        # Drop temp columns
+        behav = behav.drop(columns=fb_shift_cols)
+
+    return behav
 
 
 
@@ -408,7 +512,7 @@ def add_value_function(behav_original, digitize=False, n_classes=4):
 
     for monkey, behav in behavior.groupby('monkey'):
         # init an agent
-        agent_class = ShiftValueAgent
+        agent_class = ForagingAgent
         fixed_params = {'reset_on_switch': False}
         if monkey == 'ka':
             params = {
@@ -489,7 +593,7 @@ def add_stay_value(behav_original, alpha=None, digitize=False, n_classes=4, rese
 
     for monkey, behav in behavior.groupby('monkey'):
         # init an agent
-        agent_class = ShiftValueAgent
+        agent_class = ForagingAgent
         fixed_params = {'reset_on_switch': reset_on_switch}
         params = cfg.MODEL_PARAMS[monkey]  # get the parameters for the monkey
         if alpha is not None:

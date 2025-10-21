@@ -66,16 +66,17 @@ def save_results(xr, floc):
 
 PARAMS = {
     'model': 'glm_cpd',  # 'linear_correlation' or 'anova' or 'glm' or 'glm_cpd'
-    'glm_predictors': ['feedback', 'stay_value'],
+    'glm_predictors': ['feedback', 'R_1', 'R_2', 'R_3', 'R_4', 'R_5', 'R_6'],  # full list of predictors to include in the model
     #'cpd_predictors': ['feedback'],  DEPRECATED, use 'glm_predictors' instead to provide the full model predictors
-    'cpd_targets': ['feedback', 'stay_value'],  # ['feedback', 'R_1', 'R_2', 'R_3', 'R_4'],
+    'cpd_targets': ['feedback', 'R_1'],  # ['feedback', 'R_1', 'R_2', 'R_3', 'R_4'],
     'neural_data_type': 'spike_counts',  # 'firing_rates' or 'spike_counts'
     'value_type': 'continuous',  # 'discrete' or 'continuous'
-    'step_time': .05,
-    'n_permutations': 500,
+    'step_time': .1,
+    'n_permutations': 100,
+    'time_window': [0, 3],  # time window around event to consider (in seconds)
 
-    'floc': os.path.join(cfg.PROJECT_PATH_LOCAL, 'notebooks', 'glm', 'results', 'fb_stayvalue_cpd_inclusion'),  # Folder to save results
-    'msg': 'Decoding the target, and we use the trial_id as a predictor as well to account for time-dependence (this can reduce the effect of drifting)',  # Message to log
+    'floc': os.path.join(cfg.PROJECT_PATH_LOCAL, 'notebooks', 'glm', 'results', 'rpe_search'),  # Folder to save results
+    'msg': 'Decoding the current target and the previous one (and the one before) after feedback. Lets see is there are units which modulate outcome by history.',  # Message to log
     }
 
 ### Run

@@ -349,14 +349,14 @@ class WSLSAgent_custom:
         Returns the probability of each action according to the Softmax transformation.
         """
 
-        # if there was a reward in the last 3 trials, stay, i.e. set the probability of the previously chosen action to 1-epsilon + epsilon/n, and the rest to epsilon/n
+        # if there was a reward in the last 3 trials, stay, i.e. set the probability of the previously chosen action to 1-epsilon, and the rest to epsilon/n-1
         if sum(self.memory) > 0:  # stay
             probas = np.ones(self.n_arms) * ( self.epsilon / (self.n_arms - 1) )
             probas[self.last_action] = 1 - self.epsilon
         # set the probability of the previously chosen action to epsilon/n, and the rest to 1-epsilon/(n-1) --> epsilon/n + 2*[(1-epsilon)/(n-1)] = 1
         else:  # switch
             probas = np.ones(self.n_arms) * ((1 - self.epsilon)/(self.n_arms-1))
-            probas[self.last_action] = (self.epsilon / (self.n_arms - 1))
+            probas[self.last_action] = self.epsilon
 
         return probas
 
@@ -379,37 +379,66 @@ class WSLSAgent_custom:
         # store the last action
         self.last_action = action
 
+
 class QLearner:
     def __init__(
         self,
         n_arms=3,
         alpha=.4,
         alpha_unchosen=None,
-        beta=80,
-        structure_aware=False
+        beta=100,
+        structure_aware=False,
+        stickyness_bias=0.0,
+        b1=0.0,
+        b2=0.0,
+        b3=0.0,
+        forgetting_rate=0.0,
+        forgetting_threshold=1/3,
     ):
         """Initialize a Reinforcement Learning agent with an empty dictionary
         of action values (q_values), a learning rate and an epsilon.
         """
         self.n_arms = n_arms
+        
         self.alpha = alpha
-        self.alpha_unchosen = alpha_unchosen
+        self.alpha_unchosen = alpha_unchosen if alpha_unchosen is not None else alpha
         self.beta = beta
+        
         self.structure_aware = structure_aware
+        
+        self.stickyness_bias = float(stickyness_bias)
+        self.spatial_bias = np.array([b1, b2, b3])
+        if len(self.spatial_bias) != n_arms:
+            raise ValueError("Length of spatial_bias must be equal to n_arms.")
 
-        self.q_values = np.ones(n_arms, dtype=np.float32) / n_arms  # optimistic initialization
+        self.forgetting_rate = forgetting_rate
+        self.forgetting_threshold = forgetting_threshold
+
+        # internal variables
+        self.q_values = np.zeros(n_arms, dtype=np.float32)  # 
+        self.last_action = None  # will hold index of previous action
 
     def reset(self):
-        self.q_values = np.ones(self.n_arms, dtype=np.float32) / self.n_arms
+        self.q_values = np.zeros(self.n_arms, dtype=np.float32)
+        self.last_action = None
 
     def get_action_probas(self) -> np.ndarray:
         """
         Returns the probability of each action according to the Softmax transformation.
         """
+        # Stickiness bias: add extra bias for the last action
+        bias_temp = self.spatial_bias.copy()
+        if self.last_action is not None:
+            bias_temp[self.last_action] += self.stickyness_bias
 
         # Apply the Softmax transformation to get probabilities of actions
-        exp_Q = np.exp(self.beta * self.q_values)
-        return exp_Q / np.sum(exp_Q)
+        '''exp_Q = np.exp(self.beta * self.q_values + bias)
+        return exp_Q / np.sum(exp_Q)'''
+        # Softmax over logits = β * Q + bias  (use stable softmax)
+        logits = self.beta * self.q_values + bias_temp
+        z = logits - np.max(logits)
+        exp_z = np.exp(z)
+        return exp_z / np.sum(exp_z)
     
     def act(self) -> int:
         """
@@ -437,39 +466,62 @@ class QLearner:
         rpe = reward - self.q_values[action]
         self.q_values[action] += self.alpha * rpe
 
-        # update unchosen arms
+        # update unchosen arms (if structure aware)
         if self.structure_aware:
-            alpha_unchosen = self.alpha_unchosen if self.alpha_unchosen is not None else self.alpha
             inverse_reward = self.flip_reward(reward)
-            for action_unchosen in range(self.n_arms):
-                if not action_unchosen == action:
-                    rpe_unchosen = inverse_reward - self.q_values[action_unchosen]
-                    self.q_values[action_unchosen] += alpha_unchosen * rpe_unchosen
+            for a in range(self.n_arms):
+                if not a == action:
+                    rpe_unchosen = inverse_reward - self.q_values[a]
+                    self.q_values[a] += self.alpha_unchosen * rpe_unchosen
+
+        # forgetting towards uniform distribution (if forgetting rate > 0)
+        if self.forgetting_rate > 0.0:
+            for a in range(self.n_arms):
+                if a != action:
+                    self.q_values[a] += self.forgetting_rate * (self.forgetting_threshold - self.q_values[a])
+
+        # store the last action
+        self.last_action = action
 
 
-class ShiftValueAgent:
+class ForagingAgent:
     def __init__(self, 
                  n_arms=3,
                  alpha=0.4,
                  beta=100,
                  V0=(.7 + .25 + .25) / 3,
-                 reset_on_switch=False,
+                reset_on_switch=False,
+                b1=0.0,
+                b2=0.0,
+                b3=0.0,
+                abandoned_bias=0,
+                abandoned_decay=0
                 ):
         
         self.n_arms = n_arms
+
         self.alpha = alpha
         self.beta = beta
         self.V0 = V0
+       
         self.reset_on_switch = reset_on_switch
+       
+        self.spatial_bias_0 = np.array([b1, b2, b3])
+        if len(self.spatial_bias_0) != n_arms:
+            raise ValueError("Length of spatial_bias must be equal to n_arms.")
+        self.abandoned_bias = abandoned_bias
+        self.abandoned_decay = abandoned_decay
 
+        # internal variables
         self.V = V0
-        # random choice
         self.last_action = np.random.choice(n_arms)
+        self.spatial_bias = self.spatial_bias_0.copy()
 
     def reset(self):
         """Reset the agent to its initial state."""
         self.V = self.V0
-        self.last_action = np.random.choice(self.n_arms)    
+        self.last_action = np.random.choice(self.n_arms)
+        self.spatial_bias = self.spatial_bias_0
 
     def _get_stay_proba(self) -> float:   
         # get the probability of shifting actions, according to the logistic function 
@@ -493,8 +545,19 @@ class ShiftValueAgent:
         proba_shift = 1 / (1 + np.exp(self.beta * (self.V - self.V0)))
         proba_stay = 1 - proba_shift
 
+        # get action probas
         probas = np.ones(self.n_arms) * (proba_shift / (self.n_arms - 1))
         probas[self.last_action] = proba_stay
+
+        # add spatial bias (includes bias against abandoned target)
+        probas = probas * np.exp(self.spatial_bias)
+        probas = probas / np.sum(probas)
+
+        # --- avoid zeros that break log likelihood later ---
+        eps = np.finfo(float).tiny  # ~2.225e-308, safely > 0
+        probas = np.clip(probas, eps, 1.0)
+        probas = probas / probas.sum()  # re-normalize after flooring
+        # -----------------------------------
 
         return probas
     
@@ -514,8 +577,10 @@ class ShiftValueAgent:
     def update_values(self, action: None, reward: float):
         """Updates the V-value of an action."""
 
+        switched = action != self.last_action
+
         # if the agent switches, reset the V-value
-        if self.reset_on_switch and (action != self.last_action):
+        if self.reset_on_switch and switched:
             rpe = reward - self.V0
             self.V = self.V0 + self.alpha * rpe
         else:
@@ -523,48 +588,22 @@ class ShiftValueAgent:
             rpe = reward - self.V
             self.V += self.alpha * rpe
 
+        # set bias against the abandoned option (add to base level of bias)
+        for a in range(self.n_arms):
+            if switched and a == self.last_action:
+                self.spatial_bias[a] += self.abandoned_decay * (self.abandoned_bias - self.spatial_bias[a])
+            else:
+                self.spatial_bias[a] += self.abandoned_decay * (self.spatial_bias_0[a] - self.spatial_bias[a])
+
         # store the last action
         self.last_action = action
 
-
-'''
-class ShiftValueCMWAgent(ShiftValueAgent):
-    def __init__(self, 
-                 n_arms=3,
-                 learning_rate=0.4,
-                 learning_rate_unchosen=0.4,
-                 epsilon=0.1,
-                 value_of_env=(.7 + .25 + .25) / 3,
-                ):
-        super().__init__(n_arms, learning_rate, epsilon, value_of_env)
-
-        self.q_values = np.ones(n_arms, dtype=np.float32)  # optimistic initialization
-        self.learning_rate_unchosen = learning_rate_unchosen
-
-    def update_values(
-        self,
-        action: int,
-        reward: float,
-    ):
-        """Updates the Q-value of an action."""
-
-        rpe = reward - self.q_values[action]
-        self.q_values[action] += self.learning_rate * rpe
-
-        for action_unchosen in range(self.n_arms):
-            if not action_unchosen == action:
-                rpe_unchosen = -reward - self.q_values[action_unchosen]
-                self.q_values[action_unchosen] += self.learning_rate_unchosen * rpe_unchosen
-
-        # update the expectation of the environment, that is the cmw value of the current action
-        self.expectation = self.q_values[action]
-
-'''
 
 class BayesianAgent:
     def __init__(
         self,
         n_arms=3,
+        p_switch=None,  #1/40,
         transition_matrix = np.array([[39/40, .5/40, .5/40], [.5/40, 39/40, .5/40], [.5/40, .5/40, 39/40]]),
         emission_matrix_pos = np.array([[.7, .25, .25], [.25, .7, .25], [.25, .25, .7]]),
         emission_matrix_neg = np.array([[.3, .75, .75], [.75, .3, .75], [.75, .75, .3]]),
@@ -575,6 +614,10 @@ class BayesianAgent:
         """
         self.n_arms = n_arms
 
+        if p_switch is not None:
+            transition_matrix = np.array([[1 - p_switch, p_switch / 2, p_switch / 2],
+                                          [p_switch / 2, 1 - p_switch, p_switch / 2],
+                                          [p_switch / 2, p_switch / 2, 1 - p_switch]])
         self.transition_matrix = transition_matrix
         self.emission_matrix_pos = emission_matrix_pos
         self.emission_matrix_neg = emission_matrix_neg

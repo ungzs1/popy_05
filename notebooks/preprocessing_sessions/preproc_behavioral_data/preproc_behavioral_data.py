@@ -48,11 +48,11 @@ for index, row in session_metadata.iterrows():
         logging.info(f"Error processing {monkey} {session}")
 
 # save pandas to pickle
-df_long.to_pickle(os.path.join(out_path, f'behavior.pkl'))  # save
-df_short.to_pickle(os.path.join(out_path, f'behavior_blocklen_25.pkl'))  # save
+df_long.to_pickle(os.path.join(out_path, f'behavior_n_target_touches.pkl'))  # save
+df_short.to_pickle(os.path.join(out_path, f'behavior_blocklen_25_n_target_touches.pkl'))  # save
 
-logging.info(f"Long session behavioral data saved to {os.path.join(out_path, f'behavior.pkl')}")
-logging.info(f"Short session bata saved to {os.path.join(out_path, f'behavior_blocklen_25.pkl')}")
+logging.info(f"Long session behavioral data saved to {os.path.join(out_path, f'behavior_n_target_touches.pkl')}")
+logging.info(f"Short session data saved to {os.path.join(out_path, f'behavior_blocklen_25_n_target_touches.pkl')}")
 
 #save log
 logging.info("Processing finished")

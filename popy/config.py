@@ -54,6 +54,10 @@ EPOCH_LENS = np.array([1., 1., 0.5, 0.5, 0.5, 4.])
 
 ### PLOTTING ###
 COLORS = {
+    'target_1': '#90c6f2ff', 
+    'target_2': '#ffb273ff', 
+    'target_3': '#dea8ddff',
+
     #'LPFC': 'tab:blue',
     'MCC': '#868789fa',
     'dLPFC': '#44b2e0ff',
@@ -73,7 +77,9 @@ COLORS = {
     '1': '#238823', '0': '#D2222D',
     
     'Foraging': '#3268b7ff',
+    'Standard RL-s': '#e8465aff',
     'Standard RL': '#e8465aff',
+    'Inferential RL-s': '#edaf40ff',
     'Inferential RL': '#edaf40ff',
     'WSLS': "#9e9e9e",
     'Bayesian': "#a86514ff",
@@ -126,8 +132,8 @@ def value_gradient(n=256):
         '#227835ff',  # Deeper blue (12.5% position)
         '#3ca854ff',  # Your original dark pastel blue (25% position)
         '#84d1a6ff',  # Pale Cerulean (37.5% position)
-        '#c2e8d4ff',  # Peach-Orange (50% position)
-        '#fad5d7ff',  # Pastel Orange (62.5% position)
+        "#bcdfccff",  # Peach-Orange (50% position)
+        "#ebd0d2ff",  # Pastel Orange (62.5% position)
         '#ed8e91ff',  # Light Coral (75% position)
         '#bd3a37ff',  # Atomic Tangerine (75% position)
         '#831b1dff'   # Deeper orange-red (87.5% position)

@@ -283,7 +283,7 @@ def fit_agent(agent_class, param_space, env, behav_data=None, fixed_params=None,
     
 
 
-def fit_agent_strict(agent_class, param_space, env, behav_data=None, fixed_params=None, fit_on='ll',
+def fit_agent_strict_old(agent_class, param_space, env, behav_data=None, fixed_params=None, fit_on='ll',
                      method='L-BFGS-B', n_restarts=10, verbose=False):
     """
     Fit an agent model to behavioral data using strict local optimization (scipy.optimize.minimize).
@@ -313,7 +313,7 @@ def fit_agent_strict(agent_class, param_space, env, behav_data=None, fixed_param
             raise ValueError(f"Invalid value for 'fit_on': {fit_on}")
 
     def run_restart(x0, bounds, objective, method='L-BFGS-B', verbose=False):
-        result = minimize(objective, x0, method=method, bounds=bounds, options={'disp': verbose, 'ftol': 0.1})
+        result = minimize(objective, x0, method=method, bounds=bounds)
         return result
 
     # Create N random initializations
@@ -349,9 +349,120 @@ def fit_agent_strict(agent_class, param_space, env, behav_data=None, fixed_param
             'best_reward_rate': -best_result.fun
         }
 
+import numpy as np
+from scipy.optimize import minimize
+from collections import deque
+# from joblib import Parallel, delayed  # not used now that we're adaptive/sequential
+
+def fit_agent_strict(agent_class, param_space, env, behav_data=None, fixed_params=None, fit_on='ll',
+                     method='L-BFGS-B', n_restarts=50, verbose=False,
+                     min_improvement=-np.inf, patience=5, rng=None):
+    """
+    Fit an agent model to behavioral data using strict local optimization (scipy.optimize.minimize)
+    with adaptive early stopping: stop once the last `patience` restarts each improved the current
+    best objective by less than `min_improvement`.
+
+    Args:
+        agent_class, param_space, env, behav_data, fixed_params, fit_on, method: as before
+        n_restarts (int): maximum number of restarts (upper bound)
+        min_improvement (float): required improvement in objective (fun) to reset patience
+        patience (int): stop if the last `patience` restarts failed to improve by >= min_improvement
+        rng: optional np.random.Generator or int seed for reproducibility
+    """
+    if fixed_params is None:
+        fixed_params = {}
+
+    # RNG setup
+    if isinstance(rng, (int, np.integer)) or rng is None:
+        rng = np.random.default_rng(rng)
+
+    # Extract bounds and parameter names
+    bounds = []
+    param_names = []
+    for p in param_space:
+        # `Real` assumed from skopt-like spaces
+        from skopt.space import Real  # safe import here
+        if isinstance(p, Real):
+            bounds.append((p.low, p.high))
+        else:
+            raise ValueError("Only Real dimensions are supported with scipy.optimize.minimize.")
+        param_names.append(p.name)
+
+    # Objective wrapper
+    def objective(x):
+        params = dict(zip(param_names, x))
+        if fit_on == 'll':
+            ll = estimate_ll(agent_class, params, behav_data, fixed_params)
+            return -ll  # minimize
+        elif fit_on == 'rr':
+            rr = estimate_rr(agent_class, params, env, fixed_params)
+            return -rr
+        else:
+            raise ValueError(f"Invalid value for 'fit_on': {fit_on}")
+
+    # Single local run
+    def run_restart(x0, bounds, objective, method='L-BFGS-B', verbose=False):
+        # Note: ftol kept as in your original; tune if needed
+        return minimize(objective, x0, method=method, bounds=bounds)
+
+    # Adaptive loop
+    best_result = None
+    best_fun = np.inf
+    no_sig_improve = deque(maxlen=patience)  # store booleans: True if improvement < min_improvement
+
+    for r in range(1, n_restarts + 1):
+        # Random init per restart (uniform within bounds)
+        x0 = np.array([rng.uniform(low, high) for (low, high) in bounds])
+
+        res = run_restart(x0, bounds, objective, method=method, verbose=verbose)
+
+        # Track improvement
+        improvement = best_fun - res.fun
+        print(r, improvement, best_fun, res.fun, dict(zip(param_names, res.x)))  # DEBUG
+        if res.fun < best_fun:
+            best_fun = res.fun
+            best_result = res
+            if verbose:
+                print(f"[Restart {r:3d}] New best fun={best_fun:.6f}  (improved by {improvement:.6f})")
+        else:
+            if verbose:
+                print(f"[Restart {r:3d}] fun={res.fun:.6f}  (no improvement over {best_fun:.6f})")
+
+        # Record whether this restart failed to improve 'enough'
+        no_sig_improve.append(improvement < min_improvement)
+
+        # Once we've filled 'patience' slots and all are True → stop
+        if len(no_sig_improve) == patience and all(no_sig_improve):
+            if verbose:
+                print(f"Early stop at restart {r}: last {patience} improvements < {min_improvement}.")
+            break
+
+    if best_result is None:
+        raise RuntimeError("No optimization result obtained. Check objective or bounds.")
+
+    best_params = dict(zip(param_names, best_result.x))
+
+    if fit_on == 'll':
+        best_ll = -best_result.fun
+        n_params = len(param_space)
+        bic = -2 * best_ll + n_params * np.log(len(behav_data))
+        lpt = np.exp(best_ll / len(behav_data))
+        return {
+            'best_params': best_params,
+            'best_ll': best_ll,
+            'bic': bic,
+            'lpt': lpt,
+            'n_restarts_run': r
+        }
+    elif fit_on == 'rr':
+        return {
+            'best_params': best_params,
+            'best_reward_rate': -best_result.fun,
+            'n_restarts_run': r
+        }
 
 
-def cross_val_fit(agent_class, param_space, env, behav_data, fixed_params=None, CV_splits=5, n_calls=50, n_initial_points=10):
+def cross_val_fit(agent_class, param_space, env, behav_data, fixed_params=None, CV_splits=5, n_calls=50, n_initial_points=10, n_jobs=-1, strict=None):
     """
     Fit an agent model to behavioral data using Bayesian optimization with cross-validation.
     """
@@ -369,7 +480,12 @@ def cross_val_fit(agent_class, param_space, env, behav_data, fixed_params=None, 
         test_data = behav_data.iloc[split_idx]
 
         # Fit model
-        result_temp = fit_agent(agent_class, param_space, env, train_data, fixed_params, n_calls=n_calls, n_initial_points=n_initial_points, n_jobs=1, verbose=False, make_plots=False)
+
+        if not strict:
+            result_temp = fit_agent(agent_class, param_space, env, train_data, fixed_params, n_calls=n_calls, n_initial_points=n_initial_points, n_jobs=n_jobs, verbose=False, make_plots=False)
+        else:
+            result_temp = fit_agent_strict(agent_class, param_space, env, behav_data=train_data, fixed_params=fixed_params, fit_on='ll',
+                        method='L-BFGS-B', n_restarts=n_initial_points, verbose=False)
 
         # Evaluate model on test data
         ll = estimate_ll(agent_class, result_temp['best_params'], test_data, fixed_params=fixed_params)
@@ -393,7 +509,7 @@ def cross_val_fit(agent_class, param_space, env, behav_data, fixed_params=None, 
 
 
 def fit_simulate(agent_class, param_space, env, behav, fixed_params=None,
-                CV_splits=None,
+                CV_splits=None, strict=False,
                 n_calls=50, n_initial_points=10, n_jobs=-1, verbose=False, make_plots=False):
     """
     Fit an agent model to behavioral data and simulate the agent to get reward rate and probability of choosing best arm.
@@ -403,19 +519,13 @@ def fit_simulate(agent_class, param_space, env, behav, fixed_params=None,
     res = {}
 
     #### Fit the model ####
-
-    results = fit_agent(
-        agent_class=agent_class,
-        param_space=param_space,
-        fixed_params=fixed_params,
-        env=env,
-        behav_data=behav,
-        n_calls=n_calls,
-        n_initial_points=n_initial_points,
-        n_jobs=n_jobs,
-        verbose=verbose,
-        make_plots=make_plots
-    )
+    if not strict:
+        results = fit_agent(agent_class=agent_class, param_space=param_space, fixed_params=fixed_params, env=env,
+            behav_data=behav, n_calls=n_calls, n_initial_points=n_initial_points, n_jobs=n_jobs, verbose=verbose, make_plots=make_plots
+        )
+    else:
+        results = fit_agent_strict(agent_class, param_space, env, behav_data=behav, fixed_params=fixed_params, fit_on='ll',
+                     method='L-BFGS-B', n_restarts=n_initial_points, verbose=False)
 
     res = {**res, **results['best_params']}  # Add best parameters to results
 
@@ -427,7 +537,18 @@ def fit_simulate(agent_class, param_space, env, behav, fixed_params=None,
 
     # run cross validation
     if CV_splits is not None:
-        CV_scores = cross_val_fit(agent_class, param_space,env, behav, fixed_params, CV_splits=CV_splits, n_calls=60, n_initial_points=10)
+        CV_scores = cross_val_fit(
+            agent_class=agent_class,
+            param_space=param_space,
+            fixed_params=fixed_params,
+            env=env,
+            behav_data=behav,
+            CV_splits=CV_splits,
+            n_calls=n_calls,
+            n_initial_points=n_initial_points,
+            n_jobs=n_jobs,
+            strict=strict
+        )
 
         res['LL_CV'] = CV_scores['LL'].mean()
         res['LL_std'] = CV_scores['LL'].std()

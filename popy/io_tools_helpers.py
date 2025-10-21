@@ -76,7 +76,7 @@ def extract_behav_timestamps(raw_behav):
             curr_trial['lever_validation_time'] = curr_behav[np.where(curr_behav == 62)[0], 1][0]
             curr_trial['lever_release_time'] = curr_behav[np.where(curr_behav == 64)[0], 1][0]
             # 'lever_release_time': curr_behav[np.where(curr_behav == 64)[0], 1][0]
-            curr_trial['target_touch_time'] = get_target_touch(curr_behav)
+            curr_trial['target_touch_time'], curr_trial['n_target_touches'] = get_target_touch(curr_behav)
             curr_trial['target_validation_time'] = curr_behav[np.where(curr_behav == 125)[0], 1][0]
             curr_trial['feedback_time'] = curr_behav[np.where((curr_behav[:, 0] == 65) | (curr_behav[:, 0] == 66))[0], 1][0]
         else:  # if the trial is interrupted, we can't (won't) extract the other times
@@ -196,8 +196,9 @@ def get_target_touch(behav):
     id_125 = np.argwhere(behav[:, 0] == 125)
     ids_target_touch = np.argwhere((behav[:, 0] == 121) | (behav[:, 0] == 122) | (behav[:, 0] == 123))
     last_traget_touch_id = np.max(ids_target_touch[ids_target_touch < id_125])
+    n_target_touches = len(ids_target_touch[ids_target_touch < id_125])
 
-    return behav[last_traget_touch_id, 1]
+    return behav[last_traget_touch_id, 1], n_target_touches
 
 
 def get_block_info(trial_id, behav):

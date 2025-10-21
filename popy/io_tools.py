@@ -193,7 +193,7 @@ def load_behavior(monkey=None, session=None):
     """
 
     base_path = config.PROJECT_PATH_LOCAL
-    data_path = os.path.join(base_path, 'data', 'processed', 'behavior', 'behavior_kapo.pkl')
+    data_path = os.path.join(base_path, 'data', 'processed', 'behavior', 'behavior_n_target_touches.pkl')
     concat_data = pd.read_pickle(data_path)
 
     # sort by [monkey, session, trial_id]

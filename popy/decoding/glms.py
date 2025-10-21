@@ -108,6 +108,7 @@ class SingleUnitAnalysis:
         
         self.neural_data_type = None  # type of neural data, 'spike_counts' or 'firing_rates'
         self.value_type = None  # type of value, 'discrete' or 'continuous'
+        self.time_window = [-3, 3]  # time window around event to consider (in seconds)
         #self.n_extra_trials = -1  # number of extra trials to add to the dataset
         
         ###self.glm_results = {'coeffs': None, 'tvals': None, 'p_vals': None}
@@ -290,7 +291,7 @@ class SingleUnitAnalysis:
             neural_dataset = merge_behavior(neural_dataset, session_data)
         elif self.neural_data_type == 'spike_counts':
             # center on feedback pm 2sec
-            neural_dataset = build_trial_dataset(neural_data, mode='centering', center_on_epoch_start=5, center_window=(-3, 3))  # center on feedback, 2 sec before and after (we can not time normalize spikes thus we can not use the full trial mode)
+            neural_dataset = build_trial_dataset(neural_data, mode='centering', center_on_epoch_start=5, center_window=self.time_window)  # center on feedback, 2 sec before and after (we can not time normalize spikes thus we can not use the full trial mode)
             neural_dataset = merge_behavior(neural_dataset, session_data)
 
         return neural_dataset  # save predictors

@@ -191,8 +191,13 @@ def process_fold(fold_data):
     neural_dataset, fold_id, train_idx, test_idx, target, across_time = fold_data
 
     # Initialize models for this fold
-    clf = LogisticRegression()
-    rus = RandomUnderSampler(random_state=42)
+    if len(np.unique(neural_dataset[target].values)) > 2:
+        continuous = True
+        clf = LogisticRegressionCV(cv=5, max_iter=1000)
+    else:
+        continuous = False
+        clf = LogisticRegression()
+        rus = RandomUnderSampler(random_state=42)
     
     neural_dataset_train = neural_dataset.sel(trial_id=neural_dataset.trial_id.values[train_idx])
     neural_dataset_test = neural_dataset.sel(trial_id=neural_dataset.trial_id.values[test_idx])
@@ -212,7 +217,8 @@ def process_fold(fold_data):
         X_test_temp = neural_dataset_test.firing_rates.sel(time=t).values
 
         # balance dataset
-        X_train_temp, y_train_temp = rus.fit_resample(X_train_temp, y_train)
+        if not continuous:
+            X_train_temp, y_train_temp = rus.fit_resample(X_train_temp, y_train)
 
         # fit the model on train data
         clf.fit(X_train_temp, y_train_temp)
@@ -250,7 +256,12 @@ def time_resolved_decoder_all_time(neural_dataset, target='R_1', group=None, acr
     cv = 10
 
     # create train and test splits
-    skf = StratifiedKFold(n_splits=cv, shuffle=True, random_state=42)
+    if len(np.unique(neural_dataset[target].values)) > 2:
+        continuous = True
+        skf = KFold(n_splits=cv, shuffle=True, random_state=42)
+    else:
+        continuous = False
+        skf = StratifiedKFold(n_splits=cv, shuffle=True, random_state=42)
 
     n_timebins = len(neural_dataset.time.values)
     time_coords = {name: coord for name, coord in neural_dataset.coords.items() if 'time' in coord.dims}

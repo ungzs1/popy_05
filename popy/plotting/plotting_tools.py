@@ -75,13 +75,18 @@ def get_prop_event(behav_all_pd_original, column='switch'):
     return percent_selection# percent_shift
 
 
-def plot_strategy(behav, ax=None, saveas=None, paper_format=False, title=None, show_error=True, verbose=False):
+def plot_strategy(behav, ax=None, saveas=None, paper_format=False, title=None, show_error=True, verbose=False, h=None, w=None, ylim=None):
     # init fig
     if ax is None:
         if paper_format:
             # fontsize = 18
             plt.rcParams.update({'font.size': 8})
-            fig, axs = plt.subplots(2, 1, figsize=(2, 2), sharex=True, gridspec_kw={'hspace': 0.05})  # paper format
+            h_, w_ = 2*.8 + 0.15, 2*.95  # height and width in cm
+            if h is not None:
+                h_ = h
+            if w is not None:
+                w_ = w
+            fig, axs = plt.subplots(2, 1, figsize=(w_, h_), sharex=True, gridspec_kw={'hspace': 0.05})  # paper format
             lw = 1.5
         else:
             plt.rcParams.update({'font.size': 12})
@@ -108,6 +113,7 @@ def plot_strategy(behav, ax=None, saveas=None, paper_format=False, title=None, s
         fig.suptitle(title)
 
 
+
     # get best target selection and shift vectors
     behav = add_switch_info(behav)
     behav['if_best_target'] = behav['target'] == behav['best_target']
@@ -123,8 +129,8 @@ def plot_strategy(behav, ax=None, saveas=None, paper_format=False, title=None, s
             LEN_BLOCK = percent_selection[list(percent_selection.keys())[0]].shape[1]
 
             # get mean and std for best target selection and shift
-            mean_best_selection = np.mean(percent_selection[monkey] * 100, axis=0)
-            std_best_selection = np.std(percent_selection[monkey] * 100, axis=0)
+            mean_best_selection = np.mean(percent_selection[monkey], axis=0)
+            std_best_selection = np.std(percent_selection[monkey], axis=0)
             sem_best_selection = std_best_selection / np.sqrt(len(percent_selection[monkey]))
 
             mean_shift = np.mean(percent_shift[monkey], axis=0)
@@ -169,10 +175,10 @@ def plot_strategy(behav, ax=None, saveas=None, paper_format=False, title=None, s
     ax = axs[0]
     ax.axvline(LEN_BLOCK-5, color='k', linestyle='--', alpha=0.5, zorder=-1)
     #ax.set_title('Best target selection')
-    ax.set_ylabel('% optimal\ntarget selection')
-    #ax.set_ylim([0.2, 1])
+    ax.set_ylabel('prob HIGH target')
+    ax.set_ylim([0.3, 1])
     # set ticks every .2
-    #ax.set_yticks(np.arange(0.2, 1.1, 0.2))
+    ax.set_yticks(np.arange(0.4, 1.1, 0.2))
     if not paper_format:
         ax.legend(loc='lower right', frameon=True)
 
@@ -185,7 +191,9 @@ def plot_strategy(behav, ax=None, saveas=None, paper_format=False, title=None, s
     #ax.set_title('Shift')
     ax.set_xlabel('Trials in block')
     ax.set_ylabel('Proba. switch')
-    #ax.set_yticks(np.arange(0, 1.1, 0.1))
+    ax.set_yticks(np.arange(0, .6, 0.1))
+    if ylim is not None:
+        ax.set_ylim(ylim)
     #ax.set_ylim([-0.02, .45])
     ax.legend(loc='upper right', frameon=True)
 
@@ -306,7 +314,7 @@ def plot_hist_thingy(behav_original, title=None, paper_format=False):
     if paper_format:
         fontsize = 8
         plt.rcParams.update({'font.size': fontsize})
-        h, w = 2, 2  # height and width in cm 
+        h, w = 2, 1.6  # height and width in cm 
         s = 4
         lw = 1.2
     else:
@@ -351,20 +359,26 @@ def plot_hist_thingy(behav_original, title=None, paper_format=False):
                 markersize=s,# if not monkey in ['ka', 'po', 'yu_DCZ', 'yu_sham'] else s*1.5,
                 linewidth=lw)# if not monkey in ['ka', 'po', 'yu_DCZ', 'yu_sham'] else lw*2, alpha=0.8)
 
-    #ax.set_xticks([])
-    #ax.set_xticklabels(labels, rotation=90)
+    ax.axhline(0, color='black', linestyle='--', alpha=0.5)
+
+    ax.set_xticks(np.arange(len(labels)))
+    ax.set_xticklabels(labels, rotation=90)
 
     ax.set_xlabel('')
+    ax.set_ylim(-0.1, 1)
     ax.set_ylabel('Proba. switch')
 
     ax.spines["right"].set_visible(False)
     ax.spines["top"].set_visible(False)
-    ax.spines["bottom"].set_visible(False)
 
     # legend to the right
     ax.legend(loc='upper right', bbox_to_anchor=(1.3, 1), ncol=1)
 
     ax = ax2
+    # just a transparent axis
+    ax.axis('off')
+
+    '''ax = ax2
     for i, label in enumerate(labels):
         for j, marker in enumerate(label.split(' ')):        
             ax.scatter(i, j, marker='o' if marker == 'o' else 'x', c='tab:green' if marker == 'o' else 'tab:red')
@@ -383,8 +397,8 @@ def plot_hist_thingy(behav_original, title=None, paper_format=False):
     ax.legend(loc='lower center', bbox_to_anchor=(0.8, -0.5), ncol=1)
 
     ax.spines["right"].set_visible(False)
-    #ax.spines["top"].set_visible(False)
-    ax.spines["bottom"].set_visible(False)
+    ax.spines["top"].set_visible(False)
+    ax.spines["bottom"].set_visible(False)'''
 
     if not paper_format:
         plt.tight_layout()
