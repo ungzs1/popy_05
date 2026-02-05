@@ -114,7 +114,8 @@ def estimate_ll(
         agent_class, 
         params,
         behavior_original, 
-        fixed_params=None):
+        fixed_params=None,
+        return_with_behav=False):
     '''
     Estimate the log likelihood of the behavior given an agent.
     '''
@@ -156,7 +157,12 @@ def estimate_ll(
         # update the agent
         agent.update_values(int(action), int(reward))
 
-    return np.sum(logp_actions)
+    if return_with_behav:
+        behavior = behavior.copy()
+        behavior['logp_action'] = logp_actions
+        return behavior
+    else:
+        return np.sum(logp_actions)
 
 
 ### Functions for simulating agents ###
@@ -224,8 +230,13 @@ def fit_agent(agent_class, param_space, env, behav_data=None, fixed_params=None,
     def objective(**params):
         if fit_on == 'll':
             # Run simulation and get log likelihood
-            ll = estimate_ll(agent_class, params, behav_data, fixed_params)
+            ll = estimate_ll(agent_class, params, behav_data, fixed_params, return_with_behav=False)
             return -ll
+        elif fit_on == 'll_first15':
+            # Run simulation and get log likelihood
+            ll_all = estimate_ll(agent_class, params, behav_data, fixed_params, return_with_behav=True)
+            ll_first15 = ll_all.groupby(['session', 'block_id']).head(15)['logp_action'].sum()
+            return -ll_first15
         elif fit_on == 'rr':
             # Run simulation and get reward rate
             rr = estimate_rr(agent_class, params, env, fixed_params)
@@ -265,12 +276,14 @@ def fit_agent(agent_class, param_space, env, behav_data=None, fixed_params=None,
         
         plt.tight_layout()
     
-    if fit_on == 'll':
+    # Compute additional metrics (LPT)
+    if fit_on == 'll' or fit_on == 'll_first15':
         # Calculate BIC and log likelihood per trial
         best_ll = -result.fun  # Convert back to positive log likelihood
         n_params = len(param_space)
-        bic = -2 * best_ll + n_params * np.log(len(behav_data))
-        lpt = np.exp(best_ll / len(behav_data))
+        n_trials = len(behav_data) if fit_on == 'll' else len(behav_data.groupby(['session', 'block_id']).head(15))
+        bic = -2 * best_ll + n_params * np.log(n_trials)
+        lpt = np.exp(best_ll / n_trials)
 
         return {
             #'result': result,
@@ -287,74 +300,7 @@ def fit_agent(agent_class, param_space, env, behav_data=None, fixed_params=None,
         }
     else:
         raise ValueError(f"Invalid value for 'fit_on': {fit_on}")
-    
 
-
-def fit_agent_strict_old(agent_class, param_space, env, behav_data=None, fixed_params=None, fit_on='ll',
-                     method='L-BFGS-B', n_restarts=10, verbose=False):
-    """
-    Fit an agent model to behavioral data using strict local optimization (scipy.optimize.minimize).
-    """
-    if fixed_params is None:
-        fixed_params = {}
-
-    # Extract bounds and parameter names
-    bounds = []
-    param_names = []
-    for p in param_space:
-        if isinstance(p, (Real)):
-            bounds.append((p.low, p.high))
-        else:
-            raise ValueError("Only Real dimensions are supported with scipy.optimize.minimize.")
-        param_names.append(p.name)
-
-    def objective(x):
-        params = dict(zip(param_names, x))
-        if fit_on == 'll':
-            ll = estimate_ll(agent_class, params, behav_data, fixed_params)
-            return -ll
-        elif fit_on == 'rr':
-            rr = estimate_rr(agent_class, params, env, fixed_params)
-            return -rr
-        else:
-            raise ValueError(f"Invalid value for 'fit_on': {fit_on}")
-
-    def run_restart(x0, bounds, objective, method='L-BFGS-B', verbose=False):
-        result = minimize(objective, x0, method=method, bounds=bounds)
-        return result
-
-    # Create N random initializations
-    x0_list = [
-        [np.random.uniform(low, high) for (low, high) in bounds]
-        for _ in range(n_restarts)
-    ]
-
-    # Run them in parallel
-    results = Parallel(n_jobs=-1)(delayed(run_restart)(x0, bounds, objective, verbose=verbose) for x0 in x0_list)
-
-    # Pick the best
-    best_result = min(results, key=lambda r: r.fun)
-
-    # Extract best parameters
-    best_params = dict(zip(param_names, best_result.x))
-
-    if fit_on == 'll':
-        best_ll = -best_result.fun
-        n_params = len(param_space)
-        bic = -2 * best_ll + n_params * np.log(len(behav_data))
-        lpt = np.exp(best_ll / len(behav_data))
-
-        return {
-            'best_params': best_params,
-            'best_ll': best_ll,
-            'bic': bic,
-            'lpt': lpt
-        }
-    elif fit_on == 'rr':
-        return {
-            'best_params': best_params,
-            'best_reward_rate': -best_result.fun
-        }
 
 import numpy as np
 from scipy.optimize import minimize
@@ -515,9 +461,22 @@ def cross_val_fit(agent_class, param_space, env, behav_data, fixed_params=None, 
 ### Main function for all analysis of model fitting in once ###
 
 
-def fit_simulate(agent_class, param_space, env, behav, fixed_params=None,
-                CV_splits=None, strict=False,
-                n_calls=50, n_initial_points=10, n_jobs=-1, verbose=False, make_plots=False):
+def fit_simulate(
+    agent_class,
+    param_space,
+    env,
+    behav,
+    fixed_params=None,
+    CV_splits=None,
+    fit_on_first_15=False,
+    n_calls=50,
+    n_initial_points=10,
+    n_jobs=-1,
+    verbose=False,
+    make_plots=False,
+):
+    if CV_splits is not None:
+        raise NotImplementedError("Cross-validation is not implemented anymore in fit_simulate.")
     """
     Fit an agent model to behavioral data and simulate the agent to get reward rate and probability of choosing best arm.
     """
@@ -526,14 +485,34 @@ def fit_simulate(agent_class, param_space, env, behav, fixed_params=None,
     res = {}
 
     #### Fit the model ####
-    if not strict:
-        results = fit_agent(agent_class=agent_class, param_space=param_space, fixed_params=fixed_params, env=env,
-            behav_data=behav, n_calls=n_calls, n_initial_points=n_initial_points, n_jobs=n_jobs, verbose=verbose, make_plots=make_plots
+    if not fit_on_first_15:
+        results = fit_agent(
+            agent_class=agent_class,
+            param_space=param_space,
+            fixed_params=fixed_params,
+            fit_on="ll",
+            env=env,
+            behav_data=behav,
+            n_calls=n_calls,
+            n_initial_points=n_initial_points,
+            n_jobs=n_jobs,
+            verbose=verbose,
+            make_plots=make_plots,
         )
     else:
-        results = fit_agent_strict(agent_class, param_space, env, behav_data=behav, fixed_params=fixed_params, fit_on='ll',
-                     method='L-BFGS-B', n_restarts=n_initial_points, verbose=False)
-
+        results = fit_agent(
+            agent_class=agent_class,
+            param_space=param_space,
+            fixed_params=fixed_params,
+            fit_on='ll_first15',
+            env=env,
+            behav_data=behav,
+            n_calls=n_calls,
+            n_initial_points=n_initial_points,
+            n_jobs=n_jobs,
+            verbose=verbose,
+            make_plots=make_plots,
+        )
     res = {**res, **results['best_params']}  # Add best parameters to results
 
     res['LL_best'] = results['best_ll']
@@ -543,7 +522,7 @@ def fit_simulate(agent_class, param_space, env, behav, fixed_params=None,
     #### Cross-validate the model ####
 
     # run cross validation
-    if CV_splits is not None:
+    """if CV_splits is not None:
         CV_scores = cross_val_fit(
             agent_class=agent_class,
             param_space=param_space,
@@ -562,7 +541,7 @@ def fit_simulate(agent_class, param_space, env, behav, fixed_params=None,
         res['BIC_CV'] = CV_scores['BIC'].mean()
         res['BIC_std'] = CV_scores['BIC'].std()
         res['LPT_CV'] = CV_scores['LPT'].mean()
-        res['LPT_std'] = CV_scores['LPT'].std()
+        res['LPT_std'] = CV_scores['LPT'].std()"""
 
     #### Simulate agent ####
 

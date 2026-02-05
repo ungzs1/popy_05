@@ -309,7 +309,7 @@ def plot_performances(behavs):
     plt.show()
 
 def plot_hist_thingy(behav_original, title=None, paper_format=False):
-    labels = [ f"+ + +", f"o + +" , f"+ o +", f"o o +", f"+ + o", f"o + o", f"+ o o", f"o o o"]
+    labels = [ f"- - -", f"o - -" , f"- o -", f"o o -", f"- - o", f"o - o", f"- o o", f"o o o"]
 
     if paper_format:
         fontsize = 8
@@ -624,7 +624,7 @@ def show_target_selection_compact(
     if len(session_data['monkey'].unique()) != 1:
         raise ValueError('session_data should contain only one monkey')
     monkey = session_data['monkey'].unique()[0]
-    v0 = MODEL_PARAMS[monkey]['V0']
+    #v0 = MODEL_PARAMS[monkey]['V0']
 
     # set the colors of the targets in RGBA format
     target_colors = {1: '#90c6f2ff', 2: '#ffb273ff', 3: '#dea8ddff'}

@@ -6,7 +6,6 @@ from gymnasium.wrappers import RecordEpisodeStatistics, FlattenObservation
 import gymnasium as gym
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 import seaborn as sns
 import itertools
 import scipy.special
@@ -209,7 +208,7 @@ class ChangeZeroRewardToNegativeOne(gym.RewardWrapper):
         if reward == 0:
             return -1
         return reward
-    
+
 
 gym.register(
     id="zsombi/monkey-bandit-task-v0",
@@ -388,7 +387,7 @@ class QLearner:
         alpha_unchosen=None,
         beta=100,
         structure_aware=False,
-        stickyness_bias=0.0,
+        stickiness_bias=0.0,
         b1=0.0,
         b2=0.0,
         b3=0.0,
@@ -399,14 +398,14 @@ class QLearner:
         of action values (q_values), a learning rate and an epsilon.
         """
         self.n_arms = n_arms
-        
+
         self.alpha = alpha
         self.alpha_unchosen = alpha_unchosen if alpha_unchosen is not None else alpha
         self.beta = beta
-        
+
         self.structure_aware = structure_aware
-        
-        self.stickyness_bias = float(stickyness_bias)
+
+        self.stickiness_bias = float(stickiness_bias)
         self.spatial_bias = np.array([b1, b2, b3])
         if len(self.spatial_bias) != n_arms:
             raise ValueError("Length of spatial_bias must be equal to n_arms.")
@@ -429,7 +428,7 @@ class QLearner:
         # Stickiness bias: add extra bias for the last action
         bias_temp = self.spatial_bias.copy()
         if self.last_action is not None:
-            bias_temp[self.last_action] += self.stickyness_bias
+            bias_temp[self.last_action] += self.stickiness_bias
 
         # Apply the Softmax transformation to get probabilities of actions
         '''exp_Q = np.exp(self.beta * self.q_values + bias)
@@ -439,7 +438,7 @@ class QLearner:
         z = logits - np.max(logits)
         exp_z = np.exp(z)
         return exp_z / np.sum(exp_z)
-    
+
     def act(self) -> int:
         """
         Picks a random action probabilistically.
@@ -485,27 +484,28 @@ class QLearner:
 
 
 class ForagingAgent:
-    def __init__(self, 
-                 n_arms=3,
-                 alpha=0.4,
-                 beta=100,
-                 V0=(.7 + .25 + .25) / 3,
-                reset_on_switch=False,
-                b1=0.0,
-                b2=0.0,
-                b3=0.0,
-                abandoned_bias=0,
-                abandoned_decay=0
-                ):
-        
+    def __init__(
+        self,
+        n_arms=3,
+        alpha=0.3,
+        beta=100,
+        V0=0.3,
+        reset_on_switch=False,
+        b1=0.0,
+        b2=0.0,
+        b3=0.0,
+        abandoned_bias=0,
+        abandoned_decay=0,
+    ):
+
         self.n_arms = n_arms
 
         self.alpha = alpha
         self.beta = beta
         self.V0 = V0
-       
+
         self.reset_on_switch = reset_on_switch
-       
+
         self.spatial_bias_0 = np.array([b1, b2, b3])
         if len(self.spatial_bias_0) != n_arms:
             raise ValueError("Length of spatial_bias must be equal to n_arms.")
@@ -524,12 +524,12 @@ class ForagingAgent:
         self.spatial_bias = self.spatial_bias_0
 
     def _get_stay_proba(self) -> float:   
-        # get the probability of shifting actions, according to the logistic function 
+        # get the probability of shifting actions, according to the logistic function
         proba_shift = 1 / (1 + np.exp(self.beta * (self.V - self.V0)))
         proba_stay = 1 - proba_shift
 
         return proba_stay
-    
+
     def _get_min_max_stay_proba(self) -> tuple:
         min_proba_stay = 1 / (1 + np.exp(self.beta * (self.V0 - 0)))
         max_proba_stay = 1 / (1 + np.exp(self.beta * (self.V0 - 1)))
@@ -541,7 +541,7 @@ class ForagingAgent:
         Returns the probability of each action according to the Softmax transformation.
         """
 
-        # get the probability of shifting actions, according to the logistic function 
+        # get the probability of shifting actions, according to the logistic function
         proba_shift = 1 / (1 + np.exp(self.beta * (self.V - self.V0)))
         proba_stay = 1 - proba_shift
 
@@ -560,12 +560,12 @@ class ForagingAgent:
         # -----------------------------------
 
         return probas
-    
+
     def act(self) -> int:
         """
         Picks a random action probabilistically.
         """
-    
+
         # Apply the Softmax transformation
         prob_a = self.get_action_probas()
 
@@ -573,7 +573,7 @@ class ForagingAgent:
         action = np.random.choice(self.n_arms, p=prob_a)
 
         return action
-    
+
     def update_values(self, action: None, reward: float):
         """Updates the V-value of an action."""
 
@@ -587,6 +587,130 @@ class ForagingAgent:
             # use RPE to update the V-value after a stay, but use baseline after a switch
             rpe = reward - self.V
             self.V += self.alpha * rpe
+
+        # set bias against the abandoned option (add to base level of bias)
+        for a in range(self.n_arms):
+            if switched and a == self.last_action:
+                self.spatial_bias[a] += self.abandoned_decay * (self.abandoned_bias - self.spatial_bias[a])
+            else:
+                self.spatial_bias[a] += self.abandoned_decay * (self.spatial_bias_0[a] - self.spatial_bias[a])
+
+        # store the last action
+        self.last_action = action
+
+
+class ForagingAgentAdaptive:
+    def __init__(
+        self,
+        n_arms=3,
+        alpha=0.3,
+        alpha_threshold=.05,
+        beta=100,
+        V0=0.3,
+        b1=0.0,
+        b2=0.0,
+        b3=0.0,
+        abandoned_bias=0,
+        abandoned_decay=0,
+    ):
+
+        self.n_arms = n_arms
+
+        self.alpha = alpha
+        self.alpha_threshold = alpha_threshold
+        self.beta = beta
+        self.V0 = V0
+        self.V0_bias = V0
+
+        self.spatial_bias_0 = np.array([b1, b2, b3])
+        if len(self.spatial_bias_0) != n_arms:
+            raise ValueError("Length of spatial_bias must be equal to n_arms.")
+        self.abandoned_bias = abandoned_bias
+        self.abandoned_decay = abandoned_decay
+
+        # internal variables
+        self.V = V0
+        self.last_action = np.random.choice(n_arms)
+        self.spatial_bias = self.spatial_bias_0.copy()
+
+    def reset(self):
+        """Reset the agent to its initial state."""
+        self.V = self.V0_bias
+        self.V0 = self.V0_bias
+        self.last_action = np.random.choice(self.n_arms)
+        self.spatial_bias = self.spatial_bias_0
+
+    def _get_stay_proba(self) -> float:   
+        # get the probability of shifting actions, according to the logistic function
+        proba_shift = 1 / (1 + np.exp(self.beta * (self.V - self.V0)))
+        proba_stay = 1 - proba_shift
+
+        return proba_stay
+
+    def _get_min_max_stay_proba(self) -> tuple:
+        min_proba_stay = 1 / (1 + np.exp(self.beta * (self.V0 - 0)))
+        max_proba_stay = 1 / (1 + np.exp(self.beta * (self.V0 - 1)))
+
+        return min_proba_stay, max_proba_stay
+
+    def get_action_probas(self) -> int:
+        """
+        Returns the probability of each action according to the Softmax transformation.
+        """
+
+        # get the probability of shifting actions, according to the logistic function
+        proba_shift = 1 / (1 + np.exp(self.beta * (self.V - self.V0)))
+        proba_stay = 1 - proba_shift
+
+        # get action probas
+        probas = np.ones(self.n_arms) * (proba_shift / (self.n_arms - 1))
+        probas[self.last_action] = proba_stay
+
+        # add spatial bias (includes bias against abandoned target)
+        probas = probas * np.exp(self.spatial_bias)
+        probas = probas / np.sum(probas)
+
+        # --- avoid zeros that break log likelihood later ---
+        eps = np.finfo(float).tiny  # ~2.225e-308, safely > 0
+        probas = np.clip(probas, eps, 1.0)
+        probas = probas / probas.sum()  # re-normalize after flooring
+        # -----------------------------------
+
+        return probas
+
+    def act(self) -> int:
+        """
+        Picks a random action probabilistically.
+        """
+
+        # Apply the Softmax transformation
+        prob_a = self.get_action_probas()
+
+        # Choose an action according to the probability distribution
+        action = np.random.choice(self.n_arms, p=prob_a)
+
+        return action
+
+    def update_values(self, action: None, reward: float):
+        """Updates the V-value of an action."""
+
+        switched = action != self.last_action
+
+        # if the agent switches, reset the V-value
+        if switched:
+            rpe = reward - self.V0
+            self.V = self.V0 + self.alpha * rpe
+
+            rpe_V0 = reward - self.V0_bias
+            self.V0 = self.V0_bias + self.alpha_threshold * rpe_V0
+
+        else:
+            # use RPE to update the V-value after a stay, but use baseline after a switch
+            rpe = reward - self.V
+            self.V += self.alpha * rpe
+
+            rpe_V0 = reward - self.V0
+            self.V0 += self.alpha_threshold * rpe_V0
 
         # set bias against the abandoned option (add to base level of bias)
         for a in range(self.n_arms):
@@ -663,4 +787,121 @@ class BayesianAgent:
         self.posterior = np.dot(self.posterior, self.transition_matrix)
 
 
+class POMDPAgent:
+    """Bayesian filtering agent for a 3-arm switching task with a semi-Markov dwell time.
 
+    Latent state: (H_t, tau_t)
+      - H_t: identity of the unique HIGH arm
+      - tau_t: remaining trials (including current trial) until the next switch
+
+    Dwell time after a switch is sampled uniformly from [dwell_min, dwell_max].
+    When tau reaches 1, the next step switches H to one of the other arms uniformly.
+    """
+
+    def __init__(
+        self,
+        n_arms: int = 3,
+        p_high: float = 0.7,
+        p_low: float = 0.25,
+        dwell_min: int = 35,
+        dwell_max: int = 45,
+        beta: float = 100,
+    ):
+        if n_arms < 2:
+            raise ValueError("n_arms must be >= 2")
+        if not (0.0 < p_low < 1.0) or not (0.0 < p_high < 1.0):
+            raise ValueError("p_high and p_low must be in (0, 1)")
+        if not (1 <= dwell_min <= dwell_max):
+            raise ValueError("Require 1 <= dwell_min <= dwell_max")
+
+        self.n_arms = n_arms
+        self.p_high = float(p_high)
+        self.p_low = float(p_low)
+        self.dwell_min = int(dwell_min)
+        self.dwell_max = int(dwell_max)
+        self.beta = float(beta)
+
+        # tau takes values 1..dwell_max; index i corresponds to tau=i+1
+        self._max_tau = self.dwell_max
+        self.posterior_full = np.zeros((self.n_arms, self._max_tau), dtype=np.float32)
+        self.posterior = np.ones(self.n_arms, dtype=np.float32) / self.n_arms
+        self.reset()
+
+    def reset(self):
+        # Prior: unknown HIGH arm; assume we start at the beginning of a block
+        # (i.e., tau is drawn uniformly from [dwell_min, dwell_max]).
+        self.posterior_full.fill(0.0)
+        tau_slice = slice(self.dwell_min - 1, self.dwell_max)
+        self.posterior_full[:, tau_slice] = 1.0
+        self.posterior_full /= self.posterior_full.sum()
+        self.posterior = self.posterior_full.sum(axis=1)
+
+    def _reward_likelihood_per_high_arm(self, action: int, reward: float) -> np.ndarray:
+        # Returns a length-n_arms vector L[h] = P(reward | HIGH arm = h).
+        high_probs = np.full(self.n_arms, self.p_low, dtype=np.float32)
+        high_probs[action] = self.p_high
+
+        if reward > 0:
+            return high_probs
+        return 1.0 - high_probs
+
+    def get_action_probas(self) -> np.ndarray:
+        """Softmax over the marginal posterior P(H_t = a)."""
+        logits = self.beta * self.posterior
+        logits = logits - np.max(logits)  # numerical stability
+        exp_logits = np.exp(logits)
+        probas = exp_logits / np.sum(exp_logits)
+
+        # Avoid exact zeros (log-likelihood computations)
+        eps = np.finfo(float).tiny
+        probas = np.clip(probas, eps, 1.0)
+        probas = probas / probas.sum()
+        return probas
+
+    def act(self) -> int:
+        prob_a = self.get_action_probas()
+        return int(np.random.choice(self.n_arms, p=prob_a))
+
+    def update_values(self, action: int, reward: float):
+        """Bayesian filter update for the semi-Markov latent state."""
+        # 1) Observation update: multiply by likelihood of reward given HIGH identity.
+        likelihood_h = self._reward_likelihood_per_high_arm(action, reward)
+        self.posterior_full *= likelihood_h[:, None]
+        s = float(self.posterior_full.sum())
+        if s <= 0.0 or not np.isfinite(s):
+            # Fallback to prior if something went numerically wrong.
+            self.reset()
+            return
+        self.posterior_full /= s
+
+        # 2) Time update: propagate tau countdown; when tau=1, switch HIGH arm and resample tau.
+        new_posterior = np.zeros_like(self.posterior_full)
+
+        # Deterministic countdown for tau>1: (h, tau) -> (h, tau-1)
+        # tau index i corresponds to tau=i+1, so shift mass left by 1.
+        new_posterior[:, : self._max_tau - 1] += self.posterior_full[:, 1:]
+
+        # Switch when tau=1: distribute mass to other arms and tau' in [dwell_min, dwell_max].
+        switch_mass_by_h = self.posterior_full[:, 0]
+        n_other = self.n_arms - 1
+        n_dwell = self.dwell_max - self.dwell_min + 1
+        tau_slice = slice(self.dwell_min - 1, self.dwell_max)
+
+        for h in range(self.n_arms):
+            m = float(switch_mass_by_h[h])
+            if m <= 0.0:
+                continue
+            per_other_arm = m / n_other
+            per_state = per_other_arm / n_dwell
+            for h2 in range(self.n_arms):
+                if h2 == h:
+                    continue
+                new_posterior[h2, tau_slice] += per_state
+
+        # Normalize (should already sum to 1; normalize for numerical drift).
+        total = float(new_posterior.sum())
+        if total <= 0.0 or not np.isfinite(total):
+            self.reset()
+            return
+        self.posterior_full = new_posterior / total
+        self.posterior = self.posterior_full.sum(axis=1)
