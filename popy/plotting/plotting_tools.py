@@ -137,20 +137,27 @@ def plot_strategy(behav, ax=None, saveas=None, paper_format=False, title=None, s
             std_shift = np.std(percent_shift[monkey], axis=0)
             sem_shift = std_shift / np.sqrt(len(percent_shift[monkey]))
 
-            linestyle = 'solid'#'dashed' if not model == 'recording' else 'solid'
+            # Check if model name ends with _short to use dashed line
+            if monkey.endswith('_short'):
+                linestyle = 'dashed'
+                monkey_base = monkey[:-6]  # Remove '_short' suffix
+            else:
+                linestyle = 'solid'
+                monkey_base = monkey
+            
+            if monkey_base in COLORS.keys():
+                color = COLORS[monkey_base]
+            else:
+                color = None
+                
             if linestyle == 'solid':
-                if monkey in COLORS.keys():
-                    color = COLORS[monkey]
-                else:
-                    color = None
                 if show_error and monkey in ['ka', 'po', 'yu_sham', 'yu_DCZ']:
                     axs[0].fill_between(np.arange(LEN_BLOCK), mean_best_selection-sem_best_selection, mean_best_selection+sem_best_selection, color=color, alpha=0.5)
-            else:
-                color = COLORS[monkey]
+            
             axs[0].plot(mean_best_selection, color=color, label=monkey.upper(), linestyle=linestyle, linewidth=lw, alpha=0.8)
 
             axs[1].plot(mean_shift, color=color , label=monkey.upper(), linestyle=linestyle, linewidth=lw, alpha=0.8)
-            if linestyle == 'solid' and show_error and monkey in ['ka', 'po', 'yu_sham', 'yu_DCZ']:
+            if linestyle == 'solid' and show_error and monkey_base in ['ka', 'po', 'yu_sham', 'yu_DCZ']:
                 axs[1].fill_between(np.arange(LEN_BLOCK), mean_shift-sem_shift, mean_shift+sem_shift, color=color, alpha=0.4)
 
     # print stats 
@@ -176,11 +183,11 @@ def plot_strategy(behav, ax=None, saveas=None, paper_format=False, title=None, s
     ax.axvline(LEN_BLOCK-5, color='k', linestyle='--', alpha=0.5, zorder=-1)
     #ax.set_title('Best target selection')
     ax.set_ylabel('prob HIGH target')
-    ax.set_ylim([0.3, 1])
+    ax.set_ylim([0.2, 1])
     # set ticks every .2
-    ax.set_yticks(np.arange(0.4, 1.1, 0.2))
+    ax.set_yticks(np.arange(0.3, 1.1, 0.2))
     if not paper_format:
-        ax.legend(loc='lower right', frameon=True)
+        ax.legend(loc='center left', bbox_to_anchor=(1, 0.5), frameon=True)
 
     # hide the spines between ax and ax2
     ax.spines['right'].set_visible(False)
@@ -195,7 +202,7 @@ def plot_strategy(behav, ax=None, saveas=None, paper_format=False, title=None, s
     if ylim is not None:
         ax.set_ylim(ylim)
     #ax.set_ylim([-0.02, .45])
-    ax.legend(loc='upper right', frameon=True)
+    ax.legend(loc='center left', bbox_to_anchor=(1, 0.5), frameon=True)
 
     ax.spines['right'].set_visible(False)
     ax.spines['top'].set_visible(False)
@@ -351,11 +358,20 @@ def plot_hist_thingy(behav_original, title=None, paper_format=False):
         for (R_1, R_2, R_3), behav_temp in behav.groupby(['R_1', 'R_2', 'R_3']):
             all_trials_vector.append(behav_temp['switch'].mean())
 
-        color = COLORS[monkey] if monkey in COLORS else 'grey'
+        # Check if monkey name ends with _short to use dashed line
+        if monkey.endswith('_short'):
+            linestyle = 'dashed'
+            monkey_base = monkey[:-6]  # Remove '_short' suffix
+        else:
+            linestyle = 'solid'
+            monkey_base = monkey
+            
+        color = COLORS[monkey_base] if monkey_base in COLORS else 'grey'
         ax.plot(all_trials_vector, label=f'{monkey}', marker='o', 
                 color=color, 
                 alpha=.8,
-                markerfacecolor=color if monkey in ['ka', 'po', 'yu_DCZ', 'yu_sham'] else 'white',
+                linestyle=linestyle,
+                markerfacecolor=color if monkey_base in ['ka', 'po', 'yu_DCZ', 'yu_sham'] else 'white',
                 markersize=s,# if not monkey in ['ka', 'po', 'yu_DCZ', 'yu_sham'] else s*1.5,
                 linewidth=lw)# if not monkey in ['ka', 'po', 'yu_DCZ', 'yu_sham'] else lw*2, alpha=0.8)
 
@@ -372,7 +388,7 @@ def plot_hist_thingy(behav_original, title=None, paper_format=False):
     ax.spines["top"].set_visible(False)
 
     # legend to the right
-    ax.legend(loc='upper right', bbox_to_anchor=(1.3, 1), ncol=1)
+    ax.legend(loc='center left', bbox_to_anchor=(1, 0.5), ncol=1)
 
     ax = ax2
     # just a transparent axis

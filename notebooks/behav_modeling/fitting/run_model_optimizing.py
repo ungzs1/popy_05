@@ -84,7 +84,7 @@ ANALYSIS_PARAMETERS = {
     "CV_splits": None
 }
 
-floc = os.path.join(PROJECT_PATH_LOCAL, 'notebooks', 'behav_modeling', 'results', 'optimizing_adaptive')  # TODO: change folder name
+floc = os.path.join(PROJECT_PATH_LOCAL, 'notebooks', 'behav_modeling', 'results', 'optimizing') 
 
 # Fit parameters
 fit_params = {
@@ -178,14 +178,6 @@ MODELS = {
         "fixed_params": {"reset_on_switch": False},
         "free_params": ["alpha", "beta",  "V0", "abandoned_bias", "abandoned_decay", "b2_bias"],
     },
-    "Foraging - adaptive threshold": {
-        "agent_class": ForagingAgentAdaptive,
-        "fixed_params": {},
-        "free_params": ["alpha", "beta", "V0", "alpha_threshold"],
-    },
-}
-
-MODELS = {  # TODO: removed models to speed up optimization
     "Foraging - adaptive threshold": {
         "agent_class": ForagingAgentAdaptive,
         "fixed_params": {},

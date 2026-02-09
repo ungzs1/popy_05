@@ -1,6 +1,7 @@
 """
 This seems to be a collection of the implemented agents for the bandit task.
 """
+import warnings
 import gymnasium as gym
 from gymnasium.wrappers import RecordEpisodeStatistics, FlattenObservation
 import gymnasium as gym
@@ -723,28 +724,28 @@ class ForagingAgentAdaptive:
         self.last_action = action
 
 
-class BayesianAgent:
+class HMMAgent:
     def __init__(
         self,
-        n_arms=3,
-        p_switch=None,  #1/40,
+        n_arms: int = 3,
+        p_high: float = 0.7,
+        p_low: float = 0.25,
+        p_switch: Optional[float] = None,
         transition_matrix = np.array([[39/40, .5/40, .5/40], [.5/40, 39/40, .5/40], [.5/40, .5/40, 39/40]]),
-        emission_matrix_pos = np.array([[.7, .25, .25], [.25, .7, .25], [.25, .25, .7]]),
-        emission_matrix_neg = np.array([[.3, .75, .75], [.75, .3, .75], [.75, .75, .3]]),
-        beta=100,
+        beta: float = 100,
     ):
         """Initialize a Reinforcement Learning agent with an empty dictionary
         of action values (q_values), a learning rate and an epsilon.
         """
         self.n_arms = n_arms
+        self.p_high = p_high
+        self.p_low = p_low
 
         if p_switch is not None:
             transition_matrix = np.array([[1 - p_switch, p_switch / 2, p_switch / 2],
                                           [p_switch / 2, 1 - p_switch, p_switch / 2],
                                           [p_switch / 2, p_switch / 2, 1 - p_switch]])
         self.transition_matrix = transition_matrix
-        self.emission_matrix_pos = emission_matrix_pos
-        self.emission_matrix_neg = emission_matrix_neg
         self.beta = beta
         
         self.posterior = np.ones(n_arms, dtype=np.float32) / n_arms
@@ -760,6 +761,19 @@ class BayesianAgent:
         # softmax action selection
         exp_Q = np.exp(self.beta * self.posterior)
         return exp_Q / np.sum(exp_Q)
+    
+    def _reward_likelihood_per_high_arm(self, action: int, reward: float) -> np.ndarray:
+        """
+        Returns a length-n_arms vector L[h] = P(reward | HIGH arm = h).
+
+        E.g. if rewarded and action == arm 0, then returns [.7, .25, .25]. If not rewarded and action == arm 0, then returns [.3, .75, .75], etc.
+        """
+        high_probs = np.full(self.n_arms, self.p_low, dtype=np.float32)
+        high_probs[action] = self.p_high
+
+        if reward > 0:
+            return high_probs
+        return 1.0 - high_probs
 
     def act(self) -> int:
         """
@@ -780,14 +794,15 @@ class BayesianAgent:
     ):
         """Updates th eposteriors of the agent (inference and state transition)."""
         # update the posterior
-        self.posterior = self.posterior * self.emission_matrix_pos[action] if reward > 0 else self.posterior * self.emission_matrix_neg[action]
+        likelihood = self._reward_likelihood_per_high_arm(action, reward)  # mathematically: L(h) = P(reward | H_t = h)
+        self.posterior *= likelihood  # mathematically: P(H_t = h | reward) ∝ P(reward | H_t = h) * P(H_t = h)
         self.posterior = self.posterior / np.sum(self.posterior)
 
-        # update the transition matrix
+        # update the posterior based on the transition probabilities
         self.posterior = np.dot(self.posterior, self.transition_matrix)
 
 
-class POMDPAgent:
+class HSMMAgent:
     """Bayesian filtering agent for a 3-arm switching task with a semi-Markov dwell time.
 
     Latent state: (H_t, tau_t)
@@ -828,6 +843,19 @@ class POMDPAgent:
         self.reset()
 
     def reset(self):
+        """
+        Reset the posterior to the prior distribution.
+
+        Sets `posterior_full` as a matrix of shape (n_arms, max_tau) with uniform mass 
+        over tau in [dwell_min, dwell_max] for each arm, and `posterior` as the marginal over arms (1/n_arms for each arm)?.
+
+        mathematically, the prior_full is:
+        P(H_0 = h, tau_0 = tau) = 1/n_arms * 1/(dwell_max - dwell_min + 1) for tau in [dwell_min, dwell_max], and 0 otherwise.
+
+        The prior is:   
+        P(H_0 = h) = 1/n_arms for each arm h.
+        """
+
         # Prior: unknown HIGH arm; assume we start at the beginning of a block
         # (i.e., tau is drawn uniformly from [dwell_min, dwell_max]).
         self.posterior_full.fill(0.0)
@@ -837,7 +865,11 @@ class POMDPAgent:
         self.posterior = self.posterior_full.sum(axis=1)
 
     def _reward_likelihood_per_high_arm(self, action: int, reward: float) -> np.ndarray:
-        # Returns a length-n_arms vector L[h] = P(reward | HIGH arm = h).
+        """
+        Returns a length-n_arms vector L[h] = P(reward | HIGH arm = h).
+
+        E.g. if rewarded and action == arm 0, then returns [.7, .25, .25]. If not rewarded and action == arm 0, then returns [.3, .75, .75], etc.
+        """
         high_probs = np.full(self.n_arms, self.p_low, dtype=np.float32)
         high_probs[action] = self.p_high
 
@@ -846,7 +878,7 @@ class POMDPAgent:
         return 1.0 - high_probs
 
     def get_action_probas(self) -> np.ndarray:
-        """Softmax over the marginal posterior P(H_t = a)."""
+        """Its a simple softmax over the marginal posterior P(H_t = a)."""
         logits = self.beta * self.posterior
         logits = logits - np.max(logits)  # numerical stability
         exp_logits = np.exp(logits)
@@ -859,20 +891,25 @@ class POMDPAgent:
         return probas
 
     def act(self) -> int:
+        """
+        Picks a random action probabilistically.
+        """
         prob_a = self.get_action_probas()
         return int(np.random.choice(self.n_arms, p=prob_a))
 
     def update_values(self, action: int, reward: float):
         """Bayesian filter update for the semi-Markov latent state."""
         # 1) Observation update: multiply by likelihood of reward given HIGH identity.
-        likelihood_h = self._reward_likelihood_per_high_arm(action, reward)
-        self.posterior_full *= likelihood_h[:, None]
-        s = float(self.posterior_full.sum())
+        likelihood_h = self._reward_likelihood_per_high_arm(action, reward)  # mathematically: L(h) = P(reward | H_t = h)
+        self.posterior_full *= likelihood_h[:, None]  # multiply each row h by L(h)
+        s = float(self.posterior_full.sum())  # get normalizing constant
         if s <= 0.0 or not np.isfinite(s):
             # Fallback to prior if something went numerically wrong.
             self.reset()
+            # print warning here if desired
+            warnings.warn("Posterior collapsed to zero or non-finite value; resetting to prior.")
             return
-        self.posterior_full /= s
+        self.posterior_full /= s  # normalize to get posterior after observation update
 
         # 2) Time update: propagate tau countdown; when tau=1, switch HIGH arm and resample tau.
         new_posterior = np.zeros_like(self.posterior_full)
@@ -881,14 +918,14 @@ class POMDPAgent:
         # tau index i corresponds to tau=i+1, so shift mass left by 1.
         new_posterior[:, : self._max_tau - 1] += self.posterior_full[:, 1:]
 
-        # Switch when tau=1: distribute mass to other arms and tau' in [dwell_min, dwell_max].
+        # Switch when tau=1: distribute mass to OTHER arms and tau' in [dwell_min, dwell_max].
         switch_mass_by_h = self.posterior_full[:, 0]
         n_other = self.n_arms - 1
         n_dwell = self.dwell_max - self.dwell_min + 1
         tau_slice = slice(self.dwell_min - 1, self.dwell_max)
 
         for h in range(self.n_arms):
-            m = float(switch_mass_by_h[h])
+            m = float(switch_mass_by_h[h])  # mass to switch from arm h to other arms
             if m <= 0.0:
                 continue
             per_other_arm = m / n_other
@@ -898,10 +935,13 @@ class POMDPAgent:
                     continue
                 new_posterior[h2, tau_slice] += per_state
 
-        # Normalize (should already sum to 1; normalize for numerical drift).
+        # Normalize (should already sum to 1; normalize for numerical drift) and update marginal posterior over arms.
         total = float(new_posterior.sum())
         if total <= 0.0 or not np.isfinite(total):
             self.reset()
+            warnings.warn("Posterior collapsed to zero or non-finite value; resetting to prior.")
             return
         self.posterior_full = new_posterior / total
         self.posterior = self.posterior_full.sum(axis=1)
+
+

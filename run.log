@@ -1,4 +1,0 @@
-nohup: ignoring input
-/home/uzsombi/.config/matplotlib is not a writable directory
-Matplotlib created a temporary cache directory at /tmp/matplotlib-9us3sut4 because there was an issue with the default path (/home/uzsombi/.config/matplotlib); it is highly recommended to set the MPLCONFIGDIR environment variable to a writable directory, in particular to speed up the import of Matplotlib and to better support multiprocessing.
-[Model recovery] Running 2 simulations on 24 CPUs

@@ -143,8 +143,8 @@ def value_gradient(n=256):
 
 
 # Optimal parameters for the models
-MODEL_PARAMS = {'ka': {'alpha': 0.40963354578309075, 'V0': 0.11827469139505799, 'beta': 10.638021927670694},
-                'po': {'alpha': 0.3037981353357479, 'V0': 0.18398040544466904, 'beta': 6.973374756267803},
+MODEL_PARAMS = {'ka': {'alpha': 0.4399688616529013, 'beta': 10.947857855753064, 'V0': 0.1101034700853094},
+                'po': {'alpha': 0.2939871612815566, 'V0': 0.188963054010299, 'beta': 6.991814895352238},
                 'yu_sham': {'alpha': 0.4513693025955279, 'V0': 0.16954116683423484, 'beta': 7.678119299510347},
                 'yu_DCZ': {'alpha': 0.4942628307389808, 'V0': 0.1283662338249597, 'beta': 6.46241106842488}}
 MODEL_PARAMS['ka_simulation'] = MODEL_PARAMS['ka']
@@ -152,10 +152,13 @@ MODEL_PARAMS['po_simulation'] = MODEL_PARAMS['po']
 MODEL_PARAMS['yu_sham_simulation'] = MODEL_PARAMS['yu_sham']
 MODEL_PARAMS['yu_DCZ_simulation'] = MODEL_PARAMS['yu_DCZ']
 
-MODEL_PARAMS_RL = {'ka': {'alpha': 0.12667346795497197, 'beta': 8.706042488026716},
-                   'po': {'alpha': 0.14989319361701048, 'beta': 4.613720171756842},
+MODEL_PARAMS_RL = {'ka': {'alpha': 0.2557966140904587, 'beta': 5.695485163491024},
+                   'po': {'alpha': 0.3365096031268446, 'beta': 2.5702662331523163},
                    'yu_sham': {'alpha': 0.20112907842232014, 'beta': 5.335652953142322},
                    'yu_DCZ': {'alpha': 0.20897838964272342, 'beta': 4.78188888988298}}
+
+MODEL_PARAMS_sRL = {'ka': {'alpha': 0.2557966140904587, 'beta': 5.695485163491024, 'stickiness_bias': 3.0152515766944674},
+                    'po': {'alpha': 0.3365096031268446 , 'beta': 2.5702662331523163, 'stickiness_bias': 1.8821742282319205}}
 
 # Cage plotting things
 coord_chars = [chr(i) for i in range(97, 97+19)]

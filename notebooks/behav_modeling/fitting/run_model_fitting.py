@@ -114,7 +114,7 @@ ANALYSIS_PARAMETERS = {
     "CV_splits": None,
 }
 
-floc = os.path.join(PROJECT_PATH_LOCAL, 'notebooks', 'behav_modeling', 'results', 'fitting_first15') # TODO 
+floc = os.path.join(PROJECT_PATH_LOCAL, 'notebooks', 'behav_modeling', 'results', 'fitting_first10') # TODO 
 
 fit_params = {
     "epsilon": Real(0.01, 0.6, name="epsilon"),
@@ -232,7 +232,7 @@ def _run_model_fitting(model_name, behav_monkey, env):
         env,
         behav_monkey,
         fixed_params,
-        fit_on_first_15=True,  # TODO change back to False to fit on all trials
+        fit_on_first_10=True,  # TODO change back to False to fit on all trials
         CV_splits=ANALYSIS_PARAMETERS["CV_splits"],
         make_plots=ANALYSIS_PARAMETERS["make_plots"],
         n_calls=ANALYSIS_PARAMETERS["n_calls"],

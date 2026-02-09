@@ -174,7 +174,8 @@ def simulate_agent(
         env=None,
         fixed_params=None,
         behavioral_variables=[],
-        n_trials=None):
+        n_trials=None,
+        verbose=False):
     """
     Simulate an agent in an environment for a number of episodes and return the behavior.
     """
@@ -202,6 +203,7 @@ def simulate_agent(
     done = False
 
     # play one episode
+    i = 0
     while not done:
         action = agent.act()
         _, reward, _, done, info = env.step(action)
@@ -210,6 +212,10 @@ def simulate_agent(
 
         # update the agent
         agent.update_values(action, reward)
+
+        if verbose and i%100==0:
+            print("Simulated {i} trials")
+        i += 1
 
     # convert the behavior to a pandas DataFrame
     return recording.get_recording()
@@ -232,11 +238,11 @@ def fit_agent(agent_class, param_space, env, behav_data=None, fixed_params=None,
             # Run simulation and get log likelihood
             ll = estimate_ll(agent_class, params, behav_data, fixed_params, return_with_behav=False)
             return -ll
-        elif fit_on == 'll_first15':
+        elif fit_on == 'll_first10':
             # Run simulation and get log likelihood
             ll_all = estimate_ll(agent_class, params, behav_data, fixed_params, return_with_behav=True)
-            ll_first15 = ll_all.groupby(['session', 'block_id']).head(15)['logp_action'].sum()
-            return -ll_first15
+            ll_first10 = ll_all.groupby(['session', 'block_id']).head(10)['logp_action'].sum()
+            return -ll_first10
         elif fit_on == 'rr':
             # Run simulation and get reward rate
             rr = estimate_rr(agent_class, params, env, fixed_params)
@@ -277,11 +283,11 @@ def fit_agent(agent_class, param_space, env, behav_data=None, fixed_params=None,
         plt.tight_layout()
     
     # Compute additional metrics (LPT)
-    if fit_on == 'll' or fit_on == 'll_first15':
+    if fit_on == 'll' or fit_on == 'll_first10':
         # Calculate BIC and log likelihood per trial
         best_ll = -result.fun  # Convert back to positive log likelihood
         n_params = len(param_space)
-        n_trials = len(behav_data) if fit_on == 'll' else len(behav_data.groupby(['session', 'block_id']).head(15))
+        n_trials = len(behav_data) if fit_on == 'll' else len(behav_data.groupby(['session', 'block_id']).head(10))
         bic = -2 * best_ll + n_params * np.log(n_trials)
         lpt = np.exp(best_ll / n_trials)
 
@@ -468,7 +474,7 @@ def fit_simulate(
     behav,
     fixed_params=None,
     CV_splits=None,
-    fit_on_first_15=False,
+    fit_on_first_10=False,
     n_calls=50,
     n_initial_points=10,
     n_jobs=-1,
@@ -485,7 +491,7 @@ def fit_simulate(
     res = {}
 
     #### Fit the model ####
-    if not fit_on_first_15:
+    if not fit_on_first_10:
         results = fit_agent(
             agent_class=agent_class,
             param_space=param_space,
@@ -504,7 +510,7 @@ def fit_simulate(
             agent_class=agent_class,
             param_space=param_space,
             fixed_params=fixed_params,
-            fit_on='ll_first15',
+            fit_on='ll_first10',
             env=env,
             behav_data=behav,
             n_calls=n_calls,
