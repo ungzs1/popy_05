@@ -114,7 +114,7 @@ ANALYSIS_PARAMETERS = {
     "CV_splits": None,
 }
 
-floc = os.path.join(PROJECT_PATH_LOCAL, 'notebooks', 'behav_modeling', 'results', 'fitting_first10') # TODO 
+floc = os.path.join(PROJECT_PATH_LOCAL, 'notebooks', 'behav_modeling', 'results', 'fitting_xxx') # TODO 
 
 fit_params = {
     "epsilon": Real(0.01, 0.6, name="epsilon"),
@@ -213,6 +213,26 @@ MODELS = {
         "fixed_params": {},
         "free_params": ["alpha", "beta", "V0", "alpha_threshold"],
     },
+
+    "HSMMAgent": {
+        "agent_class": HSMMAgent,
+        "fixed_params": {},
+        "free_params": ["beta"],
+    },
+}
+
+MODELS = {  # TODO
+    "Standard RL - stickiness": {
+        "agent_class": QLearner,
+        "fixed_params": {"structure_aware": False},
+        "free_params": ["alpha", "beta", "stickiness_bias"],
+    },
+
+    "HSMMAgent": {
+        "agent_class": HSMMAgent,
+        "fixed_params": {},
+        "free_params": ["beta"],
+    },
 }
 
 
@@ -232,7 +252,7 @@ def _run_model_fitting(model_name, behav_monkey, env):
         env,
         behav_monkey,
         fixed_params,
-        fit_on_first_10=True,  # TODO change back to False to fit on all trials
+        fit_on_first_10=False,
         CV_splits=ANALYSIS_PARAMETERS["CV_splits"],
         make_plots=ANALYSIS_PARAMETERS["make_plots"],
         n_calls=ANALYSIS_PARAMETERS["n_calls"],
