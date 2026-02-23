@@ -1,0 +1,31 @@
+2026-02-19 14:40:13,989 - INFO - PARAMS:
+2026-02-19 14:40:13,990 - INFO - time_of_interest: [1.5, 3.5]
+2026-02-19 14:40:13,990 - INFO - floc: /workspace/uzsombi/inserm/PoPy/notebooks/population_decoding/neural_value/results/across_target_before_fb
+2026-02-19 14:40:13,990 - INFO - Started at 2026-02-19 14:40:13
+2026-02-19 14:41:34,644 - INFO - Finished for monkey ka and session 230720
+2026-02-19 14:42:31,423 - INFO - Finished for monkey ka and session 300720
+2026-02-19 14:42:32,540 - INFO - Finished for monkey ka and session 170920
+2026-02-19 14:43:43,975 - INFO - Finished for monkey ka and session 011020
+2026-02-19 14:43:50,264 - INFO - Finished for monkey ka and session 230520
+2026-02-19 14:43:53,946 - INFO - Finished for monkey ka and session 190620
+2026-02-19 14:44:09,753 - INFO - Finished for monkey ka and session 200820
+2026-02-19 14:44:15,983 - INFO - Finished for monkey ka and session 240820
+2026-02-19 14:44:27,634 - INFO - Finished for monkey ka and session 050620
+2026-02-19 14:44:28,251 - INFO - Finished for monkey ka and session 160620
+2026-02-19 14:44:40,599 - INFO - Finished for monkey ka and session 270720
+2026-02-19 14:44:42,276 - INFO - Finished for monkey ka and session 100820
+2026-02-19 14:44:45,543 - INFO - Finished for monkey ka and session 310820
+2026-02-19 14:44:45,545 - ERROR - Error occurred for arguments ('ka', '050820'): matmul: Input operand 1 does not have enough dimensions (has 0, gufunc core with signature (n?,k),(k,m?)->(n?,m?) requires 1)
+2026-02-19 14:44:57,586 - INFO - Finished for monkey ka and session 281020
+2026-02-19 14:45:01,528 - INFO - Finished for monkey ka and session 080620
+2026-02-19 14:45:07,131 - INFO - Finished for monkey ka and session 081020
+2026-02-19 14:45:07,490 - INFO - Finished for monkey ka and session 120820
+2026-02-19 14:45:08,027 - INFO - Finished for monkey ka and session 100920
+2026-02-19 14:45:26,176 - INFO - Finished for monkey ka and session 100620
+2026-02-19 14:45:29,726 - INFO - Finished for monkey ka and session 150720
+2026-02-19 14:45:34,613 - INFO - Finished for monkey ka and session 090720
+2026-02-19 14:45:46,963 - INFO - Finished for monkey ka and session 170720
+2026-02-19 14:45:54,046 - INFO - Finished for monkey ka and session 101220
+2026-02-19 14:46:02,318 - INFO - Finished for monkey ka and session 010720
+2026-02-19 14:46:04,250 - INFO - Finished for monkey ka and session 221020
+2026-02-19 14:47:07,338 - INFO - Finished for monkey ka and session 180221

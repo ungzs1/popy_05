@@ -67,7 +67,7 @@ def _get_grid_location(monkey, session, area):
 
     if pd.isna(position):
         print(f"No position information for recording: monkey {monkey}, session {session}, area {area}")
-        return np.nan
+        return (np.nan, np.nan)
 
     decode_first_pos = {'a': -9, 'b': -8, 'c': -7, 'd': -6, 'e': -5, 'f': -4, 'g': -3, 'h': -2, 'i': -1, 'j': 0, 'k': 1, 'l': 2, 'm': 3, 'n': 4, 'o': 5, 'p': 6, 'q': 7, 'r': 8, 's': 9}
     decode_second_pos = {'a': 9, 'b': 8, 'c': 7, 'd': 6, 'e': 5, 'f': 4, 'g': 3, 'h': 2, 'i': 1, 'j': 0, 'k': -1, 'l': -2, 'm': -3, 'n': -4, 'o': -5, 'p': -6, 'q': -7, 'r': -8, 's': -9}

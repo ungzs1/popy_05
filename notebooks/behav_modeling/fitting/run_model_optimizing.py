@@ -1,4 +1,3 @@
-
 # @title Imports
 import os
 
@@ -109,13 +108,11 @@ MODELS = {
         "fixed_params": {},
         "free_params": ["epsilon"],
     },
-
     "WSLS": {
         "agent_class": WSLSAgent,
         "fixed_params": {},
         "free_params": ["epsilon"],
     },
-
     "Standard RL": {
         "agent_class": QLearner,
         "fixed_params": {"structure_aware": False},
@@ -134,15 +131,20 @@ MODELS = {
     "Standard RL - stickiness + forgetting": {
         "agent_class": QLearner,
         "fixed_params": {"structure_aware": False},
-        "free_params": ["alpha", "beta", "forgetting_rate", "forgetting_threshold", "stickiness_bias"],
+        "free_params": [
+            "alpha",
+            "beta",
+            "forgetting_rate",
+            "forgetting_threshold",
+            "stickiness_bias",
+        ],
     },
-
     "Inferential RL": {
         "agent_class": QLearner,
         "fixed_params": {"structure_aware": True},
         "free_params": ["alpha", "beta"],
     },
-    "Inferential RL - stickiness": {    
+    "Inferential RL - stickiness": {
         "agent_class": QLearner,
         "fixed_params": {"structure_aware": True},
         "free_params": ["alpha", "beta", "stickiness_bias"],
@@ -157,7 +159,6 @@ MODELS = {
         "fixed_params": {"structure_aware": True},
         "free_params": ["alpha", "alpha_unchosen", "beta", "stickiness_bias"],
     },
-
     "Foraging - no reset": {
         "agent_class": ForagingAgent,
         "fixed_params": {"reset_on_switch": False},
@@ -171,17 +172,29 @@ MODELS = {
     "Foraging - abandoned bias": {
         "agent_class": ForagingAgent,
         "fixed_params": {"reset_on_switch": True},
-        "free_params": ["alpha", "beta",  "V0", "abandoned_bias", "abandoned_decay"],
+        "free_params": ["alpha", "beta", "V0", "abandoned_bias", "abandoned_decay"],
     },
     "Foraging - abandoned bias + spatial bias": {
         "agent_class": ForagingAgent,
         "fixed_params": {"reset_on_switch": False},
-        "free_params": ["alpha", "beta",  "V0", "abandoned_bias", "abandoned_decay", "b2_bias"],
+        "free_params": [
+            "alpha",
+            "beta",
+            "V0",
+            "abandoned_bias",
+            "abandoned_decay",
+            "b2_bias",
+        ],
     },
     "Foraging - adaptive threshold": {
         "agent_class": ForagingAgentAdaptive,
         "fixed_params": {},
         "free_params": ["alpha", "beta", "V0", "alpha_threshold"],
+    },
+    "HSMM": {
+        "agent_class": HSMMAgent,
+        "fixed_params": {},
+        "free_params": ["beta"],
     },
 }
 
@@ -263,8 +276,3 @@ if __name__ == '__main__':
     # Save results
     save_res_and_behav(results, behaviors_simulated, floc)
     print('Optimization completed and results saved')
-
-
-
-
-

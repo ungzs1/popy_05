@@ -81,6 +81,7 @@ COLORS = {
     'Inferential RL': '#edaf40ff',
     'WSLS': "#9e9e9e",
     'Bayesian': "#a86514ff",
+    'HSMM': "#000000ff",
     'none': '#cccccc',
     'PROBLEM': '#cccccc'
     }

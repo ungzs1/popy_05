@@ -5,6 +5,12 @@
 # ---
 # # Setup
 
+""" Run code in the background:
+nohup /home/uzsombi/miniconda3/envs/popy_local/bin/python -u /workspace/uzsombi/inserm/PoPy/notebooks/behav_modeling/fitting/run_model_fitting.py > /workspace/uzsombi/inserm/PoPy/logs/run_model_fitting_$(date +%F_%H%M%S).log 2>&1 & echo $! > /workspace/uzsombi/inserm/PoPy/logs/run_model_fitting.pid
+
+pkill -f "run_model_fitting.py"
+"""
+
 # @title Imports
 import os
 
@@ -107,14 +113,14 @@ def save_res_and_behav(results, behaviors_simulated, monkey, floc):
 ANALYSIS_PARAMETERS = {
     "n_calls": 350,
     "n_initial_points": 100,
-    "n_cpus": max(1, os.cpu_count() - 2),  
+    "n_cpus": max(1, os.cpu_count() - 1),  
+    "CV_splits": True,
     "n_jobs": 1,                                                   
     "verbose": False,
     "make_plots": False,
-    "CV_splits": None,
 }
 
-floc = os.path.join(PROJECT_PATH_LOCAL, 'notebooks', 'behav_modeling', 'results', 'fitting_xxx') # TODO 
+floc = os.path.join(PROJECT_PATH_LOCAL, 'notebooks', 'behav_modeling', 'results', 'fitting')
 
 fit_params = {
     "epsilon": Real(0.01, 0.6, name="epsilon"),
@@ -214,21 +220,7 @@ MODELS = {
         "free_params": ["alpha", "beta", "V0", "alpha_threshold"],
     },
 
-    "HSMMAgent": {
-        "agent_class": HSMMAgent,
-        "fixed_params": {},
-        "free_params": ["beta"],
-    },
-}
-
-MODELS = {  # TODO
-    "Standard RL - stickiness": {
-        "agent_class": QLearner,
-        "fixed_params": {"structure_aware": False},
-        "free_params": ["alpha", "beta", "stickiness_bias"],
-    },
-
-    "HSMMAgent": {
+    "HSMM": {
         "agent_class": HSMMAgent,
         "fixed_params": {},
         "free_params": ["beta"],

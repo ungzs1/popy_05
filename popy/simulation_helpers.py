@@ -224,13 +224,25 @@ def simulate_agent(
 ### Functions for fitting agents and cross-validation ###
 
 
-def fit_agent(agent_class, param_space, env, behav_data=None, fixed_params=None, fit_on='ll', n_calls=50, n_initial_points=10, n_jobs=-1, verbose=False, make_plots=True):
+def fit_agent(
+    agent_class,
+    param_space,
+    env,
+    behav_data=None,
+    fixed_params=None,
+    fit_on="ll",
+    n_calls=50,
+    n_initial_points=10,
+    n_jobs=-1,
+    verbose=False,
+    make_plots=False,
+):
     """
     Fit an agent model to behavioral data using Bayesian optimization.
     """
     if fixed_params is None:
         fixed_params = {}
-        
+
     # Define the objective function with dynamic parameter handling
     @use_named_args(param_space)
     def objective(**params):
@@ -264,24 +276,24 @@ def fit_agent(agent_class, param_space, env, behav_data=None, fixed_params=None,
     # Extract best parameters
     param_names = [p.name for p in param_space]
     best_params = dict(zip(param_names, result.x))
-        
+
     # Create plots
     if make_plots:
         fig, axes = plt.subplots(1, 2, figsize=(10, 4))
-        
+
         # Plot convergence
         plot_convergence(result, ax=axes[0])
         axes[0].set_title("Convergence Plot")
-        
+
         # Plot parameter importance if there's more than one parameter
         if len(param_space) > 1:
             plot_objective(result, dimensions=param_names, ax=axes[1])
         else:
             plot_objective(result, ax=axes[1])
         axes[1].set_title("Parameter Importance")
-        
+
         plt.tight_layout()
-    
+
     # Compute additional metrics (LPT)
     if fit_on == 'll' or fit_on == 'll_first10':
         # Calculate BIC and log likelihood per trial
@@ -421,47 +433,65 @@ def fit_agent_strict(agent_class, param_space, env, behav_data=None, fixed_param
         }
 
 
-def cross_val_fit(agent_class, param_space, env, behav_data, fixed_params=None, CV_splits=5, n_calls=50, n_initial_points=10, n_jobs=-1, strict=None):
+def cross_val_fit(
+    agent_class,
+    param_space,
+    env,
+    behav_data,
+    fixed_params=None,
+    n_calls=50,
+    n_initial_points=10,
+    n_jobs=-1,
+):
     """
     Fit an agent model to behavioral data using Bayesian optimization with cross-validation.
+
+    CV is 10 fold over the sessions.
     """
-    # Split data
-    n_trials = len(behav_data)
-    n_trials_per_split = n_trials // CV_splits
-    split_indices = np.array_split(np.arange(n_trials), CV_splits)
+    # Split data (10 fold split of session ids)
+    sessions = behav_data['session'].unique()
+    np.random.shuffle(sessions)  # Add this line to randomize
+    CV_splits = 10
+    split_sessions = np.array_split(sessions, CV_splits)
 
     # Fit model on each split
-    results = []
-    for i, split_idx in enumerate(split_indices):
+    res = {"LL": [], "BIC": [], "LPT": []}
+
+    for i, test_sessions in enumerate(split_sessions):
         # Get training and test data
-        train_idx = np.concatenate([split_indices[j] for j in range(CV_splits) if j != i])
-        train_data = behav_data.iloc[train_idx]
-        test_data = behav_data.iloc[split_idx]
+        train_data = behav_data[~behav_data['session'].isin(test_sessions)]
+        test_data = behav_data[behav_data['session'].isin(test_sessions)]
 
         # Fit model
-
-        if not strict:
-            result_temp = fit_agent(agent_class, param_space, env, train_data, fixed_params, n_calls=n_calls, n_initial_points=n_initial_points, n_jobs=n_jobs, verbose=False, make_plots=False)
-        else:
-            result_temp = fit_agent_strict(agent_class, param_space, env, behav_data=train_data, fixed_params=fixed_params, fit_on='ll',
-                        method='L-BFGS-B', n_restarts=n_initial_points, verbose=False)
+        result_temp = fit_agent(
+            agent_class=agent_class,
+            param_space=param_space,
+            fixed_params=fixed_params,
+            fit_on="ll",
+            env=env,
+            behav_data=train_data,
+            n_calls=n_calls,
+            n_initial_points=n_initial_points,
+            n_jobs=n_jobs,
+        )
 
         # Evaluate model on test data
         ll = estimate_ll(agent_class, result_temp['best_params'], test_data, fixed_params=fixed_params)
 
         #### Save results
-        res = {
-            #'Model': model_name,
-            #'Model family': 'Baseline',
-            'CV_fold': i,
-            'LL': ll,
-            'BIC': -2 * ll + len(param_space) * np.log(len(test_data)),
-            'LPT': np.exp(ll / len(test_data)),
-        }
-        res = {**res, **result_temp['best_params']}  # Add best parameters to results
-        results.append(res)
+        res['LL'].append(ll)
+        res['BIC'].append(-2 * ll + len(param_space) * np.log(len(test_data)))
+        res['LPT'].append(np.exp(ll / len(test_data)))
 
-    return pd.DataFrame(results)
+    # take mean and std of results across splits
+    res_summary = {}
+    for key in res.keys():
+        res_summary[key] = {
+            'mean': np.mean(res[key]),
+            'std': np.std(res[key])
+        }
+
+    return res_summary
 
 
 ### Main function for all analysis of model fitting in once ###
@@ -473,7 +503,7 @@ def fit_simulate(
     env,
     behav,
     fixed_params=None,
-    CV_splits=None,
+    CV_splits=False,
     fit_on_first_10=False,
     n_calls=50,
     n_initial_points=10,
@@ -481,16 +511,34 @@ def fit_simulate(
     verbose=False,
     make_plots=False,
 ):
-    if CV_splits is not None:
-        raise NotImplementedError("Cross-validation is not implemented anymore in fit_simulate.")
     """
     Fit an agent model to behavioral data and simulate the agent to get reward rate and probability of choosing best arm.
     """
 
-    # collect results
+    # container for the results
     res = {}
 
-    #### Fit the model ####
+    #### Fit the model (CV) for performance ####
+    if CV_splits:
+        CV_scores = cross_val_fit(
+            agent_class=agent_class,
+            param_space=param_space,
+            fixed_params=fixed_params,
+            env=env,
+            behav_data=behav,
+            n_calls=n_calls,
+            n_initial_points=n_initial_points,
+            n_jobs=n_jobs,
+        )
+
+        res['LL_CV'] = CV_scores['LL']['mean']
+        res['LL_std'] = CV_scores['LL']['std']
+        res['BIC_CV'] = CV_scores['BIC']['mean']
+        res['BIC_std'] = CV_scores['BIC']['std']
+        res['LPT_CV'] = CV_scores['LPT']['mean']
+        res['LPT_std'] = CV_scores['LPT']['std']
+
+    #### Fit the model on full data for parameters ####
     if not fit_on_first_10:
         results = fit_agent(
             agent_class=agent_class,
@@ -519,35 +567,13 @@ def fit_simulate(
             verbose=verbose,
             make_plots=make_plots,
         )
+    
+    # collect results
     res = {**res, **results['best_params']}  # Add best parameters to results
 
     res['LL_best'] = results['best_ll']
     res['BIC_best'] = results['bic']
     res['LPT_best'] = results['lpt']
-
-    #### Cross-validate the model ####
-
-    # run cross validation
-    """if CV_splits is not None:
-        CV_scores = cross_val_fit(
-            agent_class=agent_class,
-            param_space=param_space,
-            fixed_params=fixed_params,
-            env=env,
-            behav_data=behav,
-            CV_splits=CV_splits,
-            n_calls=n_calls,
-            n_initial_points=n_initial_points,
-            n_jobs=n_jobs,
-            strict=strict
-        )
-
-        res['LL_CV'] = CV_scores['LL'].mean()
-        res['LL_std'] = CV_scores['LL'].std()
-        res['BIC_CV'] = CV_scores['BIC'].mean()
-        res['BIC_std'] = CV_scores['BIC'].std()
-        res['LPT_CV'] = CV_scores['LPT'].mean()
-        res['LPT_std'] = CV_scores['LPT'].std()"""
 
     #### Simulate agent ####
 
