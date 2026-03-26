@@ -1,31 +1,488 @@
-2026-02-19 14:40:13,989 - INFO - PARAMS:
-2026-02-19 14:40:13,990 - INFO - time_of_interest: [1.5, 3.5]
-2026-02-19 14:40:13,990 - INFO - floc: /workspace/uzsombi/inserm/PoPy/notebooks/population_decoding/neural_value/results/across_target_before_fb
-2026-02-19 14:40:13,990 - INFO - Started at 2026-02-19 14:40:13
-2026-02-19 14:41:34,644 - INFO - Finished for monkey ka and session 230720
-2026-02-19 14:42:31,423 - INFO - Finished for monkey ka and session 300720
-2026-02-19 14:42:32,540 - INFO - Finished for monkey ka and session 170920
-2026-02-19 14:43:43,975 - INFO - Finished for monkey ka and session 011020
-2026-02-19 14:43:50,264 - INFO - Finished for monkey ka and session 230520
-2026-02-19 14:43:53,946 - INFO - Finished for monkey ka and session 190620
-2026-02-19 14:44:09,753 - INFO - Finished for monkey ka and session 200820
-2026-02-19 14:44:15,983 - INFO - Finished for monkey ka and session 240820
-2026-02-19 14:44:27,634 - INFO - Finished for monkey ka and session 050620
-2026-02-19 14:44:28,251 - INFO - Finished for monkey ka and session 160620
-2026-02-19 14:44:40,599 - INFO - Finished for monkey ka and session 270720
-2026-02-19 14:44:42,276 - INFO - Finished for monkey ka and session 100820
-2026-02-19 14:44:45,543 - INFO - Finished for monkey ka and session 310820
-2026-02-19 14:44:45,545 - ERROR - Error occurred for arguments ('ka', '050820'): matmul: Input operand 1 does not have enough dimensions (has 0, gufunc core with signature (n?,k),(k,m?)->(n?,m?) requires 1)
-2026-02-19 14:44:57,586 - INFO - Finished for monkey ka and session 281020
-2026-02-19 14:45:01,528 - INFO - Finished for monkey ka and session 080620
-2026-02-19 14:45:07,131 - INFO - Finished for monkey ka and session 081020
-2026-02-19 14:45:07,490 - INFO - Finished for monkey ka and session 120820
-2026-02-19 14:45:08,027 - INFO - Finished for monkey ka and session 100920
-2026-02-19 14:45:26,176 - INFO - Finished for monkey ka and session 100620
-2026-02-19 14:45:29,726 - INFO - Finished for monkey ka and session 150720
-2026-02-19 14:45:34,613 - INFO - Finished for monkey ka and session 090720
-2026-02-19 14:45:46,963 - INFO - Finished for monkey ka and session 170720
-2026-02-19 14:45:54,046 - INFO - Finished for monkey ka and session 101220
-2026-02-19 14:46:02,318 - INFO - Finished for monkey ka and session 010720
-2026-02-19 14:46:04,250 - INFO - Finished for monkey ka and session 221020
-2026-02-19 14:47:07,338 - INFO - Finished for monkey ka and session 180221
+2026-02-23 16:24:41,254 - INFO - PARAMS:
+2026-02-23 16:24:41,254 - INFO - time_of_interest: [1.5, 3.5]
+2026-02-23 16:24:41,254 - INFO - floc: /workspace/uzsombi/inserm/PoPy/notebooks/population_decoding/neural_value/results/across_target_before_fb
+2026-02-23 16:24:41,254 - INFO - Started at 2026-02-23 16:24:41
+2026-02-23 16:41:33,375 - INFO - Finished for monkey ka and session 170920
+2026-02-23 17:00:01,304 - INFO - Finished for monkey ka and session 230720
+2026-02-23 17:00:53,154 - INFO - Finished for monkey ka and session 230520
+2026-02-23 17:06:33,662 - INFO - Finished for monkey ka and session 011020
+2026-02-23 17:06:46,643 - INFO - Finished for monkey ka and session 190620
+2026-02-23 17:07:52,906 - INFO - Finished for monkey ka and session 090720
+2026-02-23 17:08:47,437 - INFO - Finished for monkey ka and session 300720
+2026-02-23 17:17:39,856 - INFO - Finished for monkey ka and session 170720
+2026-02-23 17:20:18,294 - INFO - Finished for monkey ka and session 050620
+2026-02-23 17:25:54,687 - INFO - Finished for monkey ka and session 100620
+2026-02-23 17:26:06,547 - INFO - Finished for monkey ka and session 080620
+2026-02-23 17:26:06,733 - INFO - Finished for monkey ka and session 240820
+2026-02-23 17:28:07,919 - INFO - Finished for monkey ka and session 100920
+2026-02-23 17:30:13,468 - INFO - Finished for monkey ka and session 310820
+2026-02-23 17:32:12,398 - INFO - Finished for monkey ka and session 200820
+2026-02-23 17:32:39,778 - INFO - Finished for monkey ka and session 100820
+2026-02-23 17:36:08,947 - INFO - Finished for monkey ka and session 160620
+2026-02-23 17:36:36,656 - INFO - Finished for monkey ka and session 270720
+2026-02-23 17:38:06,524 - INFO - Finished for monkey ka and session 050820
+2026-02-23 17:38:59,756 - INFO - Finished for monkey ka and session 281020
+2026-02-23 17:40:05,894 - INFO - Finished for monkey ka and session 081020
+2026-02-23 17:43:33,094 - INFO - Finished for monkey ka and session 120820
+2026-02-23 17:43:34,494 - INFO - Finished for monkey ka and session 101220
+2026-02-23 17:46:12,173 - INFO - Finished for monkey ka and session 150720
+2026-02-23 17:51:41,835 - INFO - Finished for monkey ka and session 010720
+2026-02-23 17:55:26,432 - INFO - Finished for monkey ka and session 180221
+2026-02-23 18:04:52,600 - INFO - Finished for monkey ka and session 221020
+2026-02-23 18:06:25,868 - INFO - Finished for monkey ka and session 120821
+2026-02-23 18:13:37,823 - INFO - Finished for monkey ka and session 180121
+2026-02-23 18:14:03,012 - INFO - Finished for monkey ka and session 070322
+2026-02-23 18:14:24,551 - INFO - Finished for monkey ka and session 041220
+2026-02-23 18:24:22,847 - INFO - Finished for monkey ka and session 080622
+2026-02-23 18:30:20,070 - INFO - Finished for monkey ka and session 250121
+2026-02-23 18:31:46,132 - INFO - Finished for monkey ka and session 150221
+2026-02-23 18:35:32,323 - INFO - Finished for monkey ka and session 110321
+2026-02-23 18:36:52,981 - INFO - Finished for monkey ka and session 190821
+2026-02-23 18:44:03,143 - INFO - Finished for monkey ka and session 130622
+2026-02-23 18:45:58,080 - INFO - Finished for monkey ka and session 040321
+2026-02-23 18:46:14,140 - INFO - Finished for monkey ka and session 290921
+2026-02-23 18:48:03,024 - INFO - Finished for monkey ka and session 130422
+2026-02-23 18:49:34,757 - INFO - Finished for monkey ka and session 180321
+2026-02-23 18:53:10,132 - INFO - Finished for monkey ka and session 030522
+2026-02-23 18:54:40,340 - INFO - Finished for monkey ka and session 030322
+2026-02-23 18:55:52,459 - INFO - Finished for monkey ka and session 020622
+2026-02-23 18:56:12,807 - ERROR - Error occurred for arguments ('po', '080920'): This solver needs samples of at least 2 classes in the data, but the data contains only one class: 0.0
+2026-02-23 18:56:17,896 - INFO - Finished for monkey ka and session 210322
+2026-02-23 18:57:40,612 - INFO - Finished for monkey ka and session 050422
+2026-02-23 18:57:56,930 - ERROR - Error occurred for arguments ('po', '150920'): Found array with 0 feature(s) (shape=(662674, 0)) while a minimum of 1 is required by StandardScaler.
+2026-02-23 18:58:35,734 - INFO - Finished for monkey ka and session 280322
+2026-02-23 19:07:08,687 - INFO - Finished for monkey ka and session 200422
+2026-02-23 19:09:21,989 - INFO - Finished for monkey ka and session 250422
+2026-02-23 19:09:56,504 - INFO - Finished for monkey ka and session 150622
+2026-02-23 19:11:47,583 - ERROR - Error occurred for arguments ('po', '051020'): This solver needs samples of at least 2 classes in the data, but the data contains only one class: 0.0
+2026-02-23 19:13:28,686 - INFO - Finished for monkey po and session 070920
+2026-02-23 19:18:25,543 - INFO - Finished for monkey ka and session 200622
+2026-02-23 19:24:18,567 - INFO - Finished for monkey ka and session 230622
+2026-02-23 19:26:24,734 - INFO - Finished for monkey po and session 040920
+2026-02-23 19:26:45,682 - INFO - Finished for monkey po and session 021020
+2026-02-23 19:29:24,603 - INFO - Finished for monkey po and session 121020
+2026-02-23 19:29:26,115 - INFO - Finished for monkey ka and session 010922
+2026-02-23 19:30:16,956 - INFO - Finished for monkey po and session 110920
+2026-02-23 19:31:03,238 - INFO - Finished for monkey ka and session 280622
+2026-02-23 19:32:03,073 - INFO - Finished for monkey po and session 211020
+2026-02-23 19:32:10,562 - INFO - Finished for monkey po and session 180920
+2026-02-23 19:33:04,043 - INFO - Finished for monkey po and session 140920
+2026-02-23 19:36:15,177 - INFO - Finished for monkey ka and session 300622
+2026-02-23 19:37:21,223 - INFO - Finished for monkey ka and session 210722
+2026-02-23 19:39:36,846 - INFO - Finished for monkey po and session 210920
+2026-02-23 19:39:49,671 - INFO - Finished for monkey ka and session 010822
+2026-02-23 19:42:31,585 - INFO - Finished for monkey po and session 160920
+2026-02-23 19:43:42,744 - INFO - Finished for monkey ka and session 270722
+2026-02-23 19:48:45,943 - INFO - Finished for monkey po and session 090920
+2026-02-23 19:49:15,243 - INFO - Finished for monkey ka and session 070722
+2026-02-23 19:49:53,769 - INFO - Finished for monkey po and session 070121
+2026-02-23 19:51:50,419 - INFO - Finished for monkey po and session 141020
+2026-02-23 19:53:23,763 - INFO - Finished for monkey ka and session 300822
+2026-02-23 19:53:26,980 - ERROR - Error occurred for arguments ('po', '190721'): Found array with 0 feature(s) (shape=(159778, 0)) while a minimum of 1 is required by StandardScaler.
+2026-02-23 19:54:47,564 - INFO - Finished for monkey ka and session 060922
+2026-02-23 19:57:45,296 - INFO - Finished for monkey ka and session 080822
+2026-02-23 19:57:53,433 - INFO - Finished for monkey po and session 291020
+2026-02-23 20:03:05,984 - INFO - Finished for monkey po and session 031220
+2026-02-23 20:03:42,136 - INFO - Finished for monkey po and session 111220
+2026-02-23 20:04:55,499 - INFO - Finished for monkey po and session 011220
+2026-02-23 20:05:48,898 - ERROR - Error occurred for arguments ('po', '180322'): This solver needs samples of at least 2 classes in the data, but the data contains only one class: 0.0
+2026-02-23 20:07:03,243 - INFO - Finished for monkey po and session 190321
+2026-02-23 20:07:42,046 - INFO - Finished for monkey po and session 080321
+2026-02-23 20:07:44,254 - INFO - Finished for monkey po and session 071220
+2026-02-23 20:07:56,489 - ERROR - Error occurred for arguments ('po', '080422'): This solver needs samples of at least 2 classes in the data, but the data contains only one class: 0.0
+2026-02-23 20:09:48,275 - INFO - Finished for monkey po and session 120121
+2026-02-23 20:11:03,472 - ERROR - Error occurred for arguments ('po', '140622'): Found array with 0 sample(s) (shape=(0, 18)) while a minimum of 1 is required by LogisticRegression.
+2026-02-23 20:11:28,506 - INFO - Finished for monkey po and session 090421
+2026-02-23 20:20:31,009 - INFO - Finished for monkey po and session 270121
+2026-02-23 20:21:30,518 - INFO - Finished for monkey po and session 140121
+2026-02-23 20:22:04,755 - INFO - Finished for monkey po and session 280421
+2026-02-23 20:23:27,773 - INFO - Finished for monkey po and session 240321
+2026-02-23 20:24:13,054 - INFO - Finished for monkey po and session 220422
+2026-02-23 20:24:37,650 - INFO - Finished for monkey po and session 261020
+2026-02-23 20:33:00,172 - INFO - Finished for monkey po and session 190121
+2026-02-23 20:38:33,712 - INFO - Finished for monkey po and session 100321
+2026-02-23 20:39:39,169 - INFO - Finished for monkey po and session 140422
+2026-02-23 20:40:04,193 - INFO - Finished for monkey po and session 071021
+2026-02-23 20:41:13,227 - ERROR - Error occurred for arguments ('po', '210622'): conflicting sizes for dimension 'subspace': length 3 on the data but length 2 on coordinate 'subspace'
+2026-02-23 20:41:54,002 - INFO - Finished for monkey po and session 090322
+2026-02-23 20:47:32,871 - INFO - Finished for monkey po and session 090721
+2026-02-23 20:47:40,986 - INFO - Finished for monkey po and session 300421
+2026-02-23 20:47:54,261 - INFO - Finished for monkey po and session 280721
+2026-02-23 20:50:31,514 - INFO - Finished for monkey po and session 230421
+2026-02-23 20:52:51,729 - INFO - Finished for monkey po and session 040322
+2026-02-23 20:54:57,595 - INFO - Finished for monkey po and session 240921
+2026-02-23 20:56:01,325 - INFO - Finished for monkey po and session 050922
+2026-02-23 20:56:53,618 - INFO - Finished for monkey po and session 080722
+2026-02-23 20:58:23,493 - INFO - Finished for monkey po and session 300322
+2026-02-23 21:00:04,100 - INFO - Finished for monkey po and session 210422
+2026-02-23 21:02:36,469 - INFO - Finished for monkey po and session 090822
+2026-02-23 21:04:49,766 - INFO - Finished for monkey po and session 200722
+2026-02-23 21:08:03,295 - INFO - Finished for monkey po and session 310822
+2026-02-23 21:14:14,356 - INFO - Finished for monkey po and session 280722
+2026-02-23 21:14:14,444 - INFO - Finished at 2026-02-23 21:14:14
+2026-02-23 21:14:14,446 - INFO - PARAMS:
+2026-02-23 21:14:14,446 - INFO - time_of_interest: [-4, -2]
+2026-02-23 21:14:14,446 - INFO - floc: /workspace/uzsombi/inserm/PoPy/notebooks/population_decoding/neural_value/results/across_target_after_fb
+2026-02-23 21:14:14,446 - INFO - Started at 2026-02-23 21:14:14
+2026-02-23 21:15:27,172 - INFO - Finished for monkey ka and session 230720
+2026-02-23 21:16:16,261 - INFO - Finished for monkey ka and session 170920
+2026-02-23 21:16:20,796 - INFO - Finished for monkey ka and session 300720
+2026-02-23 21:17:24,205 - INFO - Finished for monkey ka and session 190620
+2026-02-23 21:17:25,361 - INFO - Finished for monkey ka and session 011020
+2026-02-23 21:17:46,242 - INFO - Finished for monkey ka and session 200820
+2026-02-23 21:17:52,878 - INFO - Finished for monkey ka and session 230520
+2026-02-23 21:17:54,256 - INFO - Finished for monkey ka and session 050620
+2026-02-23 21:18:05,627 - INFO - Finished for monkey ka and session 240820
+2026-02-23 21:18:12,815 - INFO - Finished for monkey ka and session 160620
+2026-02-23 21:18:19,939 - INFO - Finished for monkey ka and session 270720
+2026-02-23 21:18:26,421 - INFO - Finished for monkey ka and session 281020
+2026-02-23 21:18:29,025 - INFO - Finished for monkey ka and session 100820
+2026-02-23 21:18:29,812 - INFO - Finished for monkey ka and session 100920
+2026-02-23 21:18:41,700 - INFO - Finished for monkey ka and session 080620
+2026-02-23 21:18:45,440 - INFO - Finished for monkey ka and session 050820
+2026-02-23 21:18:47,904 - INFO - Finished for monkey ka and session 081020
+2026-02-23 21:18:49,279 - INFO - Finished for monkey ka and session 120820
+2026-02-23 21:18:51,923 - INFO - Finished for monkey ka and session 310820
+2026-02-23 21:18:59,523 - INFO - Finished for monkey ka and session 150720
+2026-02-23 21:19:12,536 - INFO - Finished for monkey ka and session 100620
+2026-02-23 21:19:18,775 - INFO - Finished for monkey ka and session 101220
+2026-02-23 21:19:22,006 - INFO - Finished for monkey ka and session 090720
+2026-02-23 21:19:24,972 - INFO - Finished for monkey ka and session 170720
+2026-02-23 21:19:37,552 - INFO - Finished for monkey ka and session 221020
+2026-02-23 21:19:45,083 - INFO - Finished for monkey ka and session 010720
+2026-02-23 21:20:27,650 - INFO - Finished for monkey ka and session 180221
+2026-02-23 21:20:51,833 - INFO - Finished for monkey ka and session 120821
+2026-02-23 21:21:21,729 - INFO - Finished for monkey ka and session 110321
+2026-02-23 21:21:22,612 - INFO - Finished for monkey ka and session 041220
+2026-02-23 21:22:03,939 - INFO - Finished for monkey ka and session 080622
+2026-02-23 21:22:07,018 - INFO - Finished for monkey ka and session 070322
+2026-02-23 21:22:28,946 - INFO - Finished for monkey ka and session 180121
+2026-02-23 21:22:32,636 - INFO - Finished for monkey ka and session 190821
+2026-02-23 21:22:37,720 - INFO - Finished for monkey ka and session 290921
+2026-02-23 21:22:40,501 - INFO - Finished for monkey ka and session 040321
+2026-02-23 21:23:10,002 - INFO - Finished for monkey ka and session 150221
+2026-02-23 21:23:27,705 - INFO - Finished for monkey ka and session 130422
+2026-02-23 21:23:29,348 - INFO - Finished for monkey ka and session 020622
+2026-02-23 21:23:38,791 - INFO - Finished for monkey ka and session 030522
+2026-02-23 21:23:46,819 - INFO - Finished for monkey ka and session 250121
+2026-02-23 21:23:59,860 - INFO - Finished for monkey ka and session 280322
+2026-02-23 21:24:05,621 - INFO - Finished for monkey ka and session 180321
+2026-02-23 21:24:22,692 - INFO - Finished for monkey ka and session 130622
+2026-02-23 21:24:34,816 - INFO - Finished for monkey ka and session 050422
+2026-02-23 21:24:39,212 - INFO - Finished for monkey ka and session 210322
+2026-02-23 21:24:45,189 - INFO - Finished for monkey ka and session 030322
+2026-02-23 21:24:51,161 - INFO - Finished for monkey ka and session 200422
+2026-02-23 21:24:55,510 - INFO - Finished for monkey ka and session 150622
+2026-02-23 21:25:08,644 - INFO - Finished for monkey ka and session 200622
+2026-02-23 21:25:17,045 - ERROR - Error occurred for arguments ('po', '150920'): Found array with 0 feature(s) (shape=(662674, 0)) while a minimum of 1 is required by StandardScaler.
+2026-02-23 21:25:21,139 - INFO - Finished for monkey ka and session 250422
+2026-02-23 21:25:40,986 - INFO - Finished for monkey po and session 070920
+2026-02-23 21:25:47,225 - INFO - Finished for monkey ka and session 230622
+2026-02-23 21:25:54,527 - INFO - Finished for monkey ka and session 300622
+2026-02-23 21:25:55,676 - INFO - Finished for monkey po and session 080920
+2026-02-23 21:26:01,769 - INFO - Finished for monkey po and session 021020
+2026-02-23 21:26:06,742 - INFO - Finished for monkey ka and session 270722
+2026-02-23 21:26:20,540 - INFO - Finished for monkey po and session 040920
+2026-02-23 21:26:29,113 - INFO - Finished for monkey ka and session 210722
+2026-02-23 21:26:31,931 - INFO - Finished for monkey po and session 121020
+2026-02-23 21:26:40,795 - INFO - Finished for monkey po and session 211020
+2026-02-23 21:26:49,117 - INFO - Finished for monkey ka and session 280622
+2026-02-23 21:27:07,182 - INFO - Finished for monkey ka and session 010822
+2026-02-23 21:27:23,422 - INFO - Finished for monkey ka and session 060922
+2026-02-23 21:27:28,599 - INFO - Finished for monkey po and session 291020
+2026-02-23 21:27:31,293 - INFO - Finished for monkey po and session 051020
+2026-02-23 21:27:34,213 - INFO - Finished for monkey po and session 110920
+2026-02-23 21:27:40,124 - INFO - Finished for monkey ka and session 070722
+2026-02-23 21:27:48,043 - INFO - Finished for monkey po and session 111220
+2026-02-23 21:27:52,560 - INFO - Finished for monkey po and session 031220
+2026-02-23 21:27:53,967 - INFO - Finished for monkey po and session 140920
+2026-02-23 21:27:55,313 - INFO - Finished for monkey po and session 160920
+2026-02-23 21:27:56,625 - INFO - Finished for monkey po and session 141020
+2026-02-23 21:27:58,469 - INFO - Finished for monkey po and session 011220
+2026-02-23 21:28:10,843 - INFO - Finished for monkey ka and session 080822
+2026-02-23 21:28:15,624 - INFO - Finished for monkey ka and session 010922
+2026-02-23 21:28:15,624 - ERROR - Error occurred for arguments ('po', '190721'): Found array with 0 feature(s) (shape=(159778, 0)) while a minimum of 1 is required by StandardScaler.
+2026-02-23 21:28:18,477 - INFO - Finished for monkey po and session 090920
+2026-02-23 21:28:25,240 - INFO - Finished for monkey po and session 071220
+2026-02-23 21:28:27,074 - INFO - Finished for monkey po and session 210920
+2026-02-23 21:28:32,621 - INFO - Finished for monkey po and session 070121
+2026-02-23 21:28:43,297 - INFO - Finished for monkey ka and session 300822
+2026-02-23 21:28:57,522 - INFO - Finished for monkey po and session 190321
+2026-02-23 21:29:00,027 - INFO - Finished for monkey po and session 090421
+2026-02-23 21:29:02,363 - INFO - Finished for monkey po and session 120121
+2026-02-23 21:29:10,556 - INFO - Finished for monkey po and session 280421
+2026-02-23 21:29:21,332 - INFO - Finished for monkey po and session 240321
+2026-02-23 21:29:25,692 - INFO - Finished for monkey po and session 180920
+2026-02-23 21:29:29,737 - INFO - Finished for monkey po and session 140121
+2026-02-23 21:29:35,736 - INFO - Finished for monkey po and session 080321
+2026-02-23 21:29:54,217 - INFO - Finished for monkey po and session 220422
+2026-02-23 21:30:09,975 - INFO - Finished for monkey po and session 190121
+2026-02-23 21:30:16,026 - INFO - Finished for monkey po and session 100321
+2026-02-23 21:30:23,570 - INFO - Finished for monkey po and session 261020
+2026-02-23 21:30:59,207 - INFO - Finished for monkey po and session 180322
+2026-02-23 21:31:00,945 - INFO - Finished for monkey po and session 140422
+2026-02-23 21:31:03,198 - INFO - Finished for monkey po and session 300421
+2026-02-23 21:31:14,630 - INFO - Finished for monkey po and session 090721
+2026-02-23 21:31:21,705 - INFO - Finished for monkey po and session 270121
+2026-02-23 21:31:23,396 - INFO - Finished for monkey po and session 300322
+2026-02-23 21:31:24,382 - INFO - Finished for monkey po and session 080422
+2026-02-23 21:31:25,669 - INFO - Finished for monkey po and session 090322
+2026-02-23 21:31:26,816 - INFO - Finished for monkey po and session 280721
+2026-02-23 21:31:27,839 - INFO - Finished for monkey po and session 240921
+2026-02-23 21:31:50,286 - INFO - Finished for monkey po and session 071021
+2026-02-23 21:31:55,384 - INFO - Finished for monkey po and session 210422
+2026-02-23 21:31:57,536 - INFO - Finished for monkey po and session 230421
+2026-02-23 21:32:09,458 - INFO - Finished for monkey po and session 040322
+2026-02-23 21:32:20,747 - INFO - Finished for monkey po and session 140622
+2026-02-23 21:32:25,499 - INFO - Finished for monkey po and session 310822
+2026-02-23 21:32:28,511 - INFO - Finished for monkey po and session 080722
+2026-02-23 21:32:45,469 - INFO - Finished for monkey po and session 090822
+2026-02-23 21:32:54,243 - ERROR - Error occurred for arguments ('po', '210622'): conflicting sizes for dimension 'subspace': length 3 on the data but length 2 on coordinate 'subspace'
+2026-02-23 21:33:06,210 - INFO - Finished for monkey po and session 050922
+2026-02-23 21:33:44,031 - INFO - Finished for monkey po and session 280722
+2026-02-23 21:33:53,940 - INFO - Finished for monkey po and session 200722
+2026-02-23 21:33:54,069 - INFO - Finished at 2026-02-23 21:33:54
+2026-02-23 21:33:54,070 - INFO - PARAMS:
+2026-02-23 21:33:54,070 - INFO - time_of_interest: [-2, 0]
+2026-02-23 21:33:54,070 - INFO - floc: /workspace/uzsombi/inserm/PoPy/notebooks/population_decoding/neural_value/results/across_target_it1
+2026-02-23 21:33:54,070 - INFO - Started at 2026-02-23 21:33:54
+2026-02-23 21:35:06,393 - INFO - Finished for monkey ka and session 230720
+2026-02-23 21:35:44,383 - INFO - Finished for monkey ka and session 170920
+2026-02-23 21:35:59,251 - INFO - Finished for monkey ka and session 300720
+2026-02-23 21:37:08,062 - INFO - Finished for monkey ka and session 190620
+2026-02-23 21:37:10,008 - INFO - Finished for monkey ka and session 011020
+2026-02-23 21:37:28,340 - INFO - Finished for monkey ka and session 281020
+2026-02-23 21:37:37,124 - INFO - Finished for monkey ka and session 230520
+2026-02-23 21:37:54,060 - INFO - Finished for monkey ka and session 200820
+2026-02-23 21:38:05,452 - INFO - Finished for monkey ka and session 050620
+2026-02-23 21:38:06,736 - INFO - Finished for monkey ka and session 160620
+2026-02-23 21:38:21,220 - INFO - Finished for monkey ka and session 240820
+2026-02-23 21:38:28,673 - INFO - Finished for monkey ka and session 100820
+2026-02-23 21:38:30,406 - INFO - Finished for monkey ka and session 270720
+2026-02-23 21:38:34,055 - INFO - Finished for monkey ka and session 080620
+2026-02-23 21:38:37,058 - INFO - Finished for monkey ka and session 081020
+2026-02-23 21:38:41,527 - INFO - Finished for monkey ka and session 310820
+2026-02-23 21:38:44,127 - INFO - Finished for monkey ka and session 120820
+2026-02-23 21:38:57,394 - INFO - Finished for monkey ka and session 050820
+2026-02-23 21:39:03,332 - INFO - Finished for monkey ka and session 100620
+2026-02-23 21:39:05,942 - INFO - Finished for monkey ka and session 100920
+2026-02-23 21:39:08,250 - INFO - Finished for monkey ka and session 150720
+2026-02-23 21:39:10,827 - INFO - Finished for monkey ka and session 101220
+2026-02-23 21:39:35,440 - INFO - Finished for monkey ka and session 170720
+2026-02-23 21:39:37,677 - INFO - Finished for monkey ka and session 090720
+2026-02-23 21:39:43,141 - INFO - Finished for monkey ka and session 221020
+2026-02-23 21:39:58,778 - INFO - Finished for monkey ka and session 010720
+2026-02-23 21:40:45,433 - INFO - Finished for monkey ka and session 180221
+2026-02-23 21:41:29,651 - INFO - Finished for monkey ka and session 120821
+2026-02-23 21:41:43,836 - INFO - Finished for monkey ka and session 070322
+2026-02-23 21:41:59,952 - INFO - Finished for monkey ka and session 041220
+2026-02-23 21:42:12,074 - INFO - Finished for monkey ka and session 180121
+2026-02-23 21:42:27,672 - INFO - Finished for monkey ka and session 190821
+2026-02-23 21:42:33,549 - INFO - Finished for monkey ka and session 110321
+2026-02-23 21:42:39,488 - INFO - Finished for monkey ka and session 080622
+2026-02-23 21:42:55,202 - INFO - Finished for monkey ka and session 150221
+2026-02-23 21:43:17,919 - INFO - Finished for monkey ka and session 250121
+2026-02-23 21:43:27,691 - INFO - Finished for monkey ka and session 290921
+2026-02-23 21:43:53,800 - INFO - Finished for monkey ka and session 130422
+2026-02-23 21:43:59,710 - INFO - Finished for monkey ka and session 180321
+2026-02-23 21:44:14,419 - INFO - Finished for monkey ka and session 040321
+2026-02-23 21:44:32,207 - INFO - Finished for monkey ka and session 020622
+2026-02-23 21:44:43,131 - INFO - Finished for monkey ka and session 280322
+2026-02-23 21:44:44,253 - INFO - Finished for monkey ka and session 030322
+2026-02-23 21:44:46,333 - INFO - Finished for monkey ka and session 050422
+2026-02-23 21:44:49,481 - INFO - Finished for monkey ka and session 030522
+2026-02-23 21:44:58,323 - INFO - Finished for monkey ka and session 200422
+2026-02-23 21:45:07,857 - INFO - Finished for monkey ka and session 150622
+2026-02-23 21:45:11,541 - INFO - Finished for monkey ka and session 210322
+2026-02-23 21:45:18,733 - INFO - Finished for monkey ka and session 130622
+2026-02-23 21:45:29,228 - INFO - Finished for monkey ka and session 250422
+2026-02-23 21:45:38,368 - ERROR - Error occurred for arguments ('po', '150920'): Found array with 0 feature(s) (shape=(662674, 0)) while a minimum of 1 is required by StandardScaler.
+2026-02-23 21:45:56,345 - INFO - Finished for monkey ka and session 200622
+2026-02-23 21:46:01,818 - INFO - Finished for monkey ka and session 230622
+2026-02-23 21:46:20,986 - INFO - Finished for monkey po and session 021020
+2026-02-23 21:46:20,987 - ERROR - Error occurred for arguments ('po', '080920'): This solver needs samples of at least 2 classes in the data, but the data contains only one class: 0.0
+2026-02-23 21:46:23,604 - INFO - Finished for monkey po and session 070920
+2026-02-23 21:46:40,107 - INFO - Finished for monkey ka and session 300622
+2026-02-23 21:46:51,722 - INFO - Finished for monkey ka and session 210722
+2026-02-23 21:46:58,439 - INFO - Finished for monkey ka and session 280622
+2026-02-23 21:47:00,447 - INFO - Finished for monkey ka and session 270722
+2026-02-23 21:47:14,497 - INFO - Finished for monkey po and session 121020
+2026-02-23 21:47:15,543 - INFO - Finished for monkey po and session 211020
+2026-02-23 21:47:22,144 - INFO - Finished for monkey po and session 040920
+2026-02-23 21:47:52,392 - INFO - Finished for monkey po and session 110920
+2026-02-23 21:47:55,471 - INFO - Finished for monkey ka and session 060922
+2026-02-23 21:48:01,550 - INFO - Finished for monkey ka and session 070722
+2026-02-23 21:48:12,129 - ERROR - Error occurred for arguments ('po', '051020'): This solver needs samples of at least 2 classes in the data, but the data contains only one class: 0.0
+2026-02-23 21:48:17,532 - INFO - Finished for monkey po and session 291020
+2026-02-23 21:48:19,223 - INFO - Finished for monkey ka and session 010822
+2026-02-23 21:48:33,150 - INFO - Finished for monkey po and session 141020
+2026-02-23 21:48:34,631 - INFO - Finished for monkey ka and session 010922
+2026-02-23 21:48:36,464 - INFO - Finished for monkey po and session 140920
+2026-02-23 21:48:38,376 - INFO - Finished for monkey po and session 090920
+2026-02-23 21:48:40,433 - INFO - Finished for monkey po and session 031220
+2026-02-23 21:48:41,500 - INFO - Finished for monkey po and session 011220
+2026-02-23 21:48:52,742 - INFO - Finished for monkey po and session 210920
+2026-02-23 21:48:55,564 - INFO - Finished for monkey po and session 111220
+2026-02-23 21:48:56,368 - ERROR - Error occurred for arguments ('po', '190721'): Found array with 0 feature(s) (shape=(159778, 0)) while a minimum of 1 is required by StandardScaler.
+2026-02-23 21:48:59,525 - INFO - Finished for monkey po and session 160920
+2026-02-23 21:49:07,432 - INFO - Finished for monkey po and session 070121
+2026-02-23 21:49:14,651 - INFO - Finished for monkey po and session 071220
+2026-02-23 21:49:17,546 - INFO - Finished for monkey ka and session 080822
+2026-02-23 21:49:36,635 - INFO - Finished for monkey po and session 190321
+2026-02-23 21:49:45,382 - INFO - Finished for monkey ka and session 300822
+2026-02-23 21:49:46,674 - INFO - Finished for monkey po and session 090421
+2026-02-23 21:49:55,861 - INFO - Finished for monkey po and session 180920
+2026-02-23 21:49:57,397 - INFO - Finished for monkey po and session 120121
+2026-02-23 21:50:03,463 - INFO - Finished for monkey po and session 240321
+2026-02-23 21:50:13,928 - INFO - Finished for monkey po and session 280421
+2026-02-23 21:50:22,689 - INFO - Finished for monkey po and session 080321
+2026-02-23 21:50:36,647 - INFO - Finished for monkey po and session 220422
+2026-02-23 21:50:49,024 - INFO - Finished for monkey po and session 190121
+2026-02-23 21:50:56,331 - INFO - Finished for monkey po and session 140121
+2026-02-23 21:51:10,823 - INFO - Finished for monkey po and session 100321
+2026-02-23 21:51:26,793 - ERROR - Error occurred for arguments ('po', '180322'): This solver needs samples of at least 2 classes in the data, but the data contains only one class: 0.0
+2026-02-23 21:51:36,353 - INFO - Finished for monkey po and session 261020
+2026-02-23 21:51:52,666 - INFO - Finished for monkey po and session 090721
+2026-02-23 21:52:03,065 - INFO - Finished for monkey po and session 140422
+2026-02-23 21:52:05,380 - INFO - Finished for monkey po and session 270121
+2026-02-23 21:52:09,548 - INFO - Finished for monkey po and session 300421
+2026-02-23 21:52:18,188 - INFO - Finished for monkey po and session 090322
+2026-02-23 21:52:26,551 - ERROR - Error occurred for arguments ('po', '080422'): This solver needs samples of at least 2 classes in the data, but the data contains only one class: 0.0
+2026-02-23 21:52:33,581 - INFO - Finished for monkey po and session 300322
+2026-02-23 21:52:35,516 - INFO - Finished for monkey po and session 280721
+2026-02-23 21:52:37,475 - INFO - Finished for monkey po and session 071021
+2026-02-23 21:52:38,634 - INFO - Finished for monkey po and session 240921
+2026-02-23 21:53:02,717 - INFO - Finished for monkey po and session 230421
+2026-02-23 21:53:08,179 - INFO - Finished for monkey po and session 040322
+2026-02-23 21:53:09,355 - INFO - Finished for monkey po and session 210422
+2026-02-23 21:53:14,367 - ERROR - Error occurred for arguments ('po', '140622'): Found array with 0 sample(s) (shape=(0, 18)) while a minimum of 1 is required by LogisticRegression.
+2026-02-23 21:53:22,856 - INFO - Finished for monkey po and session 080722
+2026-02-23 21:53:34,549 - INFO - Finished for monkey po and session 310822
+2026-02-23 21:53:48,065 - INFO - Finished for monkey po and session 090822
+2026-02-23 21:53:52,464 - ERROR - Error occurred for arguments ('po', '210622'): conflicting sizes for dimension 'subspace': length 3 on the data but length 2 on coordinate 'subspace'
+2026-02-23 21:53:58,728 - INFO - Finished for monkey po and session 050922
+2026-02-23 21:54:46,318 - INFO - Finished for monkey po and session 280722
+2026-02-23 21:55:09,925 - INFO - Finished for monkey po and session 200722
+2026-02-23 21:55:10,114 - INFO - Finished at 2026-02-23 21:55:10
+2026-02-23 21:55:10,115 - INFO - PARAMS:
+2026-02-23 21:55:10,115 - INFO - time_of_interest: [-0.5, 1.5]
+2026-02-23 21:55:10,115 - INFO - floc: /workspace/uzsombi/inserm/PoPy/notebooks/population_decoding/neural_value/results/across_target_it2
+2026-02-23 21:55:10,115 - INFO - Started at 2026-02-23 21:55:10
+2026-02-23 22:13:43,136 - INFO - Finished for monkey ka and session 170920
+2026-02-23 22:20:17,883 - INFO - Finished for monkey ka and session 230720
+2026-02-23 22:22:48,472 - INFO - Finished for monkey ka and session 230520
+2026-02-23 22:25:47,324 - INFO - Finished for monkey ka and session 190620
+2026-02-23 22:27:31,166 - INFO - Finished for monkey ka and session 011020
+2026-02-23 22:28:34,317 - INFO - Finished for monkey ka and session 300720
+2026-02-23 22:29:24,698 - INFO - Finished for monkey ka and session 090720
+2026-02-23 22:35:36,300 - INFO - Finished for monkey ka and session 050620
+2026-02-23 22:36:07,963 - INFO - Finished for monkey ka and session 170720
+2026-02-23 22:37:33,609 - INFO - Finished for monkey ka and session 200820
+2026-02-23 22:43:11,420 - INFO - Finished for monkey ka and session 080620
+2026-02-23 22:43:47,416 - INFO - Finished for monkey ka and session 310820
+2026-02-23 22:46:24,786 - INFO - Finished for monkey ka and session 240820
+2026-02-23 22:47:36,441 - INFO - Finished for monkey ka and session 100820
+2026-02-23 22:49:05,504 - INFO - Finished for monkey ka and session 100620
+2026-02-23 22:49:21,046 - INFO - Finished for monkey ka and session 281020
+2026-02-23 22:50:06,662 - INFO - Finished for monkey ka and session 160620
+2026-02-23 22:50:20,351 - INFO - Finished for monkey ka and session 100920
+2026-02-23 22:50:20,664 - INFO - Finished for monkey ka and session 270720
+2026-02-23 22:52:10,720 - INFO - Finished for monkey ka and session 050820
+2026-02-23 22:53:36,429 - INFO - Finished for monkey ka and session 101220
+2026-02-23 22:56:26,601 - INFO - Finished for monkey ka and session 120820
+2026-02-23 22:57:15,011 - INFO - Finished for monkey ka and session 081020
+2026-02-23 22:57:40,800 - INFO - Finished for monkey ka and session 150720
+2026-02-23 23:01:16,202 - INFO - Finished for monkey ka and session 010720
+2026-02-23 23:01:58,426 - INFO - Finished for monkey ka and session 180221
+2026-02-23 23:10:30,049 - INFO - Finished for monkey ka and session 221020
+2026-02-23 23:11:04,495 - INFO - Finished for monkey ka and session 120821
+2026-02-23 23:20:04,080 - INFO - Finished for monkey ka and session 070322
+2026-02-23 23:21:48,911 - INFO - Finished for monkey ka and session 250121
+2026-02-23 23:22:04,421 - INFO - Finished for monkey ka and session 180121
+2026-02-23 23:25:19,253 - INFO - Finished for monkey ka and session 041220
+2026-02-23 23:26:51,565 - INFO - Finished for monkey ka and session 080622
+2026-02-23 23:31:33,598 - INFO - Finished for monkey ka and session 150221
+2026-02-23 23:34:21,015 - INFO - Finished for monkey ka and session 110321
+2026-02-23 23:38:18,975 - INFO - Finished for monkey ka and session 130622
+2026-02-23 23:39:11,074 - INFO - Finished for monkey ka and session 040321
+2026-02-23 23:41:30,192 - INFO - Finished for monkey ka and session 180321
+2026-02-23 23:43:36,048 - INFO - Finished for monkey ka and session 280322
+2026-02-23 23:43:49,279 - INFO - Finished for monkey ka and session 190821
+2026-02-23 23:47:49,410 - INFO - Finished for monkey ka and session 290921
+2026-02-23 23:49:00,324 - INFO - Finished for monkey ka and session 020622
+2026-02-23 23:50:44,835 - INFO - Finished for monkey ka and session 130422
+2026-02-23 23:51:37,782 - INFO - Finished for monkey ka and session 210322
+2026-02-23 23:52:19,023 - ERROR - Error occurred for arguments ('po', '080920'): This solver needs samples of at least 2 classes in the data, but the data contains only one class: 0.0
+2026-02-23 23:52:26,989 - INFO - Finished for monkey ka and session 030322
+2026-02-23 23:52:53,695 - INFO - Finished for monkey ka and session 050422
+2026-02-23 23:53:03,275 - INFO - Finished for monkey ka and session 030522
+2026-02-23 23:53:11,901 - INFO - Finished for monkey ka and session 200422
+2026-02-23 23:53:13,795 - ERROR - Error occurred for arguments ('po', '150920'): Found array with 0 feature(s) (shape=(662674, 0)) while a minimum of 1 is required by StandardScaler.
+2026-02-24 00:01:27,644 - INFO - Finished for monkey ka and session 250422
+2026-02-24 00:01:40,211 - INFO - Finished for monkey ka and session 150622
+2026-02-24 00:03:30,622 - ERROR - Error occurred for arguments ('po', '051020'): This solver needs samples of at least 2 classes in the data, but the data contains only one class: 0.0
+2026-02-24 00:06:08,032 - INFO - Finished for monkey po and session 070920
+2026-02-24 00:14:28,107 - INFO - Finished for monkey po and session 021020
+2026-02-24 00:15:18,068 - INFO - Finished for monkey ka and session 010922
+2026-02-24 00:15:51,153 - INFO - Finished for monkey ka and session 230622
+2026-02-24 00:16:05,495 - INFO - Finished for monkey po and session 210920
+2026-02-24 00:16:45,263 - INFO - Finished for monkey ka and session 200622
+2026-02-24 00:16:51,822 - INFO - Finished for monkey po and session 180920
+2026-02-24 00:17:17,826 - INFO - Finished for monkey po and session 040920
+2026-02-24 00:17:43,362 - INFO - Finished for monkey ka and session 270722
+2026-02-24 00:18:22,103 - INFO - Finished for monkey po and session 110920
+2026-02-24 00:18:39,839 - INFO - Finished for monkey ka and session 280622
+2026-02-24 00:20:23,521 - INFO - Finished for monkey po and session 140920
+2026-02-24 00:20:40,531 - INFO - Finished for monkey ka and session 300622
+2026-02-24 00:21:03,061 - INFO - Finished for monkey po and session 121020
+2026-02-24 00:25:12,631 - INFO - Finished for monkey po and session 211020
+2026-02-24 00:25:27,168 - INFO - Finished for monkey ka and session 210722
+2026-02-24 00:27:39,096 - INFO - Finished for monkey ka and session 070722
+2026-02-24 00:28:55,240 - INFO - Finished for monkey po and session 090920
+2026-02-24 00:29:03,713 - INFO - Finished for monkey po and session 160920
+2026-02-24 00:30:14,018 - INFO - Finished for monkey ka and session 010822
+2026-02-24 00:34:02,508 - INFO - Finished for monkey ka and session 060922
+2026-02-24 00:34:11,073 - INFO - Finished for monkey po and session 070121
+2026-02-24 00:34:45,912 - INFO - Finished for monkey ka and session 080822
+2026-02-24 00:34:48,654 - ERROR - Error occurred for arguments ('po', '190721'): Found array with 0 feature(s) (shape=(159778, 0)) while a minimum of 1 is required by StandardScaler.
+2026-02-24 00:35:42,282 - INFO - Finished for monkey ka and session 300822
+2026-02-24 00:36:45,046 - INFO - Finished for monkey po and session 141020
+2026-02-24 00:38:20,922 - INFO - Finished for monkey po and session 291020
+2026-02-24 00:41:51,497 - INFO - Finished for monkey po and session 031220
+2026-02-24 00:42:40,725 - INFO - Finished for monkey po and session 111220
+2026-02-24 00:44:25,554 - ERROR - Error occurred for arguments ('po', '180322'): This solver needs samples of at least 2 classes in the data, but the data contains only one class: 0.0
+2026-02-24 00:44:44,732 - INFO - Finished for monkey po and session 011220
+2026-02-24 00:44:57,425 - INFO - Finished for monkey po and session 080321
+2026-02-24 00:46:36,808 - INFO - Finished for monkey po and session 071220
+2026-02-24 00:46:39,728 - INFO - Finished for monkey po and session 190321
+2026-02-24 00:46:56,350 - ERROR - Error occurred for arguments ('po', '080422'): This solver needs samples of at least 2 classes in the data, but the data contains only one class: 0.0
+2026-02-24 00:47:25,154 - INFO - Finished for monkey po and session 120121
+2026-02-24 00:49:54,252 - ERROR - Error occurred for arguments ('po', '140622'): Found array with 0 sample(s) (shape=(0, 18)) while a minimum of 1 is required by LogisticRegression.
+2026-02-24 00:50:24,511 - INFO - Finished for monkey po and session 090421
+2026-02-24 00:54:06,195 - INFO - Finished for monkey po and session 280421
+2026-02-24 00:54:51,548 - INFO - Finished for monkey po and session 140121
+2026-02-24 00:58:03,590 - INFO - Finished for monkey po and session 220422
+2026-02-24 00:58:15,395 - INFO - Finished for monkey po and session 240321
+2026-02-24 00:58:33,100 - INFO - Finished for monkey po and session 270121
+2026-02-24 01:02:25,995 - INFO - Finished for monkey po and session 261020
+2026-02-24 01:06:05,804 - INFO - Finished for monkey po and session 190121
+2026-02-24 01:10:11,537 - INFO - Finished for monkey po and session 100321
+2026-02-24 01:10:44,483 - INFO - Finished for monkey po and session 071021
+2026-02-24 01:11:58,566 - INFO - Finished for monkey po and session 140422
+2026-02-24 01:12:53,324 - INFO - Finished for monkey po and session 090322
+2026-02-24 01:13:18,928 - ERROR - Error occurred for arguments ('po', '210622'): conflicting sizes for dimension 'subspace': length 3 on the data but length 2 on coordinate 'subspace'
+2026-02-24 01:17:10,493 - INFO - Finished for monkey po and session 230421
+2026-02-24 01:17:49,192 - INFO - Finished for monkey po and session 090721
+2026-02-24 01:18:45,106 - INFO - Finished for monkey po and session 300421
+2026-02-24 01:20:34,541 - INFO - Finished for monkey po and session 280721
+2026-02-24 01:20:54,166 - INFO - Finished for monkey po and session 040322
+2026-02-24 01:21:03,058 - INFO - Finished for monkey po and session 240921
+2026-02-24 01:23:54,002 - INFO - Finished for monkey po and session 210422
+2026-02-24 01:24:25,420 - INFO - Finished for monkey po and session 050922
+2026-02-24 01:26:32,247 - INFO - Finished for monkey po and session 080722
+2026-02-24 01:26:33,311 - INFO - Finished for monkey po and session 300322
+2026-02-24 01:26:46,960 - INFO - Finished for monkey po and session 090822
+2026-02-24 01:29:56,335 - INFO - Finished for monkey po and session 310822
+2026-02-24 01:33:53,291 - INFO - Finished for monkey po and session 200722
+2026-02-24 01:37:27,554 - INFO - Finished for monkey po and session 280722
+2026-02-24 01:37:27,666 - INFO - Finished at 2026-02-24 01:37:27

@@ -1,7 +1,15 @@
+import os
+
+# Limit native-threaded math libs per process (prevents CPU oversubscription)
+os.environ.setdefault("OMP_NUM_THREADS", "1")
+os.environ.setdefault("OPENBLAS_NUM_THREADS", "1")
+os.environ.setdefault("MKL_NUM_THREADS", "1")
+os.environ.setdefault("VECLIB_MAXIMUM_THREADS", "1")
+os.environ.setdefault("NUMEXPR_NUM_THREADS", "1")
+
 import pandas as pd
 import numpy as np
 import datetime
-import os
 import concurrent.futures
 import traceback
 import xarray as xr
@@ -49,16 +57,46 @@ def save_results(xr, floc):
     xr.to_netcdf(os.path.join(floc, 'scores.nc'))
 
 ### Set parameters
+'''
+"stay_value_0.05",
+        "stay_value_0.10",
+        "stay_value_0.15",
+        "stay_value_0.20",
+        "stay_value_0.25",
+        "stay_value_0.30",
+        "stay_value_0.35",
+        "stay_value_0.40",
+        "stay_value_0.45",
+        "stay_value_0.50",
+        "stay_value_0.55",
+        "stay_value_0.60",
+        "stay_value_0.65",
+        "stay_value_0.70",
+        "stay_value_0.75",
+        "stay_value_0.80",
+        "stay_value_0.85",
+        "stay_value_0.90",
+        "stay_value_0.95",'''
 
 PARAMS = {
-    'conditions': ['stay_value_0.05', 'stay_value_0.10', 'stay_value_0.15', 'stay_value_0.20', 'stay_value_0.25', 'stay_value_0.30', 'stay_value_0.35', 'stay_value_0.40', 'stay_value_0.45', 'stay_value_0.50', 'stay_value_0.55', 'stay_value_0.60', 'stay_value_0.65', 'stay_value_0.70', 'stay_value_0.75', 'stay_value_0.80', 'stay_value_0.85', 'stay_value_0.90', 'stay_value_0.95'],
-    'group_targets': None, #['target', 'target_shuffled'],
-    'K_fold': 10,
-    'step_len': .1,
-    'n_perm': 500, 
-    'n_extra_trials': (0, 0),
-    'floc': os.path.join(cfg.PROJECT_PATH_LOCAL, 'notebooks', 'population_decoding', 'results', 'multiple_alphas_ridge'),
-    'msg': 'Compute the stay value with different alpha parameters and try to see which is the best regressor. alpha parameter is set to 100 (for the regularization)',
+    "conditions": [  # TODO
+        'stay_value', 
+        'Q_1_inf', 'Q_1_stand', 'Q_2_inf', 'Q_2_stand', 'Q_3_inf', 'Q_3_stand', 
+        'Q_chosen_inf', 'Q_chosen_stand'
+    ],
+    "group_targets": None,  # ['target', 'target_shuffled'],
+    "K_fold": 10,
+    "step_len": 0.1,
+    "n_perm": 100,
+    "n_extra_trials": (-1, 0),
+    "floc": os.path.join(
+        cfg.PROJECT_PATH_LOCAL,
+        "notebooks",
+        "population_decoding",
+        "results",
+        "alternative_model_values",
+    ),
+    "msg": "Running linear decoders for alternative model values (e.g. Q values, RPE) - no grouping of targets, 100 permutations, 10-fold CV, step length of 100ms, and using all trials (n_extra_trials = (-1, 0))",
 }
 
 ### Run
@@ -68,7 +106,7 @@ if __name__ == '__main__':
 
     monkeys, sessions = get_all_sessions()  # Get a pandas df containing all sessions' meta information
     
-    n_cores = np.min([111, os.cpu_count()-1])  # get number of cores in the machine
+    n_cores = np.min([111, os.cpu_count()-3])  # get number of cores in the machine
     with concurrent.futures.ProcessPoolExecutor(max_workers=n_cores) as executor:
         # submit jobs
         futures, future_proxy_mapping = [], {}

@@ -7,6 +7,8 @@ import matplotlib.colors as mcolors
 from scipy import ndimage
 from joblib import Parallel, delayed
 import statsmodels.api as sm
+from scipy.stats import gaussian_kde
+from scipy import stats
 
 from matplotlib.collections import LineCollection
 
@@ -20,6 +22,7 @@ from popy.decoding.decoder_tools import *
 from popy.plotting.plotting_tools import *
 # from popy.plotting.plot_behavior import show_target_selection
 import popy.config as cfg
+from popy.config import COLORS
 from popy.config import value_gradient
 from popy.plotting.plot_cortical_grid import plot_on_cortical_grid
 from imblearn.under_sampling import RandomUnderSampler
@@ -1714,3 +1717,302 @@ def _add_fig_to_ax(fig, ax):
     img = np.array(Image.open(buf))
     ax.imshow(img)
     ax.axis('off')
+
+
+
+def stat_tests_mixed_glm(results_mixed, alpha=0.05):
+    ##### Slope and intercept for C=0 and C=1 #####
+    b0 = results_mixed.params['const']
+    b1 = results_mixed.params['B']
+    b2 = results_mixed.params['C']
+    b3 = results_mixed.params['B_C']
+
+
+
+    ## Get confidence intervals
+    conf_int = results_mixed.conf_int(alpha)
+
+
+
+
+    ##### Slope significant? #####
+
+    # For C=0: slope is b1, intercept is b0
+    # For C=1: slope is b1+b3, intercept is b0+b2
+
+    # For C=0: test if b1 != 0
+    p_value_b1 = results_mixed.pvalues['B']
+    
+    # For C=1: slope is b1+b3, need to compute SE and test
+    # Using formula: Var(b1 + b3) = Var(b1) + Var(b3) + 2*Cov(b1, b3)
+    cov_matrix = results_mixed.cov_params()
+    var_b1_plus_b3 = cov_matrix.loc['B', 'B'] + cov_matrix.loc['B_C', 'B_C'] + 2*cov_matrix.loc['B', 'B_C']
+    se_b1_plus_b3 = np.sqrt(var_b1_plus_b3)
+    t_stat_c1 = (b1 + b3) / se_b1_plus_b3
+    p_value_c1 = 2 * (1 - stats.t.cdf(abs(t_stat_c1), df=results_mixed.df_resid))
+    
+
+
+    ##### Slope between 0 and 1? #####
+    # For C=0: check if confidence interval for b1 is within [0, 1]
+    ci_b1_lower = conf_int.loc['B', 0]
+    ci_b1_upper = conf_int.loc['B', 1]
+    within_bounds_c0 = (ci_b1_lower >= 0) and (ci_b1_upper <= 1)
+
+    # For C=1: confidence interval for b1+b3
+    ci_b1_plus_b3_lower = (b1 + b3) - 1.96 * se_b1_plus_b3
+    ci_b1_plus_b3_upper = (b1 + b3) + 1.96 * se_b1_plus_b3
+    within_bounds_c1 = (ci_b1_plus_b3_lower >= 0) and (ci_b1_plus_b3_upper <= 1)
+    
+
+
+    ##### Test if intercept is higher for C=1 vs C=0 #####
+
+    # Intercept for C=0 is b0
+    # Intercept for C=1 is b0 + b2
+    # Test if (b0 + b2) > b0, i.e., if b2 > 0
+    p_value_b2 = results_mixed.pvalues['C']
+    t_stat_b2 = results_mixed.tvalues['C']
+
+    # One-sided test: H0: b2 <= 0, H1: b2 > 0
+    if t_stat_b2 > 0:
+        p_value_one_sided = p_value_b2 / 2  # One-sided
+    else:
+        p_value_one_sided = 1 - p_value_b2 / 2
+
+    ##### Report results #####
+
+    return {
+        'slope_c0': b1,
+        'slope_c1': b1 + b3,
+        'intercept_c0': b0,
+        'intercept_c1': b0 + b2,
+
+        'b1_c0_pvalue': p_value_b1,
+        'b1_c0_significant': p_value_b1 < 0.05,
+        'b1_c1_pvalue': p_value_c1,
+        'b1_c1_significant': p_value_c1 < 0.05,
+
+        'b1_c0_ci': (ci_b1_lower, ci_b1_upper),
+        'b1_c0_within_bounds': within_bounds_c0,
+        'b1_c1_ci': (ci_b1_plus_b3_lower, ci_b1_plus_b3_upper),
+        'b1_c1_within_bounds': within_bounds_c1,
+
+        'intercept_difference': b2,
+        'intercept_c1_higher': p_value_one_sided < 0.05
+    }
+
+
+def fit_mixed_glm(data):
+    '''
+    Fits the model :
+
+    A = b0 + b1*B + b2*C + b3*(B*C) + error
+
+    on the data. Data needs to have columns 'A', 'B', and 'C'.
+    '''
+    # Create design matrix with interaction term
+    X = pd.DataFrame({
+        'const': 1,
+        'B': data['B'],
+        'C': data['C'],
+        'B_C': data['B'] * data['C']  # Interaction term
+    })
+
+    # Fit the mixed GLM
+    model_mixed = sm.OLS(data['A'], X)
+    results_mixed = model_mixed.fit()
+
+    return results_mixed
+
+
+def add_hypothesis(test_results):
+    '''
+    Returns a hypothesis label based on the test results. 
+    
+    Hypotheses:
+    Delta rule: both slopes are within bounds and intercept is higher for C=1
+    Feedback: slopes are not significant but intercept is higher for C=1
+    Nothing: no slopes significant and no intercept difference
+    RPE?: slopes are significant but not within bounds, and intercept is higher for C=1
+    else: does not fit any of the above categories
+    '''
+    if (test_results['b1_c0_within_bounds'] and test_results['b1_c1_within_bounds'] and  # if both slopes are within bounds (0, 1) and intercet positive is higher
+        test_results['intercept_c1_higher']):
+        return 'Delta rule (strict)'
+    elif (test_results['b1_c0_within_bounds'] or test_results['b1_c1_within_bounds']) and test_results['intercept_c1_higher']:  # if any slopes are within bounds (0, 1) and intercet positive is higher
+        return 'Delta rule (loose)'
+    elif (not test_results['b1_c0_significant'] and not test_results['b1_c1_significant'] and  # if no slope is significantly nonzero but there is a difference
+          test_results['intercept_c1_higher']):
+        return 'Feedback'
+        '''elif (not test_results['b1_c0_significant'] and not test_results['b1_c1_significant'] and not test_results['intercept_c1_higher']):return 'Nothing'''
+    else:
+        return 'Other'
+
+
+def plot_betas(res_df):
+    # fontsize 8
+    plt.rcParams.update({'font.size': 8})
+
+    all_var_to_plot = [
+        (
+            "slope_pos",
+            "slope_pos_withinbounds",
+            r"Slope $\beta$ of $V(t)$ regressor" + "\n(positive outcomes)",
+        ),
+        (
+            "slope_neg",
+            "slope_neg_withinbounds",
+            r"Slope $\beta$ of $V(t)$ regressor" + "\n(negative outcomes)",
+        ),
+    ]
+
+    for var_to_plot, signif_slope, var_name in all_var_to_plot:
+        monkeys   = res_df['monkey'].unique()
+        subregions = res_df['subregion'].unique()
+        n_monks   = len(monkeys)
+        n_subs    = len(subregions)
+
+        fig, axs = plt.subplots(n_monks, n_subs, figsize=(1.3 * n_subs, 1.8 * n_monks), sharey=True)
+        if axs.ndim == 1:
+            axs = axs[np.newaxis, :]
+
+        VIOLIN_START = 0.38
+        VIOLIN_WIDTH = 0.30
+
+        for m, monkey in enumerate(monkeys):
+            for s, subregion in enumerate(subregions):
+                ax = axs[m, s]
+                subset = res_df[(res_df['monkey'] == monkey) & (res_df['subregion'] == subregion)]
+                vals = subset[var_to_plot].dropna().values
+                signifs = subset[signif_slope].dropna().values
+                
+                if len(vals) == 0:
+                    ax.set_visible(False)
+                    continue
+
+                kde = gaussian_kde(vals, bw_method='scott')
+                y_range = np.linspace(vals.min() - 0.5, vals.max() + 0.5, 300)
+                density  = kde(y_range)
+                density  = density / density.max() * VIOLIN_WIDTH
+
+                ax.fill_betweenx(y_range, VIOLIN_START, VIOLIN_START + density,
+                                alpha=0.5, color='steelblue', linewidth=0)
+                ax.plot(VIOLIN_START + density, y_range, color='steelblue', linewidth=0.8)
+
+                ax.boxplot(vals, positions=[0.25], widths=0.15,
+                        vert=True, patch_artist=True,
+                        medianprops=dict(color='black', linewidth=1.5),
+                        boxprops=dict(facecolor='steelblue', alpha=0.5),
+                        whiskerprops=dict(color='black', linewidth=0.8),
+                        capprops=dict(color='black', linewidth=0.8),
+                        flierprops=dict(marker='', linestyle='none'),
+                        showfliers=False)
+
+                rng    = np.random.default_rng(42)
+                jitter = rng.uniform(-0.08, 0.08, size=len(vals))
+
+                ax.scatter(jitter[signifs],  vals[signifs],
+                        alpha=0.7, s=12, marker='o',
+                        color='steelblue', zorder=3)
+                ax.scatter(jitter[~signifs], vals[~signifs],
+                        alpha=0.5, s=12, marker='o', facecolors='none',
+                        color='steelblue', linewidths=0.7, zorder=3)
+
+                ax.axhline(0, color='black',   linestyle='--', linewidth=0.8, zorder=1)
+                ax.axhline(1, color='black', linestyle='--', linewidth=0.8, zorder=1)
+
+                n_sig = signifs.sum()
+                ax.set_title(f"{monkey.upper()} – {subregion}\n(n. sig.={n_sig}/{len(vals)})", fontsize=7)
+                ax.set_ylabel(var_name, fontsize=7)
+                ax.tick_params(labelsize=7)
+                ax.set_xlim(-0.3, VIOLIN_START + VIOLIN_WIDTH + 0.05)
+                ax.set_ylim(-.5, 1.01)
+                ax.set_xticks([])
+                ax.spines['bottom'].set_visible(False)
+                ax.spines['top'].set_visible(False)
+                ax.spines['right'].set_visible(False)
+
+        plt.tight_layout()
+        # save figure
+        plt.savefig(os.path.join(PATH, 'notebooks', 'population_decoding', 'neural_value', 'figs', f'all_sessions_{var_to_plot}.svg'), format='svg', dpi=300, bbox_inches='tight')
+        plt.show()
+
+
+def plot_intercept_differences(res_df):
+    plt.rcParams.update({'font.size': 8})
+
+    monkeys    = res_df['monkey'].unique()
+    subregions = res_df['subregion'].unique()
+    n_monks    = len(monkeys)
+    n_subs     = len(subregions)
+
+    fig, axs = plt.subplots(n_monks, n_subs, figsize=(1.3 * n_subs, 1.8 * n_monks), sharey=True)
+    if axs.ndim == 1:
+        axs = axs[np.newaxis, :]
+
+    VIOLIN_START = 0.38
+    VIOLIN_WIDTH = 0.30
+
+    for m, monkey in enumerate(monkeys):
+        for s, subregion in enumerate(subregions):
+            ax = axs[m, s]
+            subset = res_df[(res_df['monkey'] == monkey) & (res_df['subregion'] == subregion)]
+            vals    = (subset['intercept_pos'] - subset['intercept_neg']).values
+            signifs = subset['intercept_pos_higher'].values
+            mask    = np.isfinite(vals)
+            vals    = vals[mask]
+            signifs = signifs[mask]
+
+            if len(vals) == 0:
+                ax.set_visible(False)
+                continue
+
+            # ── 1. Half-violin (KDE) ─────────────────────────────────────────────
+            kde     = gaussian_kde(vals, bw_method='scott')
+            y_range = np.linspace(vals.min() - 0.3, vals.max() + 0.3, 300)
+            density = kde(y_range)
+            density = density / density.max() * VIOLIN_WIDTH
+
+            ax.fill_betweenx(y_range, VIOLIN_START, VIOLIN_START + density,
+                            alpha=0.5, color='steelblue', linewidth=0)
+            ax.plot(VIOLIN_START + density, y_range, color='steelblue', linewidth=0.8)
+
+            # ── 2. Boxplot ───────────────────────────────────────────────────────
+            ax.boxplot(vals, positions=[0.25], widths=0.15,
+                    vert=True, patch_artist=True,
+                    medianprops=dict(color='black', linewidth=1.5),
+                    boxprops=dict(facecolor='steelblue', alpha=0.5),
+                    whiskerprops=dict(color='black', linewidth=0.8),
+                    capprops=dict(color='black', linewidth=0.8),
+                    showfliers=False)
+
+            # ── 3. Jittered scatter: filled circle = sig, open circle = nonsig ──
+            rng    = np.random.default_rng(42)
+            jitter = rng.uniform(-0.08, 0.08, size=len(vals))
+
+            ax.scatter(jitter[signifs],  vals[signifs],
+                    alpha=0.7, s=12, marker='o',
+                    color='steelblue', zorder=3)
+            ax.scatter(jitter[~signifs], vals[~signifs],
+                    alpha=0.5, s=12, marker='o', facecolors='none',
+                    edgecolors='steelblue', linewidths=0.7, zorder=3)
+
+            # ── Zero reference line only ─────────────────────────────────────────
+            ax.axhline(0, color='black', linestyle='--', linewidth=0.8, zorder=1)
+
+            # ── Cosmetics ────────────────────────────────────────────────────────
+            n_sig = signifs.sum()
+            ax.set_title(f"{monkey.upper()} – {subregion}\n(n. sig.={n_sig}/{len(vals)})", fontsize=7)
+            ax.set_ylabel('Intercept difference\n(positive - negative)', fontsize=7)
+            ax.tick_params(labelsize=7)
+            ax.set_xlim(-0.3, VIOLIN_START + VIOLIN_WIDTH + 0.05)
+            ax.set_xticks([])
+            ax.spines['bottom'].set_visible(False)
+            ax.spines['top'].set_visible(False)
+            ax.spines['right'].set_visible(False)
+
+    plt.tight_layout()
+    plt.savefig(os.path.join(PATH, 'notebooks', 'population_decoding', 'neural_value', 'figs', f'all_sessions_intercept_diff.svg'), format='svg', dpi=300, bbox_inches='tight')
+    plt.show()
+

@@ -583,6 +583,8 @@ def add_foraging_value(behav_original, alpha=None, digitize=False, n_classes=4, 
     """
     VALUE CORRESPONDING TO TRIAL t IS THE ONE KNOWN BEFORE THE FEEDBACK OF TRIAL t IS RECEIVED!
 
+    in case of interrupted trials (NaN actions), the value function is untouched.
+
     Model-based value function calculation. 
     
     The value function is calculated based on the Shift-value model with reset.
@@ -605,28 +607,27 @@ def add_foraging_value(behav_original, alpha=None, digitize=False, n_classes=4, 
         stay_probas = np.zeros(len(behav))
         session_previous = 'none'
         for i, (_, row) in enumerate(behav.iterrows()):
-            # Get latent value function
+            # If we are in a new session, reset the agent
+            session_curr = row["session"]
+            if session_curr != session_previous:
+                agent.reset()
+                session_previous = session_curr
+
+            # Get latent value function (before update)
             stay_values[i] = agent.V
             stay_probas[i] = agent._get_stay_proba()
 
             # Get the action and reward taken by the agent
             action, reward = row["target"], row["feedback"]
-            session_curr = row["session"]
 
-            # Skip NaN actions (interrupted trials)
+            # Skip updating for NaN actions (interrupted trials)
             if np.isnan(action):
-                stay_values[i] = np.nan
-                stay_probas[i] = np.nan
+                #stay_values[i] = np.nan
+                #stay_probas[i] = np.nan
                 continue
 
-            # If we are in a new session, reset the agent
-            if session_curr != session_previous:
-                agent.reset()
-                session_previous = session_curr
-
             # update the agent
-            action = int(action) - 1  # convert to 0-indexed
-            agent.update_values(action, int(reward))
+            agent.update_values(int(action) - 1, int(reward))
 
         behav.loc[:, 'stay_value'] = stay_values
         if add_proba:
@@ -676,7 +677,7 @@ def add_RL_values(behav_original, digitize=False, n_classes=4, structure_aware=T
         # init an agent
         agent_class = QLearner
         fixed_params = {'structure_aware': structure_aware}
-        params = cfg.MODEL_PARAMS_RL[monkey]  # get the parameters for the monkey
+        params = cfg.MODEL_PARAMS_sRL[monkey]  # get the parameters for the monkey
 
         agent = agent_class(**params, **fixed_params)
 
@@ -684,28 +685,27 @@ def add_RL_values(behav_original, digitize=False, n_classes=4, structure_aware=T
         stay_probas = np.zeros(len(behav))
         session_previous = 'none'
         for i, (_, row) in enumerate(behav.iterrows()):
-            # Get latent value function
-            q_values[i] = agent.q_values
-            stay_probas[i] = np.nan  # agent._get_stay_proba()  # TODO: implement stay probability for RL agent
-
-            # Get the action and reward taken by the agent
-            action, reward = row["target"], row["feedback"]
-            action = int(action) - 1  # convert to 0-indexed
-            session_curr = row["session"]
-
-            # Skip NaN actions (interrupted trials)
-            if np.isnan(action):
-                q_values[i] = np.nan
-                stay_probas[i] = np.nan
-                continue
-
             # If we are in a new session, reset the agent
+            session_curr = row["session"]
             if session_curr != session_previous:
                 agent.reset()
                 session_previous = session_curr
 
+            # Get the action and reward taken by the agent
+            action, reward = row["target"], row["feedback"]
+            
+            # Get latent value function
+            q_values[i] = agent.q_values
+            stay_probas[i] = np.nan  # agent._get_stay_proba()  # TODO: implement stay probability for RL agent
+
+            # Skip updating if NaN actions (interrupted trials)
+            if np.isnan(action):
+                #q_values[i] = np.nan
+                #stay_probas[i] = np.nan
+                continue
+
             # update the agent
-            agent.update_values(int(action), int(reward))
+            agent.update_values(int(action) - 1, int(reward))
         
         for j in range(3):
             behav.loc[:, f'Q_{j+1}'] = q_values[:, j]

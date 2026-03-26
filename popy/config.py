@@ -83,7 +83,9 @@ COLORS = {
     'Bayesian': "#a86514ff",
     'HSMM': "#000000ff",
     'none': '#cccccc',
-    'PROBLEM': '#cccccc'
+    'Nothing': '#cccccc',
+    'PROBLEM': '#cccccc',
+    'Feedback': '#000000ff',
     }
 
 '''def hex_to_rgb(hex_color):

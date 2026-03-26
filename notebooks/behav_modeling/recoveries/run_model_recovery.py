@@ -22,18 +22,26 @@ from popy.simulation_tools import *  # Provides agents like ForagingAgent, QLear
 from popy.simulation_helpers import simulate_agent, fit_simulate
 from popy.config import PROJECT_PATH_LOCAL
 
+def sample_beta(scale):
+    while True:
+        beta = np.random.exponential(scale=scale)
+
+        if beta > 1 and beta < 20: # only keep betas in this range
+            return beta
+
 ANALYSIS_PARAMETERS = {
-    'T': 1_000,  # Total trials per simulation
-    'N': 100,    # Number of simulations to run
-    'n_calls': 150,#200,  # Number of optimizer calls
-    'n_initial_points': 50,#100,  # Number of initial points for optimizer
-    'n_cpus': max(1, cpu_count()-4),  # Number of CPUs to use
+    "T": 10_000,  # Total trials per simulation (same order of magnitude as real data)
+    "N": 100,  # Number of simulations to run
+    "n_calls": 150,  # 200,  # Number of optimizer calls
+    "n_initial_points": 50,  # 100,  # Number of initial points for optimizer
+    "n_cpus": max(1, cpu_count() - 4),  # Number of CPUs to use
+    "output_file": "model_recovery_10k.csv",
 }
 
 gen_params = {
     "epsilon": lambda: np.random.uniform(0, .5),
     "alpha": lambda: np.random.uniform(0.1, 0.7),
-    "beta": lambda: np.random.lognormal(mean=np.log(5.0), sigma=1.0),
+    "beta": lambda: sample_beta(scale=5.0),
     "V0": lambda: np.random.uniform(0.05, 0.5),
     "stickiness_bias": lambda: np.random.exponential(1),
 }
@@ -47,11 +55,6 @@ fit_params = {
 }
 
 MODELS = {
-    "WSLS": {
-        "agent_class": WSLSAgent,
-        "fixed_params": {},
-        "free_params": ["epsilon"],
-    },
     "Foraging": {
         "agent_class": ForagingAgent,
         "fixed_params": {"reset_on_switch": True},
@@ -123,8 +126,7 @@ def _run_model_recovery(sim_model, fit_model, iteration):
             env,
             behavior_simulated,
             fixed_params=fit_fixed_params,
-            CV_splits=None,
-            strict=False,
+            CV_splits=False,
             make_plots=False,
             n_calls=ANALYSIS_PARAMETERS['n_calls'],
             n_initial_points=ANALYSIS_PARAMETERS['n_initial_points'],
@@ -168,7 +170,7 @@ def generate_model_recovery(env, output_csv_path: str):
     """
     n_models = len(MODELS)
     n_tasks = ANALYSIS_PARAMETERS['N'] * (n_models ** 2)
-    print(f"[Model recovery] Running {n_tasks} fits ({ANALYSIS_PARAMETERS['N']} sims × {n_models}×{n_models} models) on {ANALYSIS_PARAMETERS['n_cpus']} CPUs")
+    print(f"[Model recovery] Running {n_tasks} fits ({ANALYSIS_PARAMETERS['N']} sims × {n_models}×{n_models} models) on {ANALYSIS_PARAMETERS['n_cpus']}/{os.cpu_count()} CPUs")
     
     # Create task list: for each iteration, fit all models to the same simulation
     tasks = []
@@ -197,5 +199,5 @@ if __name__ == "__main__":
     env = make_env()
     generate_model_recovery(
         env,
-        output_csv_path=os.path.join(PROJECT_PATH_LOCAL, "notebooks", "behav_modeling", "results", "recovery", "model_recovery.csv"),
+        output_csv_path=os.path.join(PROJECT_PATH_LOCAL, "notebooks", "behav_modeling", "results", "recovery", ANALYSIS_PARAMETERS['output_file']),
     )

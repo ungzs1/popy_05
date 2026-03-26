@@ -113,7 +113,7 @@ def save_res_and_behav(results, behaviors_simulated, monkey, floc):
 ANALYSIS_PARAMETERS = {
     "n_calls": 350,
     "n_initial_points": 100,
-    "n_cpus": max(1, os.cpu_count() - 1),  
+    "n_cpus": max(1, os.cpu_count() - 3),  
     "CV_splits": True,
     "n_jobs": 1,                                                   
     "verbose": False,

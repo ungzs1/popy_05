@@ -17,7 +17,7 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 
-from sklearn.linear_model import LinearRegression
+from sklearn.linear_model import LinearRegression, LogisticRegression
 
 import popy.config as cfg
 from notebooks.population_decoding.neural_value.helpers import (
@@ -25,7 +25,6 @@ from notebooks.population_decoding.neural_value.helpers import (
 )
 from popy.io_tools import load_metadata
 from run_neural_value_all_sessions import load_data_custom
-
 
 
 PATH = cfg.PROJECT_PATH_LOCAL
@@ -71,6 +70,11 @@ PATH = cfg.PROJECT_PATH_LOCAL
 """
 
 def OLD_project_across_targets(neural_dataset):
+    '''
+    This is the code we used for the first manuscript. But the problem is that it uses the model based value 
+    to regress the neural data, which is not ideal because the model based value is biased towards froaging (as
+    it comes from the foraging model).
+    '''
 
     target_vector = neural_dataset['target'].values
 
@@ -147,6 +151,86 @@ def OLD_project_across_targets(neural_dataset):
 
     return data_projected_da
 
+def NEW_project_across_targets(neural_dataset, fit_subspace_on='R_1'):
+    '''
+    This is the modified version of the code, where we regress the neural data to the last outcome instead of the model based value. This way we get a more unbiased projection of the neural data, which is not biased towards foraging (as the model based value is).
+    '''
+    # Get a vector of selected targets [0, 1, 2] for each trial
+    target_vector = neural_dataset['target'].values
+
+    # write back to xarray, preserve the trial and time dimensions and corresponding coordinates
+    time_coords = {name: coord for name, coord in neural_dataset.coords.items() if 'time' in coord.dims}
+    trial_coords = {name: coord for name, coord in neural_dataset.coords.items() if 'trial_id' in coord.dims}
+
+    # create train and test splits
+    clf = LogisticRegression(class_weight="balanced", max_iter=1000)
+
+    projections = np.full((3, len(neural_dataset.trial_id), len(neural_dataset.time)), np.nan)
+    trial_ids = neural_dataset.trial_id.values
+    time_bins = neural_dataset.time.values
+
+    ## Part 1: project within target: leave one out method (train on all but one trial, project the left out trial to the subspace defined by the training trials)
+    for t_id, t in enumerate(neural_dataset.time):
+        # if t % 1 == 0:print(t_id)
+        # first project within target with leave one out method
+        for fold, target_temp in enumerate(np.unique(target_vector)):
+            neural_dataset_within = neural_dataset.firing_rates.sel(trial_id=neural_dataset.target == target_temp, time=t)
+
+            for test_trial in np.unique(neural_dataset_within.trial_id.values):
+                train_trials = neural_dataset_within.trial_id.values != test_trial
+                X_train = neural_dataset_within.sel(trial_id=train_trials).values
+                y_train = neural_dataset_within.sel(trial_id=train_trials)[fit_subspace_on].values
+
+                X_project = neural_dataset_within.sel(trial_id=test_trial).values
+
+                # fit the model
+                clf.fit(X_train, y_train)
+
+                # project the dataset (at this point) to this subspace
+                weights = clf.coef_.reshape(-1, 1)
+                # trial_projected = np.dot(X_project, weights)
+                weights_norm = np.linalg.norm(weights)
+                trial_projected = (np.dot(X_project, weights) + clf.intercept_) / weights_norm
+
+                trial_idx = np.where(trial_ids == test_trial)[0][0]
+                projections[fold, trial_idx, t_id] = trial_projected.squeeze()
+
+    ## Part 2: project alternative targets: train the model on one target, project the other targets to this subspace
+    # scores = np.empty((2, len(neural_dataset.time)))
+    for t_id, t in enumerate(neural_dataset.time):
+        for fold, target_temp in enumerate(np.unique(target_vector)):
+            neural_dataset_within = neural_dataset.firing_rates.sel(trial_id=neural_dataset.target == target_temp, time=t)
+            neural_dataset_across = neural_dataset.firing_rates.sel(trial_id=neural_dataset.target != target_temp, time=t)
+
+            # get the firing rates for the current time point
+            X_train = neural_dataset_within.values
+            y_train = neural_dataset_within[fit_subspace_on].values
+
+            # fit the model
+            clf.fit(X_train, y_train)
+
+            # project the dataset (at this point) to this subspace
+            weights = clf.coef_.reshape(-1, 1)  # reshape to ensure correct dimensions
+            # trials_projected = np.dot(neural_dataset_across, weights)
+            weights_norm = np.linalg.norm(weights)
+            trials_projected = (np.dot(neural_dataset_across, weights) + clf.intercept_) / weights_norm
+
+            trial_idxs = [np.where(trial_ids == trial_id)[0][0] for trial_id in neural_dataset_across.trial_id.values]
+            projections[fold, trial_idxs, t_id] = trials_projected.squeeze()
+
+    # Create a DataArray with the projected data
+    data_projected_da = xr.DataArray(projections, dims=('subspace', 'trial_id', 'time'),
+                                      coords={'subspace': [f'target_{int(temp)}' for temp in np.unique(target_vector)],
+                                              'trial_id': neural_dataset.trial_id.values,
+                                              'time': neural_dataset.time.values})
+    # Add the original coordinates
+    for name, coord in time_coords.items():
+        data_projected_da = data_projected_da.assign_coords({name: coord})
+    for name, coord in trial_coords.items():
+        data_projected_da = data_projected_da.assign_coords({name: coord})
+
+    return data_projected_da
+
 
 def extract_neural_data(neural_values, data_projected):
     results = []
@@ -195,7 +279,6 @@ def extract_neural_data(neural_values, data_projected):
     return results_df
 
 
-
 ### Load metadata
 
 def get_all_sessions():
@@ -238,17 +321,16 @@ def save_results(dfs_all, floc):
 ### Set parameters
 
 TIMES_OF_INTEREST = {
+    'after_fb':   (-4, -2),
+    'it1':        (-2,  0),
+    'it2':        (-.5,  1.5),
     'before_fb':  (1.5, 3.5),
 }
-
-"""    'after_fb':   (-4, -2),
-    'it1':        (-2,  0),
-    'it2':        (-1,  1),"""
 
 def make_params(key, time_window):
     return {
         'time_of_interest': list(time_window),
-        'floc': os.path.join(cfg.PROJECT_PATH_LOCAL, 'notebooks', 'population_decoding', 'neural_value', 'results', f'across_target_{key}')
+        'floc': os.path.join(cfg.PROJECT_PATH_LOCAL, 'notebooks', 'population_decoding', 'neural_value', 'results', f'across_target_{key}') 
     }
 
 ### Run
@@ -259,7 +341,7 @@ def run(monkey, session, PARAMS):
 
     time_of_interest = PARAMS['time_of_interest']
 
-    neural_dataset = load_data_custom(monkey, session, area=None, n_extra_trials=(0, 0))
+    neural_dataset = load_data_custom(monkey, session, area=None, n_extra_trials=(-1, 0))
 
     dfs = []
     for subregion in np.unique(neural_dataset.subregion.data):
@@ -268,8 +350,8 @@ def run(monkey, session, PARAMS):
         neural_dataset_temp = neural_dataset_temp.sel(time=slice(*time_of_interest))
 
         # project the neural data across targets - from high dimensional space to 3 dimensional space
-        data_projected = OLD_project_across_targets(neural_dataset_temp)
-
+        data_projected = NEW_project_across_targets(neural_dataset_temp, fit_subspace_on='R_1')  
+        
         # Extract 'neural values' for the specified time range by averaging across time points
         neural_values = data_projected.mean(dim='time')
 
@@ -346,4 +428,3 @@ if __name__ == '__main__':
 
         end_log()
         print(f'Finished all on {datetime.datetime.now()}')
-
