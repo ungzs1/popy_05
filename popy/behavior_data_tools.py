@@ -579,7 +579,7 @@ def add_value_function(behav_original, digitize=False, n_classes=4):
 def add_shift_value(*args, **kwargs):
     raise NotImplementedError("Use 'add_stay_value(...)' instead, and change 'shift_value' to 'stay_value'")
 
-def add_foraging_value(behav_original, alpha=None, digitize=False, n_classes=4, reset_on_switch=True, add_proba=False):
+def add_foraging_value(behav_original, alpha=None, digitize=False, n_classes=4, reset_on_switch=True, add_proba=False, add_PE=False):
     """
     VALUE CORRESPONDING TO TRIAL t IS THE ONE KNOWN BEFORE THE FEEDBACK OF TRIAL t IS RECEIVED!
 
@@ -605,6 +605,7 @@ def add_foraging_value(behav_original, alpha=None, digitize=False, n_classes=4, 
 
         stay_values = np.zeros(len(behav))
         stay_probas = np.zeros(len(behav))
+        pes = np.zeros(len(behav))
         session_previous = 'none'
         for i, (_, row) in enumerate(behav.iterrows()):
             # If we are in a new session, reset the agent
@@ -628,16 +629,22 @@ def add_foraging_value(behav_original, alpha=None, digitize=False, n_classes=4, 
 
             # update the agent
             agent.update_values(int(action) - 1, int(reward))
+            # save pe used for value updating
+            pes[i] = agent.pe
 
         behav.loc[:, 'stay_value'] = stay_values
         if add_proba:
             behav.loc[:, 'stay_proba'] = stay_probas
+        if add_PE:
+            behav.loc[:, 'PE'] = pes
 
         # write back the q_values to the original dataframe, matching the indices
         behavior.loc[behav.index, 'stay_value'] = behav.loc[behav.index, 'stay_value'].values
         behavior['V0'] = params['V0']
         if add_proba:
             behavior.loc[behav.index, 'stay_proba'] = behav.loc[behav.index, 'stay_proba'].values
+        if add_PE:
+            behavior.loc[behav.index, 'PE_foraging'] = behav.loc[behav.index, 'PE'].values
 
     if digitize:
         # Create bin edges (from min to max value, or 0-1 if specified)
@@ -661,7 +668,7 @@ def add_foraging_value(behav_original, alpha=None, digitize=False, n_classes=4, 
 
     return behavior
 
-def add_RL_values(behav_original, digitize=False, n_classes=4, structure_aware=True, add_proba=False):
+def add_RL_values(behav_original, digitize=False, n_classes=4, structure_aware=True, add_proba=False, add_PE=False):
     """
     VALUE CORRESPONDING TO TRIAL t IS THE ONE KNOWN BEFORE THE FEEDBACK OF TRIAL t IS RECEIVED!
 
@@ -683,6 +690,7 @@ def add_RL_values(behav_original, digitize=False, n_classes=4, structure_aware=T
 
         q_values = np.zeros((len(behav), 3))  # 3 targets
         stay_probas = np.zeros(len(behav))
+        pes = np.zeros(len(behav))
         session_previous = 'none'
         for i, (_, row) in enumerate(behav.iterrows()):
             # If we are in a new session, reset the agent
@@ -706,12 +714,17 @@ def add_RL_values(behav_original, digitize=False, n_classes=4, structure_aware=T
 
             # update the agent
             agent.update_values(int(action) - 1, int(reward))
+            # save pe used for value updating
+            pes[i] = agent.pe
+
         
         for j in range(3):
             behav.loc[:, f'Q_{j+1}'] = q_values[:, j]
         
         if add_proba:
             behav.loc[:, 'stay_proba'] = stay_probas
+        if add_PE:
+            behav.loc[:, 'PE'] = pes
 
         # write back the q_values to the original dataframe, matching the indices
         behavior.loc[behav.index, 'Q_1'] = behav.loc[behav.index, 'Q_1'].values
@@ -719,6 +732,8 @@ def add_RL_values(behav_original, digitize=False, n_classes=4, structure_aware=T
         behavior.loc[behav.index, 'Q_3'] = behav.loc[behav.index, 'Q_3'].values
         if add_proba:
             behavior.loc[behav.index, 'stay_proba'] = behav.loc[behav.index, 'stay_proba'].values
+        if add_PE:
+            behavior.loc[behav.index, 'PE_RL'] = behav.loc[behav.index, 'PE'].values
 
     if digitize:
         # Create bin edges (from min to max value, or 0-1 if specified)

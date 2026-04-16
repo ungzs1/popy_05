@@ -62,8 +62,10 @@ COLORS = {
     'vLPFC': '#fc8e10ff',
 
     'ka': '#885bb2ff',
+    'KA': '#885bb2ff',
     'Monkey KA': '#885bb2ff',
     'po': '#9aaf49ff',
+    'PO': '#9aaf49ff',
     'Monkey PO': '#9aaf49ff',
     'ka_simulation': 'tab:brown',
     'po_simulation': 'tab:red',

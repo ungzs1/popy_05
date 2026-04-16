@@ -36,7 +36,7 @@ warnings.filterwarnings('ignore')
 PATH = cfg.PROJECT_PATH_LOCAL
 
 ##% data loading
-def load_data_custom(monkey, session, area=None, subregion=None, n_extra_trials=(0, 1), sr=100):
+def load_data_custom(monkey, session, area=None, subregion=None, n_extra_trials=(0, 1), sr=100, n_first_only=None):
     # 1. Behavior data
 
     # load data (meta session)
@@ -44,12 +44,16 @@ def load_data_custom(monkey, session, area=None, subregion=None, n_extra_trials=
     behav = drop_time_fields(behav)
 
     # add behav vars to decode
-    behav = add_foraging_value(behav)
+    #behav = add_foraging_value(behav)
     behav = add_switch_info(behav)
     behav = add_history_of_feedback(behav, num_trials=8, one_column=False, add_history_of_targets=False)
     #behav['fb_sequence'] = [r3 + 2*r2 + 4*r1 for (r1, r2, r3) in zip(behav['R_1'], behav['R_2'], behav['R_3'])]
     #behav['target_1'] = behav['target'] == 1
     behav = behav.dropna()
+
+    if n_first_only is not None:
+        # group by monkey, session, block, and take only the first n_first_only trials of each block
+        behav = behav.groupby(['monkey', 'session', 'block_id']).head(n_first_only).reset_index(drop=True)
 
     # 2. Neural data
     
@@ -945,7 +949,7 @@ def create_r_style_plot(ax=None, data=None, x_col=None, y_col=None, title=None, 
     axis = ax
     if paper_format:
         plt.rcParams.update({'font.size': 8})
-        h = 2 
+        h = 1.5
         w = 2
         s = 3
 
@@ -1183,8 +1187,8 @@ def plot_Vt_per_sequence(behav_new, paper_format=False, ylim=None, show_datapoin
     # project to axis
     if paper_format:
         plt.rcParams.update({'font.size': 8})
-        h = 2 
-        w = 2.5
+        h = 1.5 
+        w = 2
         s = 3
     else:
         plt.rcParams.update({'font.size': 18})
@@ -1248,7 +1252,7 @@ def plot_Vt_per_sequence(behav_new, paper_format=False, ylim=None, show_datapoin
 
     #ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.3), ncol=1)
     #ax.set_xlabel('Feedback sequence')
-    ax.set_ylabel('Mean projections\nfrom $Lt(t+1)$ to $Fb(t+1)$')
+    ax.set_ylabel('Neural value')
     # set ticks at every 1
     y_min = df['V_t'].min()
     y_max = df['V_t'].max()
@@ -1721,19 +1725,23 @@ def _add_fig_to_ax(fig, ax):
 
 
 def stat_tests_mixed_glm(results_mixed, alpha=0.05):
+    '''
+    Extract GLM coeffs and perform statistical tests for the model:
+    A = b0 + b1*B + b2*C + b3*(B*C) + error
+
+    where
+    A = V_t_p1 (neural value at time t+1)
+    B = V_t (neural value at time t)
+    C = feedback (0 or 1)
+    '''
     ##### Slope and intercept for C=0 and C=1 #####
-    b0 = results_mixed.params['const']
+    b0 = results_mixed.params['const']  
     b1 = results_mixed.params['B']
     b2 = results_mixed.params['C']
     b3 = results_mixed.params['B_C']
 
-
-
     ## Get confidence intervals
     conf_int = results_mixed.conf_int(alpha)
-
-
-
 
     ##### Slope significant? #####
 
@@ -1783,23 +1791,23 @@ def stat_tests_mixed_glm(results_mixed, alpha=0.05):
     ##### Report results #####
 
     return {
-        'slope_c0': b1,
-        'slope_c1': b1 + b3,
-        'intercept_c0': b0,
-        'intercept_c1': b0 + b2,
+        'slope_c0': b1,  # slope of V_t for R=0 (unrewarded)
+        'slope_c1': b1 + b3,  # slope of V_t for R=1 (rewarded)
+        'intercept_c0': b0,  # intercept for R=0 (unrewarded)
+        'intercept_c1': b0 + b2,  # intercept for R=1 (rewarded)
 
-        'b1_c0_pvalue': p_value_b1,
-        'b1_c0_significant': p_value_b1 < 0.05,
-        'b1_c1_pvalue': p_value_c1,
-        'b1_c1_significant': p_value_c1 < 0.05,
+        'b1_c0_pvalue': p_value_b1,  # p-value for slope of V_t for R=0 (unrewarded)
+        'b1_c0_significant': p_value_b1 < 0.05,  # is slope of V_t for R=0 (unrewarded) significant?
+        'b1_c1_pvalue': p_value_c1,  # p-value for slope of V_t for R=1 (rewarded)
+        'b1_c1_significant': p_value_c1 < 0.05,  # is slope of V_t for R=1 (rewarded) significant?
 
-        'b1_c0_ci': (ci_b1_lower, ci_b1_upper),
-        'b1_c0_within_bounds': within_bounds_c0,
-        'b1_c1_ci': (ci_b1_plus_b3_lower, ci_b1_plus_b3_upper),
-        'b1_c1_within_bounds': within_bounds_c1,
+        'b1_c0_ci': (ci_b1_lower, ci_b1_upper),  # confidence interval for slope of V_t for R=0 (unrewarded)
+        'b1_c0_within_bounds': within_bounds_c0,  # is slope of V_t for R=0 (unrewarded) between 0 and 1?
+        'b1_c1_ci': (ci_b1_plus_b3_lower, ci_b1_plus_b3_upper),  # confidence interval for slope of V_t for R=1 (rewarded)
+        'b1_c1_within_bounds': within_bounds_c1,  # is slope of V_t for R=1 (rewarded) between 0 and 1?
 
         'intercept_difference': b2,
-        'intercept_c1_higher': p_value_one_sided < 0.05
+        'intercept_c1_higher': p_value_one_sided < 0.05  # is intercept for R=1 (rewarded) significantly higher than intercept for R=0 (unrewarded)?
     }
 
 
@@ -1837,10 +1845,14 @@ def add_hypothesis(test_results):
     RPE?: slopes are significant but not within bounds, and intercept is higher for C=1
     else: does not fit any of the above categories
     '''
-    if (test_results['b1_c0_within_bounds'] and test_results['b1_c1_within_bounds'] and  # if both slopes are within bounds (0, 1) and intercet positive is higher
+    if (test_results['b1_c0_within_bounds'] and 
+        test_results['b1_c1_within_bounds'] and
+        test_results['b1_c0_significant'] and
+        test_results['b1_c1_significant'] and  # if both slopes are within bounds (0, 1) and intercet positive is higher
         test_results['intercept_c1_higher']):
         return 'Delta rule (strict)'
-    elif (test_results['b1_c0_within_bounds'] or test_results['b1_c1_within_bounds']) and test_results['intercept_c1_higher']:  # if any slopes are within bounds (0, 1) and intercet positive is higher
+    elif ((test_results['b1_c0_within_bounds'] or test_results['b1_c1_within_bounds']) and
+          test_results['intercept_c1_higher']):  # if any slopes are within bounds (0, 1) and intercet positive is higher
         return 'Delta rule (loose)'
     elif (not test_results['b1_c0_significant'] and not test_results['b1_c1_significant'] and  # if no slope is significantly nonzero but there is a difference
           test_results['intercept_c1_higher']):

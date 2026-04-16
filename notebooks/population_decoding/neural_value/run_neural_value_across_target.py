@@ -268,9 +268,9 @@ def extract_neural_data(neural_values, data_projected):
             df_temp_subspace[f'V_neural_p1'] = float(V_t_p1)
             df_temp_subspace[f'dV_neural'] = dV
 
-            df_temp_subspace[f'V_behav'] = neural_values_curr.stay_value.values
+            '''df_temp_subspace[f'V_behav'] = neural_values_curr.stay_value.values
             df_temp_subspace[f'V_behav_p1'] = neural_values_p1.stay_value.values
-            df_temp_subspace[f'dV_behav'] = df_temp_subspace[f'V_behav'] - df_temp_subspace[f'V_behav_p1']
+            df_temp_subspace[f'dV_behav'] = df_temp_subspace[f'V_behav'] - df_temp_subspace[f'V_behav_p1']'''
 
             results.append(df_temp_subspace)
 
@@ -319,18 +319,23 @@ def save_results(dfs_all, floc):
     dfs_all.to_pickle(os.path.join(floc, 'behav.pkl'))
 
 ### Set parameters
-
-TIMES_OF_INTEREST = {
-    'after_fb':   (-4, -2),
-    'it1':        (-2,  0),
-    'it2':        (-.5,  1.5),
-    'before_fb':  (1.5, 3.5),
+ 
+TIMES_OF_INTEREST = {  # TODO normally we only want the last one
+    #'after_fb':   (-4, -2),
+    #'it1':        (-2,  0),
+    #'it2':        (-.5,  1.5),
+    'before_fb':  (1.5, 3.5), 
 }
 
+FLOC_FOLDER = 'across_target_first15_'  # TODO
+N_FIRST_ONLY = 15  # TODO: whether to use only the first trial of each block (to avoid contamination from previous trial)
+
 def make_params(key, time_window):
+    FLOC_BASE = os.path.join(cfg.PROJECT_PATH_LOCAL, 'notebooks', 'population_decoding', 'neural_value', 'results')
     return {
         'time_of_interest': list(time_window),
-        'floc': os.path.join(cfg.PROJECT_PATH_LOCAL, 'notebooks', 'population_decoding', 'neural_value', 'results', f'across_target_{key}') 
+        'floc': os.path.join(FLOC_BASE, FLOC_FOLDER+key),
+        'n_first_only': N_FIRST_ONLY,  # whether to use only the first trial of each block (to avoid contamination from previous trial) 
     }
 
 ### Run
@@ -341,7 +346,7 @@ def run(monkey, session, PARAMS):
 
     time_of_interest = PARAMS['time_of_interest']
 
-    neural_dataset = load_data_custom(monkey, session, area=None, n_extra_trials=(-1, 0))
+    neural_dataset = load_data_custom(monkey, session, area=None, n_extra_trials=(-1, 0), n_first_only=PARAMS['n_first_only'])  # load data for the current session, with all areas and one extra trial before the first trial (for projection purposes)
 
     dfs = []
     for subregion in np.unique(neural_dataset.subregion.data):
@@ -381,7 +386,7 @@ if __name__ == '__main__':
 
         monkeys, sessions = get_all_sessions()  # Get a pandas df containing all sessions' meta information
         
-        n_cores = np.max([1, os.cpu_count()-2])  # get number of cores in the machine
+        n_cores = np.max([1, os.cpu_count()-2])  # get number of cores in the machine TODO set this manually if you want to use less cores
         with concurrent.futures.ProcessPoolExecutor(max_workers=n_cores) as executor:
             # submit jobs
             futures, future_proxy_mapping = [], {}

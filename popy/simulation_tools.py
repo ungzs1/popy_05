@@ -418,9 +418,13 @@ class QLearner:
         self.q_values = np.ones(n_arms, dtype=np.float32) / n_arms  #np.zeros(n_arms, dtype=np.float32)  # 
         self.last_action = None  # will hold index of previous action
 
+        # monitoring
+        self.pe = 0  # so that its accessible for later analysis
+
     def reset(self):
         self.q_values = np.zeros(self.n_arms, dtype=np.float32)
         self.last_action = None
+        self.pe = 0
 
     def get_action_probas(self) -> np.ndarray:
         """
@@ -465,6 +469,8 @@ class QLearner:
         # update selected arm
         rpe = reward - self.q_values[action]
         self.q_values[action] += self.alpha * rpe
+
+        self.pe = rpe  # so that its accessible for later analysis
 
         # update unchosen arms (if structure aware)
         if self.structure_aware:
@@ -518,11 +524,15 @@ class ForagingAgent:
         self.last_action = np.random.choice(n_arms)
         self.spatial_bias = self.spatial_bias_0.copy()
 
+        # monitoring
+        self.pe = 0  # so that its accessible for later analysis
+
     def reset(self):
         """Reset the agent to its initial state."""
         self.V = self.V0
         self.last_action = np.random.choice(self.n_arms)
         self.spatial_bias = self.spatial_bias_0
+        self.pe = 0
 
     def _get_stay_proba(self) -> float:   
         # get the probability of shifting actions, according to the logistic function
@@ -588,6 +598,8 @@ class ForagingAgent:
             # use RPE to update the V-value after a stay, but use baseline after a switch
             rpe = reward - self.V
             self.V += self.alpha * rpe
+        
+        self.pe = rpe  # so that its accessible for later analysis
 
         # set bias against the abandoned option (add to base level of bias)
         for a in range(self.n_arms):
@@ -945,3 +957,81 @@ class HSMMAgent:
         self.posterior = self.posterior_full.sum(axis=1)
 
 
+import numpy as np
+
+class AdvancedForagingAgent:
+    """
+    Q-learning agent with:
+        - Separate learning rates for positive and negative outcomes
+        - Short-term memory of last few rewards (like WSLS)
+        - Stickiness bias for repeating last action
+        - Optional spatial bias for each arm
+        - Adaptive exploration (dynamic beta)
+    """
+    def __init__(
+        self,
+        n_arms=3,
+        alpha_pos=0.3,
+        alpha_neg=0.1,
+        beta=5.0,
+        memory_length=3,
+        stickiness=0.2,
+        spatial_bias=None,
+        adaptive_beta=True,
+        beta_min=2.0,
+        beta_max=15.0
+    ):
+        self.n_arms = n_arms
+        self.alpha_pos = alpha_pos
+        self.alpha_neg = alpha_neg
+        self.beta_base = beta
+        self.beta = beta
+        self.memory_length = memory_length
+        self.stickiness = stickiness
+        self.spatial_bias = np.zeros(n_arms) if spatial_bias is None else np.array(spatial_bias)
+        self.adaptive_beta = adaptive_beta
+        self.beta_min = beta_min
+        self.beta_max = beta_max
+        
+        self.q_values = np.zeros(n_arms)
+        self.last_action = None
+        self.memory = [0] * memory_length
+
+    def reset(self):
+        self.q_values[:] = 0.0
+        self.last_action = None
+        self.memory = [0] * self.memory_length
+        self.beta = self.beta_base
+
+    def get_action_probas(self):
+        # Calculate adaptive beta: increase exploitation if recent rewards were high
+        if self.adaptive_beta:
+            recent_avg = np.mean(self.memory)
+            self.beta = self.beta_min + (self.beta_max - self.beta_min) * recent_avg
+        else:
+            self.beta = self.beta_base
+
+        # Compute logits
+        logits = self.beta * self.q_values + self.stickiness * (np.arange(self.n_arms) == self.last_action) + self.spatial_bias
+        logits = logits - np.max(logits)  # for numerical stability
+        exp_logits = np.exp(logits)
+        probas = exp_logits / np.sum(exp_logits)
+        return probas
+
+    def act(self):
+        probas = self.get_action_probas()
+        action = np.random.choice(self.n_arms, p=probas)
+        return action
+
+    def update_values(self, action, reward):
+        # Update Q-value with separate learning rates
+        rpe = reward - self.q_values[action]
+        if rpe >= 0:
+            self.q_values[action] += self.alpha_pos * rpe
+        else:
+            self.q_values[action] += self.alpha_neg * rpe
+        
+        # Update memory and last action
+        self.memory.pop(0)
+        self.memory.append(reward)
+        self.last_action = action

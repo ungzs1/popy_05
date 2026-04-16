@@ -58,3 +58,4 @@ notebooks/thesis_material/*
 logs/*
 notebooks/population_decoding/neural_value/results/*
 
+notebooks/population_decoding/neural_value/temp/*

@@ -80,23 +80,21 @@ def save_results(xr, floc):
 
 PARAMS = {
     "conditions": [  # TODO
-        'stay_value', 
-        'Q_1_inf', 'Q_1_stand', 'Q_2_inf', 'Q_2_stand', 'Q_3_inf', 'Q_3_stand', 
-        'Q_chosen_inf', 'Q_chosen_stand'
+        'PE_RL', 'PE_foraging', 
     ],
     "group_targets": None,  # ['target', 'target_shuffled'],
     "K_fold": 10,
     "step_len": 0.1,
     "n_perm": 100,
-    "n_extra_trials": (-1, 0),
+    "n_extra_trials": (0, 0),  # TODO
     "floc": os.path.join(
         cfg.PROJECT_PATH_LOCAL,
         "notebooks",
         "population_decoding",
         "results",
-        "alternative_model_values",
+        "prediction_errors",  # TODO
     ),
-    "msg": "Running linear decoders for alternative model values (e.g. Q values, RPE) - no grouping of targets, 100 permutations, 10-fold CV, step length of 100ms, and using all trials (n_extra_trials = (-1, 0))",
+    "msg": "to reply the reviewer question, we try to decode PE signals coming from alternative models",
 }
 
 ### Run

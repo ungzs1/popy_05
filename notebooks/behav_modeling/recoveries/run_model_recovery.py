@@ -30,12 +30,12 @@ def sample_beta(scale):
             return beta
 
 ANALYSIS_PARAMETERS = {
-    "T": 10_000,  # Total trials per simulation (same order of magnitude as real data)
+    "T": 400,  # Total trials per simulation (same order of magnitude as real data)  # TODO: NOW SET TO 400 ONLY
     "N": 100,  # Number of simulations to run
-    "n_calls": 150,  # 200,  # Number of optimizer calls
-    "n_initial_points": 50,  # 100,  # Number of initial points for optimizer
+    "n_calls": 200,  # 200,  # Number of optimizer calls
+    "n_initial_points": 100,  # 100,  # Number of initial points for optimizer
     "n_cpus": max(1, cpu_count() - 4),  # Number of CPUs to use
-    "output_file": "model_recovery_10k.csv",
+    "output_file": "model_recovery_400.csv",
 }
 
 gen_params = {
@@ -115,8 +115,6 @@ def _run_model_recovery(sim_model, fit_model, iteration):
     fit_fixed_params = MODELS[fit_model]['fixed_params']
     fit_free_params = MODELS[fit_model]['free_params']
     fit_param_space = [fit_params[free_param] for free_param in fit_free_params]  # search space for optimizer
-
-
     
     # Fit the specified model to the simulated data
     try:    

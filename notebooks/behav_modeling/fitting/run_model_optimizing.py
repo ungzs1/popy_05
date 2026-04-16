@@ -74,8 +74,8 @@ def save_res_and_behav(results, behaviors_simulated, floc):
 
 # Analysis parameters
 ANALYSIS_PARAMETERS = {
-    "n_calls": 350,
-    "n_initial_points": 150,
+    "n_calls": 400,  # TODO
+    "n_initial_points": 250, # TODO
     "n_simulation_trials": 100_000,
     "n_cpus": max(1, os.cpu_count() - 2),  # leave some CPUs free
     "verbose": False,
@@ -83,20 +83,20 @@ ANALYSIS_PARAMETERS = {
     "CV_splits": None
 }
 
-floc = os.path.join(PROJECT_PATH_LOCAL, 'notebooks', 'behav_modeling', 'results', 'optimizing') 
+floc = os.path.join(PROJECT_PATH_LOCAL, 'notebooks', 'behav_modeling', 'results', 'optimizing_adaptive') # TODO
 
 # Fit parameters
 fit_params = {
     'epsilon': Real(.0, .5, name='epsilon'),
     'alpha': Real(0.01, 1, name='alpha'),
     'alpha_unchosen': Real(0, .8, name='alpha_unchosen'),
-    "alpha_threshold": Real(0.0, 0.3, name="alpha_threshold"),
+    "alpha_threshold": Real(0.0, 0.7, name="alpha_threshold"),
     'beta': Real(10, 100, name='beta'),
     'stickiness_bias': Real(0.0, 50.0, name='stickiness_bias'),
     'forgetting_rate': Real(0.0, 1.0, name='forgetting_rate'),
     'forgetting_threshold': Real(0.0, 1.0, name='forgetting_threshold'),
     'b2_bias': Real(-20.0, 20.0, name='b2'),
-    'V0': Real(0.05, .4, name='V0'),
+    'V0': Real(0.0001, .4, name='V0'),
     'abandoned_bias': Real(-50.0, 0.0, name='abandoned_bias'),
     'abandoned_decay': Real(0.0, 1.0, name='abandoned_decay'),
 }
@@ -197,6 +197,7 @@ MODELS = {
         "free_params": ["beta"],
     },
 }
+
 
 def _run_model_optimization(model_name, env):
     """Optimize a single model and return results."""

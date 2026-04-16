@@ -297,9 +297,10 @@ def load_data_for_decoder(monkey, session, n_extra_trials=(-1, 1)):
 
     # add foraging, inferential RL and standard RL values
     # 'Q_1_inf', 'Q_1_std', 'Q_2_inf', 'Q_2_std', 'Q_3_inf', 'Q_3_std', 'Q_chosen_inf', 'Q_chosen_std'
-    behav = add_foraging_value(behav)  # add shift value for its decoding
+    behav = add_foraging_value(behav, add_PE=True)  # add shift value for its decoding
+    behav = add_RL_values(behav, add_PE=True)  # add shift value for its decoding
 
-    behav = add_RL_values(behav, structure_aware=True)  # add RL values for its decoding
+    '''behav = add_RL_values(behav, structure_aware=True)  # add RL values for its decoding
     # rename Q_1 to Q_1_inf, Q_2 to Q_2_inf, Q_3 to Q_3_inf for the inferential model
     behav = behav.rename(columns={'Q_1': 'Q_1_inf', 'Q_2': 'Q_2_inf', 'Q_3': 'Q_3_inf'})
     # add a new col Q_chosen_inf, which is the Q value of the chosen option (target column)
@@ -310,8 +311,8 @@ def load_data_for_decoder(monkey, session, n_extra_trials=(-1, 1)):
     behav['Q_chosen_stand'] = behav.apply(lambda row: row[f'Q_{int(row["target"])}_stand'] if not np.isnan(row["target"]) else np.nan, axis=1)
 
     # behav = add_switch_info(behav)  # add switch information for its decoding
-    behav = add_history_of_feedback(behav, num_trials=8, one_column=False, add_history_of_targets=False)  # add history of feedback for its decoding
-
+    behav = add_history_of_feedback(behav, num_trials=8, one_column=False, add_history_of_targets=False)  # add history of feedback for its decoding    
+    '''
     '''for alpha in np.arange(0.05, 1, 0.05):
         behav = add_foraging_value(behav, alpha=alpha)
         behav = behav.rename(columns={'stay_value': f'stay_value_{alpha:.2f}'})'''

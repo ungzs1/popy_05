@@ -75,7 +75,7 @@ def get_prop_event(behav_all_pd_original, column='switch'):
     return percent_selection# percent_shift
 
 
-def plot_strategy(behav, ax=None, saveas=None, paper_format=False, title=None, show_error=True, verbose=False, h=None, w=None, ylim=None):
+def plot_strategy(behav, ax=None, saveas=None, paper_format=False, title=None, show_error=True, verbose=False, h=None, w=None):
     # init fig
     if ax is None:
         if paper_format:
@@ -154,7 +154,7 @@ def plot_strategy(behav, ax=None, saveas=None, paper_format=False, title=None, s
                 if show_error and monkey in ['ka', 'po', 'yu_sham', 'yu_DCZ']:
                     axs[0].fill_between(np.arange(LEN_BLOCK), mean_best_selection-sem_best_selection, mean_best_selection+sem_best_selection, color=color, alpha=0.5)
             
-            axs[0].plot(mean_best_selection, color=color, label=monkey.upper(), linestyle=linestyle, linewidth=lw, alpha=0.8)
+            axs[0].plot(mean_best_selection, color=color, label=monkey.upper(), linestyle=linestyle, linewidth=lw, alpha=0.8, marker='*')
 
             axs[1].plot(mean_shift, color=color , label=monkey.upper(), linestyle=linestyle, linewidth=lw, alpha=0.8)
             if linestyle == 'solid' and show_error and monkey_base in ['ka', 'po', 'yu_sham', 'yu_DCZ']:
@@ -183,9 +183,9 @@ def plot_strategy(behav, ax=None, saveas=None, paper_format=False, title=None, s
     ax.axvline(LEN_BLOCK-5, color='k', linestyle='--', alpha=0.5, zorder=-1)
     #ax.set_title('Best target selection')
     ax.set_ylabel('prob HIGH target')
-    ax.set_ylim([0.2, 1])
     # set ticks every .2
-    ax.set_yticks(np.arange(0.3, 1.1, 0.2))
+    ax.set_yticks(np.arange(0.2, 1.1, 0.2))
+    ax.set_ylim([0.2, 1])
     if not paper_format:
         ax.legend(loc='center left', bbox_to_anchor=(1, 0.5), frameon=True)
 
@@ -198,10 +198,8 @@ def plot_strategy(behav, ax=None, saveas=None, paper_format=False, title=None, s
     #ax.set_title('Shift')
     ax.set_xlabel('Trials in block')
     ax.set_ylabel('Proba. switch')
-    ax.set_yticks(np.arange(0, .6, 0.1))
-    if ylim is not None:
-        ax.set_ylim(ylim)
-    #ax.set_ylim([-0.02, .45])
+    ax.set_yticks(np.arange(0, .8, 0.1))
+    ax.set_ylim([0, .4])
     ax.legend(loc='center left', bbox_to_anchor=(1, 0.5), frameon=True)
 
     ax.spines['right'].set_visible(False)
@@ -367,12 +365,14 @@ def plot_hist_thingy(behav_original, title=None, paper_format=False):
             monkey_base = monkey
             
         color = COLORS[monkey_base] if monkey_base in COLORS else 'grey'
-        ax.plot(all_trials_vector, label=f'{monkey}', marker='o', 
+        ax.plot(all_trials_vector, label=f'{monkey}',
                 color=color, 
                 alpha=.8,
                 linestyle=linestyle,
                 markerfacecolor=color if monkey_base in ['ka', 'po', 'yu_DCZ', 'yu_sham'] else 'white',
-                markersize=s,# if not monkey in ['ka', 'po', 'yu_DCZ', 'yu_sham'] else s*1.5,
+                marker='*' if monkey_base in ['ka', 'po', 'yu_DCZ', 'yu_sham'] else 'o',
+                zorder=0 if monkey_base in ['ka', 'po', 'yu_DCZ', 'yu_sham'] else 10,
+                markersize=s*2 if monkey_base in ['ka', 'po', 'yu_DCZ', 'yu_sham'] else s,
                 linewidth=lw)# if not monkey in ['ka', 'po', 'yu_DCZ', 'yu_sham'] else lw*2, alpha=0.8)
 
     ax.axhline(0, color='black', linestyle='--', alpha=0.5)
@@ -381,7 +381,7 @@ def plot_hist_thingy(behav_original, title=None, paper_format=False):
     ax.set_xticklabels(labels, rotation=90)
 
     ax.set_xlabel('')
-    ax.set_ylim(-0.1, 1)
+    ax.set_ylim(-0.1, .7)
     ax.set_ylabel('Proba. switch')
 
     ax.spines["right"].set_visible(False)

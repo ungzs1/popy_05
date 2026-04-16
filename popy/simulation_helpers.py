@@ -7,9 +7,10 @@ import gymnasium as gym
 from gymnasium.wrappers import TimeLimit
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
 
 from skopt import gp_minimize, dummy_minimize
-from skopt.space import Real
+from skopt.space import Real, Integer
 from skopt.utils import use_named_args
 from skopt.plots import plot_convergence, plot_objective, plot_evaluations
 
@@ -134,9 +135,11 @@ def estimate_ll(
     # get likelihood of the behavior
     logp_actions = np.zeros(len(behavior))
     session_previous = 'none'
-    for i, row in behavior.iterrows():
-        action, reward = row["action"], row["reward"]
-        session_curr = row["session"]
+    
+    # Use itertuples instead of iterrows for ~5-10x speedup
+    for i, row in enumerate(behavior.itertuples(index=False)):
+        action, reward = row.action, row.reward
+        session_curr = row.session
 
         # Skip NaN actions (interrupted trials)
         if np.isnan(action):
@@ -325,7 +328,149 @@ from scipy.optimize import minimize
 from collections import deque
 # from joblib import Parallel, delayed  # not used now that we're adaptive/sequential
 
-def fit_agent_strict(agent_class, param_space, env, behav_data=None, fixed_params=None, fit_on='ll',
+def fit_agent_graddesc(
+        agent_class,
+    bounds,
+    param_names,
+    env,
+    behav_data=None,
+    fixed_params=None,
+    fit_on="ll",
+    n_restarts=50,
+    patience=5,
+    options=None,
+    method='Nelder-Mead',
+    verbose=False):
+    """
+    Fit an agent model to behavioral data using gradient descent (scipy.optimize.minimize)
+    with multiple random restarts and early stopping.
+    
+    Parameters
+    ----------
+    agent_class : class
+        The agent class to fit
+    bounds : list of tuples
+        List of (low, high) bounds for each parameter
+    param_names : list of str
+        Names of parameters corresponding to bounds
+    env : gym.Env
+        Environment for reward rate fitting
+    behav_data : pd.DataFrame
+        Behavioral data for likelihood fitting
+    fixed_params : dict
+        Fixed parameters for the agent
+    fit_on : str
+        Objective to minimize: 'll', 'll_first10', or 'rr'
+    n_restarts : int
+        Maximum number of random restarts (default: 50)
+    patience : int
+        Number of restarts without improvement before early stopping (default: 5)
+    options : dict
+        Options for scipy.optimize.minimize
+    method : str
+        Optimization method for scipy.optimize.minimize (default: 'Nelder-Mead')
+    verbose : bool
+        Print progress information
+    """
+    if fixed_params is None:
+        fixed_params = {}
+
+    # Objective wrapper
+    def objective(x):
+        params = dict(zip(param_names, x))
+        if fit_on == 'll':
+            ll = estimate_ll(agent_class, params, behav_data, fixed_params)
+            print(f'LL : {ll:.4f} with params: {[f"{name}={v:.4f}" for name, v in zip(param_names, x)]}')  # DEBUG
+            return -ll
+        elif fit_on == 'll_first10':
+            ll_all = estimate_ll(agent_class, params, behav_data, fixed_params, return_with_behav=True)
+            ll_first10 = ll_all.groupby(['session', 'block_id']).head(10)['logp_action'].sum()
+            return -ll_first10
+        elif fit_on == 'rr':
+            rr = estimate_rr(agent_class, params, env, fixed_params)
+            return -rr
+        else:
+            raise ValueError(f"Invalid value for 'fit_on': {fit_on}")
+
+    # RNG for reproducibility
+    rng = np.random.default_rng()
+
+    # Multiple restarts with early stopping
+    best_result = None
+    best_fun = np.inf
+    no_improvement_count = 0
+
+    for restart_idx in range(n_restarts):
+        # Random initialization within bounds
+        x0 = np.array([rng.uniform(low, high) for (low, high) in bounds])
+
+        # Run gradient descent with loose tolerances for speed
+        result = minimize(
+            objective, 
+            x0, 
+            method=method, 
+            bounds=bounds,
+            options=options
+        )
+
+        # Track improvement
+        if result.fun < best_fun:
+            best_fun = result.fun
+            best_result = result
+            no_improvement_count = 0
+            if verbose:
+                print(f"[Restart {restart_idx+1:3d}] New best: {best_fun:.6f}")
+        else:
+            no_improvement_count += 1
+            if verbose:
+                print(f"[Restart {restart_idx+1:3d}] No improvement (streak: {no_improvement_count}/{patience})")
+
+        # Early stopping
+        if no_improvement_count >= patience:
+            if verbose:
+                print(f"Early stopping at restart {restart_idx+1}")
+            break
+
+    if best_result is None:
+        raise RuntimeError("No optimization result obtained.")
+
+    best_params = dict(zip(param_names, best_result.x))
+
+    # Compute metrics
+    if fit_on == 'll':
+        best_ll = -best_result.fun
+        n_params = len(bounds)
+        n_trials = len(behav_data)
+        bic = -2 * best_ll + n_params * np.log(n_trials)
+        lpt = np.exp(best_ll / n_trials)
+
+        return {
+            'best_params': best_params,
+            'best_ll': best_ll,
+            'bic': bic,
+            'lpt': lpt
+        }
+    elif fit_on == 'll_first10':
+        best_ll = -best_result.fun
+        n_params = len(bounds)
+        n_trials = len(behav_data.groupby(['session', 'block_id']).head(10))
+        bic = -2 * best_ll + n_params * np.log(n_trials)
+        lpt = np.exp(best_ll / n_trials)
+
+        return {
+            'best_params': best_params,
+            'best_ll': best_ll,
+            'bic': bic,
+            'lpt': lpt
+        }
+    elif fit_on == 'rr':
+        return {
+            'best_params': best_params,
+            'best_reward_rate': -best_result.fun
+        }
+
+
+def OLD_fit_agent_strict(agent_class, param_space, env, behav_data=None, fixed_params=None, fit_on='ll',
                      method='L-BFGS-B', n_restarts=50, verbose=False,
                      min_improvement=-np.inf, patience=5, rng=None):
     """
