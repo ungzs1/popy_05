@@ -324,11 +324,13 @@ TIMES_OF_INTEREST = {  # TODO normally we only want the last one
     #'after_fb':   (-4, -2),
     #'it1':        (-2,  0),
     #'it2':        (-.5,  1.5),
-    'before_fb':  (1.5, 3.5), 
+    'tt_centered': (2,  3),    
+    'tt_centered_short': (2.25,  2.75),    
+    'before_fb_validation':  (1.5, 3.5), 
 }
 
-FLOC_FOLDER = 'across_target_first15_'  # TODO
-N_FIRST_ONLY = 15  # TODO: whether to use only the first trial of each block (to avoid contamination from previous trial)
+FLOC_FOLDER = 'across_target_'  # TODO
+N_FIRST_ONLY = None  # TODO: whether to use only the first trial of each block (to avoid contamination from previous trial). None or an int.
 
 def make_params(key, time_window):
     FLOC_BASE = os.path.join(cfg.PROJECT_PATH_LOCAL, 'notebooks', 'population_decoding', 'neural_value', 'results')

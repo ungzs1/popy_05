@@ -80,7 +80,7 @@ def save_results(xr, floc):
 
 PARAMS = {
     "conditions": [  # TODO
-        'PE_RL', 'PE_foraging', 
+        'stay_value', 'chosen_qvalue', 
     ],
     "group_targets": None,  # ['target', 'target_shuffled'],
     "K_fold": 10,
@@ -92,9 +92,9 @@ PARAMS = {
         "notebooks",
         "population_decoding",
         "results",
-        "prediction_errors",  # TODO
+        "chosenq_vs_foragingvalue",  # TODO
     ),
-    "msg": "to reply the reviewer question, we try to decode PE signals coming from alternative models",
+    "msg": "lets see if we can decode chosen q-value vs foraging value, only in switch trials!",
 }
 
 ### Run
@@ -104,7 +104,7 @@ if __name__ == '__main__':
 
     monkeys, sessions = get_all_sessions()  # Get a pandas df containing all sessions' meta information
     
-    n_cores = np.min([111, os.cpu_count()-3])  # get number of cores in the machine
+    n_cores = np.min([111, os.cpu_count()-3])  # TODO get number of cores in the machine
     with concurrent.futures.ProcessPoolExecutor(max_workers=n_cores) as executor:
         # submit jobs
         futures, future_proxy_mapping = [], {}

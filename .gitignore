@@ -5,16 +5,24 @@ envs/*
 tmep/*
 figs/*
 results/*
+movies/*
+
+notebooks/neural_analysis/movie_codes/*
+notebooks/pca/movie_codes/*
 
 notebooks/decoders/figs/*
 notebooks/decoders/results/*
 notebooks/behav_analysis/figs/*
 notebooks/neural_analysis/figs/*
+notebooks/population_decoding/neural_value/figs/*
 
 .idea
 *.csv
 *.ipynb_checkpoints
 *.svg
+*.pdf
+*.pkl
+*.nc
 .vscode/*
 
 **/__pycache__/

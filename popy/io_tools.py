@@ -190,10 +190,15 @@ def load_simulation(monkey=None, model=None):
 def load_behavior(monkey=None, session=None):
     """
     Simply loads the full behavior dataset so that its not necessary to load it every time from path.
+
+    Monkeys 'ka' and 'po' are loaded from behavior_kapo.pkl, monkey 'yu' from behavior_yu.pkl (made by
+    notebooks/preprocessing_sessions/preproc_behavioral_data/preproc_behavioral_data_yuri.py).
+    Without a monkey, only 'ka' and 'po' are returned.
     """
 
     base_path = config.PROJECT_PATH_LOCAL
-    data_path = os.path.join(base_path, 'data', 'processed', 'behavior', 'behavior_kapo.pkl')
+    fname = 'behavior_yu.pkl' if monkey == 'yu' else 'behavior_kapo.pkl'
+    data_path = os.path.join(base_path, 'data', 'processed', 'behavior', fname)
     concat_data = pd.read_pickle(data_path)
 
     # sort by [monkey, session, trial_id]

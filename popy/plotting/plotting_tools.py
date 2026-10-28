@@ -121,6 +121,8 @@ def plot_strategy(behav, ax=None, saveas=None, paper_format=False, title=None, s
     # get percent selection and percent shift per monkey and model
     for monkey, df_monkey in behav.groupby('monkey'):
         for model, df_model in df_monkey.groupby('model'):
+            # print percent best target selection for each monkey and model
+            print(f"Monkey: {monkey}, Model: {model}, Percent best target selection: {df_model['if_best_target'].mean():.2f}, Percent shift: {df_model['switch'].mean():.2f}")
             
             # get percent correct and percent shift
             percent_selection = get_prop_event(df_model, 'if_best_target')
@@ -154,7 +156,7 @@ def plot_strategy(behav, ax=None, saveas=None, paper_format=False, title=None, s
                 if show_error and monkey in ['ka', 'po', 'yu_sham', 'yu_DCZ']:
                     axs[0].fill_between(np.arange(LEN_BLOCK), mean_best_selection-sem_best_selection, mean_best_selection+sem_best_selection, color=color, alpha=0.5)
             
-            axs[0].plot(mean_best_selection, color=color, label=monkey.upper(), linestyle=linestyle, linewidth=lw, alpha=0.8, marker='*')
+            axs[0].plot(mean_best_selection, color=color, label=monkey.upper(), linestyle=linestyle, linewidth=lw, alpha=0.8)
 
             axs[1].plot(mean_shift, color=color , label=monkey.upper(), linestyle=linestyle, linewidth=lw, alpha=0.8)
             if linestyle == 'solid' and show_error and monkey_base in ['ka', 'po', 'yu_sham', 'yu_DCZ']:
@@ -605,7 +607,7 @@ def make_color_lighter(color, amount=0.1):
 def show_target_selection_compact(
         session_data_original, 
         title=None, 
-        background_values=None, 
+        background_values=[], 
         background_value_lims=None,
         ylabel=None,
         savedir=None, 
@@ -634,7 +636,10 @@ def show_target_selection_compact(
     # work on a copy of the original data
     session_data = session_data_original.copy()
 
-    if background_values is None and not isinstance(background_values, list):
+    if background_values is None:
+        background_values = []
+    
+    if not isinstance(background_values, list):
         background_values = [background_values]
 
     if len(session_data['monkey'].unique()) != 1:

@@ -1,7 +1,9 @@
 """
 Functions to transform the session data dataframe. The dataframe is the already processed pandas df, not the raw data!
+Exception: the last section contains the raw data preprocessing of monkey Yuri (csv files -> session data dataframe).
 """
 import os
+import re
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -10,6 +12,7 @@ from scipy.special import expit, logit
 
 import popy.config as cfg
 from popy.simulation_tools import *
+from popy.io_tools_helpers import extract_behav_timestamps, extract_behav_events, chop_trunctuated_blocks, reformat_behav
 
 
 
@@ -917,3 +920,105 @@ def add_trials_since_switch(behav):
 
     behav = add_switch_info(behav, add_trials_since_switch=True)
     return behav
+
+
+### Raw data preprocessing of monkey Yuri (csv files)
+
+
+def get_false_touches_yuri(trial_events):
+    """
+    Classifies the false (useless) touches of one trial (events from trial start 100 to trial end 101,
+    shape=(#events, 2)). Event codes are described in data/code_LUV_task.txt.
+
+        'n_early_lever_release': lever touch (61) before lever validation, not followed by lever validation (62)
+        'n_late_lever_touch': lever touch (61) after lever validation (62)
+        'n_premature_target_touch': target touch before lever validation (111/112/113)
+        'n_early_target_release': target touch (121/122/123) before target validation, not followed by target
+            validation (125)
+        'n_late_target_touch_after_reward': target touch after target validation (131-136, during END 141-143, or
+            121/122/123 after the 125) in a rewarded trial (65)
+        'n_late_target_touch_after_no_reward': same, in a not rewarded trial (no 65). In Yuri's data the codes
+            after no reward (134-136) are never sent and 131-133 are sent after both outcomes, so the outcome is
+            taken from the 65 code of the trial (for the END touches, this is the feedback before the touch).
+        'n_false_touch': sum of all the above
+    """
+    codes = trial_events[:, 0]
+    next_codes = np.append(codes[1:], -1)
+    position = np.arange(len(codes))
+
+    ids_62 = np.where(codes == 62)[0]
+    id_lever_validation = ids_62[0] if len(ids_62) > 0 else len(codes)
+    ids_125 = np.where(codes == 125)[0]
+    id_target_validation = ids_125[0] if len(ids_125) > 0 else len(codes)
+
+    is_lever_touch = codes == 61
+    is_target_touch = np.isin(codes, [121, 122, 123])
+    is_late_target_touch = (np.isin(codes, [131, 132, 133, 134, 135, 136, 141, 142, 143]) |
+                            (is_target_touch & (position > id_target_validation)))
+    rewarded = 65 in codes
+
+    false_touches = {
+        'n_early_lever_release': np.sum(is_lever_touch & (position < id_lever_validation) & (next_codes != 62)),
+        'n_late_lever_touch': np.sum(is_lever_touch & (position > id_lever_validation)),
+        'n_premature_target_touch': np.sum(np.isin(codes, [111, 112, 113])),
+        'n_early_target_release': np.sum(is_target_touch & (position < id_target_validation) & (next_codes != 125)),
+        'n_late_target_touch_after_reward': np.sum(is_late_target_touch) if rewarded else 0,
+        'n_late_target_touch_after_no_reward': 0 if rewarded else np.sum(is_late_target_touch),
+    }
+    false_touches = {key: int(value) for key, value in false_touches.items()}
+    false_touches['n_false_touch'] = sum(false_touches.values())
+
+    return false_touches
+
+
+def get_behavior_yuri(session_floc, condition=None):
+    """
+    Loads the raw behavior of one session of Yuri (csv file) and extracts the timestamps and the events. Returns a
+    formatted pandas dataframe, in the same format as io_tools.get_behavior() for 'ka' and 'po', plus an 'injection'
+    column, the number of events per trial ('n_events', between trial start 100 and trial end 101) and the number of
+    false touches per trial (see get_false_touches_yuri()).
+    """
+
+    raw_df = pd.DataFrame(dict(np.load(session_floc)))
+    
+    # make sure put event in first col and tim ein second col, and convert to numpy array
+    raw_df = raw_df[['code', 'time']]
+
+    # remove out of session events (before 255 code (session start) and after 102 code (session end))
+    id_255 = raw_df.index[raw_df.code == 255]
+    id_102 = raw_df.index[raw_df.code == 102]
+    raw_df = raw_df.loc[id_255[0]:id_102[-1]]  # keep only events between session start and end
+
+    # block starts are coded 8 in the csv, but get_block_info() counts 7 events
+    raw_df = raw_df.replace({'code': {8: 7}})
+
+    # convert to numpy
+    raw_behav = raw_df.to_numpy(dtype=float)
+
+    # extract timestamps and events
+    times_df = extract_behav_timestamps(raw_behav)  # extract timestamps
+    events_df = extract_behav_events(raw_behav)   # extract events
+
+    # number of events (between trial start and end) and false touches per trial
+    false_touches_df = pd.DataFrame(
+        [{
+            'trial_id': trial_id, 
+            'n_events': len(trial_events) - 2, 
+            **get_false_touches_yuri(trial_events)
+          } for trial_id, trial_events in reformat_behav(raw_behav)['behav_events'].items()])
+
+    # concatenate times, events and false touches
+    joint_df = times_df.join(events_df.set_index('trial_id'), on='trial_id')
+    joint_df = joint_df.join(false_touches_df.set_index('trial_id'), on='trial_id')
+
+    # add monkey, injection and session info, put these 3 cols in the front
+    joint_df['monkey'] = 'yu'
+    joint_df['injection'] = condition #get_injection_yuri(session)
+    joint_df['session'] = os.path.basename(session_floc)[:-len('_events.npz')]
+    cols = ['monkey', 'injection', 'session'] + [col for col in joint_df.columns if col not in ['monkey', 'injection', 'session']]
+    joint_df = joint_df[cols]
+
+    # remove too short blocks (< 30 trials) from beginning and end of session
+    joint_df = chop_trunctuated_blocks(joint_df)
+
+    return joint_df

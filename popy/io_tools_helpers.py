@@ -163,6 +163,10 @@ def reformat_behav(raw_behav):
     trial_start_ids = np.where(raw_behav[:, 0] == 100)[0]
     trial_end_ids = np.where(raw_behav[:, 0] == 101)[0]
 
+    # check if the number of trial starts and ends match
+    if len(trial_start_ids) != len(trial_end_ids):
+        raise ValueError(f"Number of trial starts ({len(trial_start_ids)}) and ends ({len(trial_end_ids)}) do not match.")
+
     all_trials = []
     for trial_id, (trial_start, trial_end) in enumerate(zip(trial_start_ids, trial_end_ids)):
         curr_trial = {

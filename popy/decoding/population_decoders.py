@@ -300,6 +300,19 @@ def load_data_for_decoder(monkey, session, n_extra_trials=(-1, 1)):
     behav = add_foraging_value(behav, add_PE=True)  # add shift value for its decoding
     behav = add_RL_values(behav, add_PE=True)  # add shift value for its decoding
 
+    # remove those trials where RL and Foraging PEs are too similar (only keep different ones)
+    # TODO: remove this line!!!
+    #diff = (behav['PE_foraging'] - behav['PE_RL']).abs()
+    #behav = behav[diff > diff.quantile(0.66)]  # keep top 33%
+
+    # get the q-chosen and restrict data to switch trials only
+    # TODO: remove this line!!!
+    behav['chosen_qvalue'] = behav.apply(lambda row: np.nan if pd.isna(row["target"]) else row[f'Q_{int(row["target"])}'], axis=1)
+    behav = add_switch_info(behav)  # add switch information for its decoding
+    behav = behav[behav['switch'] == 1]  # keep only switch trials
+    if len(behav) <= 20:
+        raise ValueError(f"Not enough switch trials for {monkey}_{session} to decode chosen q-value vs foraging value")
+
     '''behav = add_RL_values(behav, structure_aware=True)  # add RL values for its decoding
     # rename Q_1 to Q_1_inf, Q_2 to Q_2_inf, Q_3 to Q_3_inf for the inferential model
     behav = behav.rename(columns={'Q_1': 'Q_1_inf', 'Q_2': 'Q_2_inf', 'Q_3': 'Q_3_inf'})

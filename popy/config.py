@@ -20,7 +20,8 @@ import matplotlib.colors as mcolors
 ### PATHS ###
 pathes = {'q10': '/workspace/uzsombi/inserm/PoPy',
           #'HOME': '/Users/zsombi/OneDrive/PoPy'}
-          'HOME': '/Users/zsombi/Library/CloudStorage/GoogleDrive-uuungvarszi@gmail.com/Other computers/My Mac/ZSOMBI/SBRI/PoPy'}
+          #'HOME': '/Users/zsombi/Library/CloudStorage/GoogleDrive-uuungvarszi@gmail.com/Other computers/My Mac/ZSOMBI/SBRI/PoPy'
+          }
 
 # check which path exists on the local computer
 for key, path in pathes.items():
@@ -28,6 +29,10 @@ for key, path in pathes.items():
         PROJECT_PATH_LOCAL = path
         #print(f'Using {key} path')
         break
+
+# wigner server data path
+#MARION_DATA_PATH = "/mnt/monkey/Yuri/EphysData/"  # normally not needed anymore
+COMBINED_DATA_PATH = "/workspace/uzsombi/Yuri"  # this is where the combined behavioral and neural data is stored
 
 # check if the drive is accessible
 # the path of the drive
