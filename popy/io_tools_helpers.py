@@ -70,15 +70,15 @@ def extract_behav_timestamps(raw_behav):
             'trial_start_time': curr_behav[np.where(curr_behav == 100)[0], 1][0]
             }  # to save times and ids
 
-        # if the trial is not interrupted, we can extract the other times
+        # if the trial is not interrupted, we can extract the other times (NaN if the event code is missing)
         if 252 not in curr_behav[:, 0]:
             curr_trial['lever_touch_time'] = get_lever_touch(curr_behav)
-            curr_trial['lever_validation_time'] = curr_behav[np.where(curr_behav == 62)[0], 1][0]
-            curr_trial['lever_release_time'] = curr_behav[np.where(curr_behav == 64)[0], 1][0]
+            curr_trial['lever_validation_time'] = get_first_event_time(curr_behav, [62])
+            curr_trial['lever_release_time'] = get_first_event_time(curr_behav, [64], after=62)
             # 'lever_release_time': curr_behav[np.where(curr_behav == 64)[0], 1][0]
             curr_trial['target_touch_time'], curr_trial['n_target_touches'] = get_target_touch(curr_behav)
-            curr_trial['target_validation_time'] = curr_behav[np.where(curr_behav == 125)[0], 1][0]
-            curr_trial['feedback_time'] = curr_behav[np.where((curr_behav[:, 0] == 65) | (curr_behav[:, 0] == 66))[0], 1][0]
+            curr_trial['target_validation_time'] = get_first_event_time(curr_behav, [125])
+            curr_trial['feedback_time'] = get_first_event_time(curr_behav, [65, 66])
         else:  # if the trial is interrupted, we can't (won't) extract the other times
             curr_trial['lever_touch_time'] = np.nan
             curr_trial['lever_validation_time'] = np.nan
@@ -178,15 +178,31 @@ def reformat_behav(raw_behav):
     return pd.DataFrame(all_trials)
 
 
+def get_first_event_time(behav, codes, after=None):
+    """
+    Time of the first event with one of the codes (after the first event with code `after`, if given). NaN if there is
+    no such event (e.g. the code was lost).
+    """
+
+    ids = np.where(np.isin(behav[:, 0], codes))[0]
+    if after is not None:
+        ids_after = np.where(behav[:, 0] == after)[0]
+        ids = ids[ids > ids_after[0]] if len(ids_after) > 0 else ids[:0]
+
+    return behav[ids[0], 1] if len(ids) > 0 else np.nan
+
+
 def get_lever_touch(behav):
     """
     Lever touch event is the last lever touch (code 61) before lever validation (code 62), so we need the last 61 before
-    the only 62 event.
+    the only 62 event. NaN if there is no 62 or no 61 before it.
     """
 
     id_62 = np.argwhere(behav[:, 0] == 62)
     ids_61 = np.argwhere(behav[:, 0] == 61)
-    last_61_before_62 = np.max(ids_61[ids_61 < id_62])
+    if len(id_62) == 0 or not np.any(ids_61 < id_62[0]):
+        return np.nan
+    last_61_before_62 = np.max(ids_61[ids_61 < id_62[0]])
 
     return behav[last_61_before_62, 1]
 
@@ -194,13 +210,17 @@ def get_lever_touch(behav):
 def get_target_touch(behav):
     """
     Target touch event is the last target touch (code 121/122/123) before targegt validation (code 125),
-    so we need the last 121/122/123 before the only behav event.
+    so we need the last 121/122/123 before the only behav event. NaN if there is no 125 or no target touch before it.
     """
 
     id_125 = np.argwhere(behav[:, 0] == 125)
+    if len(id_125) == 0:
+        return np.nan, np.nan
     ids_target_touch = np.argwhere((behav[:, 0] == 121) | (behav[:, 0] == 122) | (behav[:, 0] == 123))
-    last_traget_touch_id = np.max(ids_target_touch[ids_target_touch < id_125])
-    n_target_touches = len(ids_target_touch[ids_target_touch < id_125])
+    n_target_touches = len(ids_target_touch[ids_target_touch < id_125[0]])
+    if n_target_touches == 0:
+        return np.nan, n_target_touches
+    last_traget_touch_id = np.max(ids_target_touch[ids_target_touch < id_125[0]])
 
     return behav[last_traget_touch_id, 1], n_target_touches
 
@@ -261,13 +281,16 @@ def get_reward_info(behav):
 def get_selected_target(behav):
     """
     Target selection events can occure multiple times. We only want to see here what the validated target was. This is
-    the last target selection (121/122/123) before target validation (125).
+    the last target selection (121/122/123) before target validation (125). NaN if there is no 125 or no target
+    selection before it.
     """
 
     id_125 = np.argwhere(behav[:, 0] == 125)
     ids_target_touch = np.argwhere((behav[:, 0] == 121) | (behav[:, 0] == 122) | (behav[:, 0] == 123))
+    if len(id_125) == 0 or not np.any(ids_target_touch < id_125[0]):
+        return np.nan
 
-    last_traget_touch_id = np.max(ids_target_touch[ids_target_touch < id_125])
+    last_traget_touch_id = np.max(ids_target_touch[ids_target_touch < id_125[0]])
     last_target_touch_code = behav[last_traget_touch_id, 0]
 
     return int(last_target_touch_code - 120)

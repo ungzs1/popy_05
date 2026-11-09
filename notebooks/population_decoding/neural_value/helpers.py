@@ -29,6 +29,7 @@ from imblearn.under_sampling import RandomUnderSampler
 from sklearn.model_selection import GroupKFold
 from matplotlib import axes
 import statsmodels.api as sm
+from statsmodels.stats.multitest import multipletests
 from joblib import Parallel, delayed
 import warnings
 warnings.filterwarnings('ignore')
@@ -42,7 +43,7 @@ def load_data_custom(monkey, session, area=None, subregion=None, n_extra_trials=
     # load data (meta session)
     behav = load_behavior(monkey, session)
     behav = drop_time_fields(behav)
-
+    
     # add behav vars to decode
     #behav = add_foraging_value(behav)
     behav = add_switch_info(behav)
@@ -670,6 +671,39 @@ def get_cpd_all(behav_new, n_perms):
 
 ##% Plotting Functions
 
+def print_stat_header(fig_label, data):
+    """Print a header line for the statistics of a figure panel: figure, monkey(s), subregion(s)."""
+    monkeys = ', '.join(sorted(str(m).upper() for m in data['monkey'].unique())) if 'monkey' in data.columns else 'n/a'
+    subregions = ', '.join(sorted(str(s) for s in data['subregion'].unique())) if 'subregion' in data.columns else 'n/a'
+    print(f"\n===== {fig_label} | monkey: {monkeys} | subregion: {subregions} =====")
+
+
+def wilcoxon_signed_rank(x):
+    """Two-sided Wilcoxon signed-rank test of x against 0.
+
+    Returns the test statistic W, the p-value, the matched-pairs rank-biserial correlation (effect size)
+    and the number of non-zero values used by the test.
+    """
+    x = np.asarray(x, dtype=float)
+    x = x[~np.isnan(x)]
+    res = stats.wilcoxon(x, alternative='two-sided')
+
+    nonzero = x[x != 0]
+    ranks = stats.rankdata(np.abs(nonzero))
+    r_rb = (ranks[nonzero > 0].sum() - ranks[nonzero < 0].sum()) / ranks.sum()
+
+    return res.statistic, res.pvalue, r_rb, len(nonzero)
+
+
+def bootstrap_median_ci(x, n_resamples=10000, confidence_level=0.95, seed=0):
+    """Percentile bootstrap confidence interval of the median (resampling sessions)."""
+    x = np.asarray(x, dtype=float)
+    x = x[~np.isnan(x)]
+    res = stats.bootstrap((x,), np.median, n_resamples=n_resamples, confidence_level=confidence_level,
+                          method='percentile', random_state=np.random.default_rng(seed))
+    return res.confidence_interval.low, res.confidence_interval.high
+
+
 
 def plot_decoder_results(results, weights, n_extra_trials):
     fig, axs = plt.subplots(1, 3, figsize=(13, 4))
@@ -934,9 +968,9 @@ def projection_timepoint(behav_new, paper_format=False, ylim=None, show_datapoin
     return fig, ax
 
 
-def create_r_style_plot(ax=None, data=None, x_col=None, y_col=None, title=None, session_col='session', paper_format=False):
+def create_r_style_plot(ax=None, data=None, x_col=None, y_col=None, title=None, session_col='session', paper_format=False, fig_label='Fig. 4e', n_comparisons=3):
     """Create R-style plot with violin, box, and jittered points
-    
+
     Args:
         ax: matplotlib axis
         data: DataFrame with the data
@@ -944,6 +978,8 @@ def create_r_style_plot(ax=None, data=None, x_col=None, y_col=None, title=None, 
         y_col: column name for y-axis values
         title: plot title
         session_col: column name for session identifier (optional, for connecting points)
+        fig_label: figure panel name used in the printed statistics
+        n_comparisons: number of tests for the Bonferroni correction (default: 3 regions)
     """
     palette = COLORS
     axis = ax
@@ -1088,9 +1124,38 @@ def create_r_style_plot(ax=None, data=None, x_col=None, y_col=None, title=None, 
     if len(categories) == 2:
         group1_data = data.loc[data[x_col] == categories[0], y_col]
         group2_data = data.loc[data[x_col] == categories[1], y_col]
-        #_, p_value = stats.ttest_ind(group1_data, group2_data)
-        U, p_value = stats.mannwhitneyu(group1_data, group2_data, alternative='two-sided')
+        print_stat_header(fig_label, data)
 
+        if session_col is not None and session_col in data.columns:
+            # paired test: each session contributes one value per category
+            pair_keys = [col for col in ['monkey', session_col] if col in data.columns]
+            paired = data.pivot_table(index=pair_keys, columns=x_col, values=y_col).dropna()
+            diffs = paired[categories[1]] - paired[categories[0]]
+            stat, p_value, r_rb, n_used = wilcoxon_signed_rank(diffs.values)
+            stat_name = 'W'
+
+            print(f"  Group test: two-sided Wilcoxon signed-rank test, paired by session, {y_col} of {categories[1]} - {categories[0]} ({x_col})")
+            print(f"  n = {len(diffs)} sessions ({n_used} non-zero differences); median difference = {np.median(diffs):.3f} "
+                  f"(IQR {np.percentile(diffs, 25):.3f} to {np.percentile(diffs, 75):.3f})")
+            ci_low, ci_high = bootstrap_median_ci(diffs.values)
+            print(f"  95% CI of the median difference (bootstrap over sessions, 10000 resamples): [{ci_low:.3f}, {ci_high:.3f}]")
+            print(f"  W = {stat:.1f}, p = {p_value:.3e}, p (Bonferroni x{n_comparisons}) = {min(p_value * n_comparisons, 1):.3e}")
+            print(f"  Effect size: matched-pairs rank-biserial r = {r_rb:.3f}")
+        else:
+            # no session identifier: groups can not be paired, fall back to an unpaired test
+            stat, p_value = stats.mannwhitneyu(group1_data, group2_data, alternative='two-sided')
+            stat_name = 'U'
+            n1, n2 = len(group1_data), len(group2_data)
+
+            print(f"  Group test: two-sided Mann-Whitney U test (unpaired), {y_col} of {categories[0]} vs. {categories[1]} ({x_col})")
+            print(f"  n = {n1} vs. {n2}")
+            print(f"  U = {stat:.1f}, p = {p_value:.3e}, p (Bonferroni x{n_comparisons}) = {min(p_value * n_comparisons, 1):.3e}")
+            print(f"  Effect size: rank-biserial r = {1 - 2 * stat / (n1 * n2):.3f}")
+
+        if 'signif' in data.columns and session_col is not None:
+            signif_sessions = data.groupby([col for col in ['monkey', session_col] if col in data.columns])['signif'].first()
+            print(f"  Per-session test (dot fill): two-sided Mann-Whitney U test on single trials, uncorrected: "
+                  f"{signif_sessions.sum()}/{len(signif_sessions)} sessions with p < 0.05")
 
         # Position for significance bar
         y_max = data[y_col].max()
@@ -1098,13 +1163,13 @@ def create_r_style_plot(ax=None, data=None, x_col=None, y_col=None, title=None, 
         
         # Add significance annotation
         if p_value < 0.001:
-            significance = '***, U={:.2f}, p={}'.format(U, p_value)
+            significance = '***, {}={:.2f}, p={}'.format(stat_name, stat, p_value)
         elif p_value < 0.01:
-            significance = '**, U={:.2f}, p={}'.format(U, p_value)
+            significance = '**, {}={:.2f}, p={}'.format(stat_name, stat, p_value)
         elif p_value < 0.05:
-            significance = '*, U={:.2f}, p={}'.format(U, p_value)
+            significance = '*, {}={:.2f}, p={}'.format(stat_name, stat, p_value)
         else:
-            significance = 'n.s., U={:.2f}, p={}'.format(U, p_value)
+            significance = 'n.s., {}={:.2f}, p={}'.format(stat_name, stat, p_value)
         
         # Add the bar and text for p-value
         ax.plot([0, 1], [y_pos, y_pos], '-k', lw=2*lw)
@@ -1182,7 +1247,7 @@ def plot_dV_per_fb(behav_new, paper_format=False, ylim=None, show_datapoints=Fal
         return fig, ax
 
 
-def plot_Vt_per_sequence(behav_new, paper_format=False, ylim=None, show_datapoints=True, ax=None, showfliers=True):
+def plot_Vt_per_sequence(behav_new, paper_format=False, ylim=None, show_datapoints=True, ax=None, showfliers=True, fig_label='Fig. 4c', n_comparisons=3):
     axis_original = ax
     # project to axis
     if paper_format:
@@ -1220,20 +1285,33 @@ def plot_Vt_per_sequence(behav_new, paper_format=False, ylim=None, show_datapoin
     df['fb_sequence_str'] = df['fb_sequence'].map(label_mapping_long)
     df['fb_sequence_last_2_str'] = df['fb_sequence_last_2'].map(label_mapping_short)
 
-    ## NEW: statistical test
+    ## Statistical test: Spearman correlation within each session, then Wilcoxon signed-rank test of the rhos across sessions
+    session_keys = ['monkey', 'session'] if 'monkey' in behav_new.columns else ['session']
+    rhos = []
+    for _, sess in behav_new.groupby(session_keys):
+        if sess['fb_sequence'].nunique() >= 3:  # need at least 3 outcome histories for a correlation
+            rhos.append(stats.spearmanr(sess['fb_sequence'], sess['V_t'])[0])
+    rhos = np.array(rhos)
+    rhos = rhos[~np.isnan(rhos)]
+    W, pval, r_rb, n_used = wilcoxon_signed_rank(rhos)
+    rho_median = np.median(rhos)
 
-    # Compute Spearman correlation between numeric sequence order and V_t
-    rho, pval = stats.spearmanr(df['fb_sequence'], df['V_t'])  # The Spearman rank-order correlation coefficient is a nonparametric measure of the monotonicity of the relationship between two datasets. 
+    # previous approach, for comparison only (treats session x history means as independent points)
+    rho_pooled, pval_pooled = stats.spearmanr(df['fb_sequence'], df['V_t'])
 
-    rho_pos, pval_pos = stats.spearmanr(df[df['fb_sequence'] >= 4]['fb_sequence'], df[df['fb_sequence'] >= 4]['V_t'])
-    rho_neg, pval_neg = stats.spearmanr(df[df['fb_sequence'] < 4]['fb_sequence'], df[df['fb_sequence'] < 4]['V_t'])
-
-    print(f"Spearman correlation (rho): {rho:.3f}, p-value: {pval:.1e}")
-    print(f"Spearman correlation positive sequences (rho): {rho_pos:.3f}, p-value: {pval_pos:.1e}")
-    print(f"Spearman correlation negative sequences (rho): {rho_neg:.3f}, p-value: {pval_neg:.1e}")
+    print_stat_header(fig_label, behav_new)
+    print(f"  Spearman correlation between outcome history (0-7) and neural value within each session,")
+    print(f"  then two-sided Wilcoxon signed-rank test of the session rhos against 0")
+    print(f"  n = {len(rhos)} sessions ({n_used} non-zero rhos); median rho = {rho_median:.3f} "
+          f"(IQR {np.percentile(rhos, 25):.3f} to {np.percentile(rhos, 75):.3f})")
+    ci_low, ci_high = bootstrap_median_ci(rhos)
+    print(f"  95% CI of the median rho (bootstrap over sessions, 10000 resamples): [{ci_low:.3f}, {ci_high:.3f}]")
+    print(f"  W = {W:.1f}, p = {pval:.3e}, p (Bonferroni x{n_comparisons}) = {min(pval * n_comparisons, 1):.3e}")
+    print(f"  Effect size: matched-pairs rank-biserial r = {r_rb:.3f}")
+    print(f"  (old pooled approach, not for reporting: rho = {rho_pooled:.3f}, p = {pval_pooled:.3e}, n = {len(df)} points)")
 
     # Optional: annotate plot with significance result
-    ax.text(0.5, 0.95, f"rho = {rho:.2f}, p = {pval:.1e}",
+    ax.text(0.5, 0.95, f"median rho = {rho_median:.2f}, p = {pval:.1e}",
             ha='center', va='top', transform=ax.transAxes,
             fontsize=6 if paper_format else 10)
 
@@ -1502,7 +1580,7 @@ def plot_simple_glm_weights(weights_all, ax=None, show_data=True):
     if axis_original is None:
         return fig, ax
 
-def plot_cpds_history_neural_value(cpd_temp, null=None, ax=None, show_data=False):
+def plot_cpds_history_neural_value(cpd_temp, null=None, ax=None, show_data=False, fig_label='Fig. 4d'):
     axis_original = ax
     if ax is None:
         h = 2
@@ -1521,9 +1599,8 @@ def plot_cpds_history_neural_value(cpd_temp, null=None, ax=None, show_data=False
     cpd_sems = cpd_vals.std().values #/ np.sqrt(len(cpd_vals))
 
     # Plot means + error bars
-    ax.errorbar(range(1, len(cpd_means)+1), cpd_means, yerr=cpd_sems, 
-           fmt='o-', color=COLORS[subregion], 
-           markeredgecolor='black', markeredgewidth=.5,
+    ax.errorbar(range(1, len(cpd_means)+1), cpd_means, yerr=cpd_sems,
+           fmt='-', color=COLORS[subregion], zorder=2,
            label='session mean ± SEM', 
            markersize=6, capsize=2)
     
@@ -1540,17 +1617,33 @@ def plot_cpds_history_neural_value(cpd_temp, null=None, ax=None, show_data=False
             ax.plot(range(1, len(cpd_cols)+1), row.values, color='grey', alpha=0.1)'''
 
     # Stars: compare each regressor to null
-    
+    pvals = []
     for i, reg in enumerate(cpd_cols):
         if null is None:  # if there is no null, we assume that there is only one session in the data: print pvalue of CPD
             pcol = f'pval_{"_".join(reg.split("_")[1:])}'
             pval = cpd_temp[pcol].values[0]
         else:
             pval = np.sum(null >= cpd_means[i]) / null.shape[0]
+        pvals.append(pval)
 
-        if pval < 0.05:
-            ypos = cpd_means[i] + cpd_sems[i] + .5 if not np.isnan(cpd_sems[i]) else cpd_means[i] + 3
-            ax.text(i+1, ypos, '*', color='black', fontsize=8, ha='center')
+    # FDR (Benjamini-Hochberg) correction across lags
+    _, pvals_fdr, _, _ = multipletests(pvals, method='fdr_bh')
+
+    # print statistics
+    print_stat_header(fig_label, cpd_temp)
+    print(f"  One-sided permutation test of mean CPD vs. null (CPD of a shuffled regressor, "
+          f"{null.shape[0] if null is not None else 'n/a'} permutations), FDR-corrected (Benjamini-Hochberg) across lags")
+    print(f"  n = {len(cpd_vals)} sessions; data are mean +/- s.d. across sessions")
+    for i, reg in enumerate(cpd_cols):
+        print(f"  t-{i+1}: CPD = {cpd_means[i]:.2f} +/- {cpd_sems[i]:.2f} %, p = {pvals[i]:.4f}, p (FDR) = {pvals_fdr[i]:.4f}"
+              f"{'  *' if pvals_fdr[i] < 0.05 else ''}")
+
+    # Markers - filled for significant, white for non-significant
+    for i in range(len(cpd_means)):
+        facecolor = COLORS[subregion] if pvals_fdr[i] < 0.05 else (1, 1, 1, 0.8)
+        ax.plot(i+1, cpd_means[i], 'o', markerfacecolor=facecolor,
+                markeredgecolor='black', markeredgewidth=.5,
+                markersize=6, zorder=3)
 
     ax.axhline(0, color='black', linestyle='dotted', alpha=0.3)
     ax.set_title(f'{monkey} {subregion}')

@@ -28,6 +28,23 @@ os.environ.setdefault("NUMEXPR_NUM_THREADS", "1")
 
 def get_all_sessions():
     session_metadata = load_metadata()
+    # print number of sessions per monkey-subregion pair. 
+    # subregion=MCC if MCC_spikes_exist=True. subregion=vLPFC if LPFC_spikes_exist=True and LPFC_subregion=vLPFC. subregion=dLPFC if LPFC_spikes_exist=True and LPFC_subregion=dLPFC.
+    for monkey in session_metadata['monkey'].unique():
+        for subregion in ['MCC', 'vLPFC', 'dLPFC']:
+            if subregion == 'MCC':
+                n_sess = session_metadata.loc[(session_metadata['monkey']==monkey) & (session_metadata['MCC_spikes_exist']==True), 'session'].nunique()
+                n_sess_valid = session_metadata.loc[(session_metadata['monkey']==monkey) & (session_metadata['MCC_spikes_exist']==True) & (session_metadata['block_len_valid']==True), 'session'].nunique()
+                print(f"{monkey}-{subregion}: {n_sess} sessions (valid: {n_sess_valid})")
+            elif subregion == 'vLPFC':
+                n_sess = session_metadata.loc[(session_metadata['monkey']==monkey) & (session_metadata['LPFC_spikes_exist']==True) & (session_metadata['LPFC_subregion']=='vLPFC'), 'session'].nunique()
+                n_sess_valid = session_metadata.loc[(session_metadata['monkey']==monkey) & (session_metadata['LPFC_spikes_exist']==True) & (session_metadata['LPFC_subregion']=='vLPFC') & (session_metadata['block_len_valid']==True), 'session'].nunique()
+                print(f"{monkey}-{subregion}: {n_sess} sessions (valid: {n_sess_valid})")
+            elif subregion == 'dLPFC':
+                n_sess = session_metadata.loc[(session_metadata['monkey']==monkey) & (session_metadata['LPFC_spikes_exist']==True) & (session_metadata['LPFC_subregion']=='dLPFC'), 'session'].nunique()
+                n_sess_valid = session_metadata.loc[(session_metadata['monkey']==monkey) & (session_metadata['LPFC_spikes_exist']==True) & (session_metadata['LPFC_subregion']=='dLPFC') & (session_metadata['block_len_valid']==True), 'session'].nunique()
+                print(f"{monkey}-{subregion}: {n_sess} sessions (valid: {n_sess_valid})")
+
     session_metadata = session_metadata[session_metadata['block_len_valid'] == True]  # Only use sessions with valid block length
 
     monkeys = session_metadata['monkey'].values 
@@ -301,7 +318,7 @@ def run_neural_value_extraction(monkey, session, PARAMS):
 
 ### RUN THIS FOR NEURAL VALUE EXTRACTION
 PARAMS = {
-    'floc': os.path.join(cfg.PROJECT_PATH_LOCAL, 'notebooks', 'population_decoding', 'neural_value', 'results', 'behav_neural_value'),
+    'floc': os.path.join(cfg.PROJECT_PATH_LOCAL, 'notebooks', 'population_decoding', 'neural_value', 'results', 'behav_neural_value_TEST'),
     'msg': 'extracting plots',
     'times_of_interest': {'after_fb': (-4, -2), 
                             'it1': (-2, 0),

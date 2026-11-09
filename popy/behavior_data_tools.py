@@ -922,7 +922,7 @@ def add_trials_since_switch(behav):
     return behav
 
 
-### Raw data preprocessing of monkey Yuri (csv files)
+### Raw data preprocessing of monkey Yuri (npz files, see fix_events_yuri.py)
 
 
 def get_false_touches_yuri(trial_events):
@@ -971,23 +971,22 @@ def get_false_touches_yuri(trial_events):
     return false_touches
 
 
-def get_behavior_yuri(session_floc, condition=None):
+def get_behavior_yuri(events, session, condition=None):
     """
-    Loads the raw behavior of one session of Yuri (csv file) and extracts the timestamps and the events. Returns a
-    formatted pandas dataframe, in the same format as io_tools.get_behavior() for 'ka' and 'po', plus an 'injection'
-    column, the number of events per trial ('n_events', between trial start 100 and trial end 101) and the number of
-    false touches per trial (see get_false_touches_yuri()).
+    Extracts the timestamps and the events of one session of Yuri from its behavioral events. Returns a formatted
+    pandas dataframe, in the same format as io_tools.get_behavior() for 'ka' and 'po', plus an 'injection' column, the
+    number of events per trial ('n_events', between trial start 100 and trial end 101) and the number of false touches
+    per trial (see get_false_touches_yuri()).
+
+    :param events: DataFrame with columns 'code' and 'time' (s), the events of the session (<session>_events.npz in
+        cfg.COMBINED_DATA_PATH) after fixing them with fix_events_yuri() (notebooks/preprocessing_sessions/
+        preproc_behavioral_data/fix_events_yuri.py): main task only, one 100 ... 101 per trial.
+    :param session: session name (ddmmyy)
+    :param condition: 'DCZ' or 'sham', saved in the 'injection' column
     """
 
-    raw_df = pd.DataFrame(dict(np.load(session_floc)))
-    
-    # make sure put event in first col and tim ein second col, and convert to numpy array
-    raw_df = raw_df[['code', 'time']]
-
-    # remove out of session events (before 255 code (session start) and after 102 code (session end))
-    id_255 = raw_df.index[raw_df.code == 255]
-    id_102 = raw_df.index[raw_df.code == 102]
-    raw_df = raw_df.loc[id_255[0]:id_102[-1]]  # keep only events between session start and end
+    # make sure put event in first col and tim ein second col
+    raw_df = events[['code', 'time']]
 
     # block starts are coded 8 in the csv, but get_block_info() counts 7 events
     raw_df = raw_df.replace({'code': {8: 7}})
@@ -998,6 +997,11 @@ def get_behavior_yuri(session_floc, condition=None):
     # extract timestamps and events
     times_df = extract_behav_timestamps(raw_behav)  # extract timestamps
     events_df = extract_behav_events(raw_behav)   # extract events
+
+    # fixed column order (extract_behav_timestamps() orders the columns by the values of the first trial)
+    times_df = times_df[['trial_id', 'trial_start_time', 'n_target_touches', 'lever_touch_time', 'lever_validation_time',
+                         'lever_release_time', 'target_touch_time', 'target_validation_time', 'feedback_time',
+                         'trial_end_time']]
 
     # number of events (between trial start and end) and false touches per trial
     false_touches_df = pd.DataFrame(
@@ -1014,7 +1018,7 @@ def get_behavior_yuri(session_floc, condition=None):
     # add monkey, injection and session info, put these 3 cols in the front
     joint_df['monkey'] = 'yu'
     joint_df['injection'] = condition #get_injection_yuri(session)
-    joint_df['session'] = os.path.basename(session_floc)[:-len('_events.npz')]
+    joint_df['session'] = session
     cols = ['monkey', 'injection', 'session'] + [col for col in joint_df.columns if col not in ['monkey', 'injection', 'session']]
     joint_df = joint_df[cols]
 

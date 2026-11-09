@@ -981,7 +981,9 @@ def plot_glm_weights(df_res, fit_curve=False, title=None, saveas=None, paper_for
         alpha = 0.5 if monkey.split('_')[0] == 'simulation' else 1
         
         # Plot points with different fill styles based on significance
-        significant = group['pvalue'] < 0.05
+        pval_col = 'pvalue_fdr' if 'pvalue_fdr' in group.columns else 'pvalue'
+        print(f'Using p-value column: {pval_col}')
+        significant = group[pval_col] < 0.05
 
         # fit exponential curve of c(a(1-a)^t)
         if fit_curve:

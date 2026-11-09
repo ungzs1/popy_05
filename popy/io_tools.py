@@ -187,6 +187,43 @@ def load_simulation(monkey=None, model=None):
     return df
 
 
+def load_eye_data(monkey, example_session):
+    """
+    Loads the eye tracking data for a given monkey and session.
+
+    For the moment only 'yu' is supported, as the other monkeys do not have eye tracking data.
+
+    Eye data location is under config.PROJECT_PATH_LOCAL/data/processed/eye_tracking/yu/<session>_eye.npz, in a zFile with keys: time, eye_x, eye_y, pupil
+
+    The files are in npz, with the first col being the time and the other 3 being the y, x and pupil size. The time is in seconds, and the other 3 are in pixels.
+
+    We return 3 numpy arrays: the time, the eye position (y, x) and the pupil size. The time is in seconds, and the other 3 are in pixels.
+    """
+    assert monkey == 'yu', "Only monkey 'yu' is supported for eye tracking data."
+
+    data = np.load(os.path.join(config.PROJECT_PATH_LOCAL, 'data', 'processed', 'eye_tracking', monkey, f'{example_session}_eye.npz'))
+
+    time_np = data['time']
+    eye_pos_np = np.stack((data['eye_x'], data['eye_y']), axis=1)  # stack y and x into a 2D array
+    pupil_size_np = data['pupil']
+
+    return time_np, eye_pos_np, pupil_size_np
+
+
+# clean eye data: remove outliers
+def clear_pupil(pupil_size):
+    
+    pupil_size_lim = (-3950, 10000)
+
+    pupil_size_good_ids = (pupil_size > pupil_size_lim[0]) & (pupil_size < pupil_size_lim[1])
+
+    print(f"Percent good pupil size data: {pupil_size_good_ids.sum() / len(pupil_size_good_ids) * 100:.2f}%")
+    
+    # set nan
+    pupil_size[~pupil_size_good_ids] = np.nan
+
+    return pupil_size
+
 def load_behavior(monkey=None, session=None):
     """
     Simply loads the full behavior dataset so that its not necessary to load it every time from path.

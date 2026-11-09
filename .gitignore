@@ -67,3 +67,5 @@ logs/*
 notebooks/population_decoding/neural_value/results/*
 
 notebooks/population_decoding/neural_value/temp/*
+notebooks/behav_analysis/yuri/figs/yu_changing_strategy.png
+notebooks/behav_analysis/yuri/dcz_effects_report_yu.md

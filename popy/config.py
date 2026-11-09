@@ -80,7 +80,8 @@ COLORS = {
     1: '#238823', 0: '#D2222D',
     1.0: '#238823', 0.0: '#D2222D',
     '1': '#238823', '0': '#D2222D',
-    
+    'rewarded': '#238823', 'unrewarded': '#D2222D',
+
     'Foraging': '#3268b7ff',
     'Standard RL-s': '#e8465aff',
     'Standard RL': '#e8465aff',

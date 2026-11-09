@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import cross_validate
+from statsmodels.stats.multitest import multipletests
 
 
 def fit_glm(behav, target='switch', predictors=None, n_permutations=1000):
@@ -35,15 +36,18 @@ def fit_glm(behav, target='switch', predictors=None, n_permutations=1000):
         p_values = np.mean(
             np.abs(permuted_coefs) >= np.abs(real_coeffs), axis=0
         )
+        # FDR (Benjamini-Hochberg) correction across predictors, within monkey
+        _, p_values_fdr, _, _ = multipletests(p_values, method='fdr_bh')
 
         # Results as DataFrame
-        for predictor, coeff, p_value in zip(predictors, real_coeffs, p_values):
+        for predictor, coeff, p_value, p_value_fdr in zip(predictors, real_coeffs, p_values, p_values_fdr):
             res.append({
                 'monkey': monkey,
                 'variable': predictor,
                 'coeffs': coeff,
                 'pvalue': p_value,
-                'if_significant': p_value < 0.05
+                'pvalue_fdr': p_value_fdr,
+                'if_significant': p_value_fdr < 0.05
             })
 
         # 2: Model evaluation
